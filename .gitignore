@@ -1,0 +1,36 @@
+﻿# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+env/
+venv/
+.venv/
+ENV/
+
+# Jupyter
+.ipynb_checkpoints
+
+# Data / DB / backups
+*.db
+*.sqlite
+*.bak
+*.sql
+*.zip
+*.tar.gz
+
+# Models / checkpoints / pickles (si no quieres subir)
+*.pkl
+*.h5
+*.ckpt
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# logs
+*.log
+
