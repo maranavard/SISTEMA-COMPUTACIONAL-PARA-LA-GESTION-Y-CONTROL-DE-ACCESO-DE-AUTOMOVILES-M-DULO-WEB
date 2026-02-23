@@ -20,6 +20,9 @@ ENV/
 *.zip
 *.tar.gz
 
+# Mantener versionados los SQL del proyecto
+!sql/**/*.sql
+
 # Models / checkpoints / pickles (si no quieres subir)
 *.pkl
 *.h5
