@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="card">
+  <h2>Panel principal</h2>
+  <p><strong>Usuario:</strong> {{ user.username }}</p>
+  <p><strong>Rol:</strong> {{ user.rol }}</p>
+  <p>Base Sprint 1 activa: autenticación + sesión + acceso protegido.</p>
+  <a class="btn-link" href="{{ url_for('auth.logout') }}">Cerrar sesión</a>
+</section>
+{% endblock %}

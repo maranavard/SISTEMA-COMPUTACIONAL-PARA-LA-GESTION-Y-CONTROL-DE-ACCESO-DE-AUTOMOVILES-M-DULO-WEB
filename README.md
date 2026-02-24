@@ -10,11 +10,13 @@ Este repositorio contiene la base técnica del proyecto de control de acceso veh
 - [Suposiciones y dependencias](docs/suposiciones-dependencias.md)
 - [Diseño DB Sprint 1](docs/diseno-db-sprint1.md)
 - [Ejecución en pgAdmin](docs/ejecucion-pgadmin.md)
+- [Backend Flask Sprint 1](docs/backend-flask-sprint1.md)
 
 ## Estructura actual
 
 - `sql/`: funciones, triggers, migraciones y pruebas de base de datos.
 - `python/`: scripts ETL y entrenamiento de modelo LSTM.
+- `python/webapp/`: backend Flask base (auth + dashboard + conexión PostgreSQL).
 
 ## Siguiente objetivo
 
