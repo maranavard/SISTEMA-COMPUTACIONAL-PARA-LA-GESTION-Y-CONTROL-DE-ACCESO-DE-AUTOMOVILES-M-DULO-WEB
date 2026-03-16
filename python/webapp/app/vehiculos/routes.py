@@ -4,7 +4,7 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import login_required
 
 from app.models.vehiculo import Vehiculo
-from app.utils.authz import admin_required
+from app.utils.authz import community_required
 
 
 vehiculos_bp = Blueprint("vehiculos", __name__, url_prefix="/vehiculos")
@@ -12,7 +12,7 @@ vehiculos_bp = Blueprint("vehiculos", __name__, url_prefix="/vehiculos")
 
 @vehiculos_bp.get("/")
 @login_required
-@admin_required
+@community_required
 def list_items():
     placa_consulta = (request.args.get("placa", "") or "").strip().upper()
     vehiculo_consulta = None
@@ -23,7 +23,7 @@ def list_items():
 
 @vehiculos_bp.post("/crear")
 @login_required
-@admin_required
+@community_required
 def create_item():
     payload = {
         "placa": request.form.get("placa", "").strip().upper(),
@@ -48,7 +48,7 @@ def create_item():
 
 @vehiculos_bp.get("/consultar")
 @login_required
-@admin_required
+@community_required
 def consultar_por_placa():
     placa = (request.args.get("placa", "") or "").strip().upper()
     if not placa:
@@ -58,7 +58,7 @@ def consultar_por_placa():
 
 @vehiculos_bp.post("/<int:item_id>/actualizar")
 @login_required
-@admin_required
+@community_required
 def update_item(item_id: int):
     payload = {
         "placa": request.form.get("placa", "").strip().upper(),

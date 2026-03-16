@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block body_class %}login-page{% endblock %}
+
+{% block header %}{% endblock %}
+
+{% block content %}
+<section class="login-wrapper">
+  <div class="login-card">
+    <div class="login-logo-wrap">
+      <img class="login-logo-img" src="{{ url_for('static', filename='imagenes/IMAGOTIPO VERTICAL COLOR.png') }}" alt="Logo Universidad de Cundinamarca" />
+      <p class="login-logo-text">Registro de estudiante</p>
+    </div>
+
+    <form method="post" action="{{ url_for('auth.register_post') }}" class="form login-form">
+      <input name="username" type="text" placeholder="Nombre de usuario" required />
+      <input name="email" type="email" placeholder="Correo institucional" required />
+      <input name="nombre" type="text" placeholder="Nombre" />
+      <input name="apellido" type="text" placeholder="Apellido" />
+      <input name="numero_identificacion" type="text" placeholder="Número de identificación" />
+      <input name="password" type="password" placeholder="Contraseña (mínimo 6 caracteres)" required />
+      <input name="confirm_password" type="password" placeholder="Confirmar contraseña" required />
+
+      <button type="submit" class="btn-primary">Crear cuenta</button>
+      <a class="forgot-link" href="{{ url_for('auth.login') }}">Ya tengo cuenta, iniciar sesión</a>
+    </form>
+  </div>
+</section>
+{% endblock %}

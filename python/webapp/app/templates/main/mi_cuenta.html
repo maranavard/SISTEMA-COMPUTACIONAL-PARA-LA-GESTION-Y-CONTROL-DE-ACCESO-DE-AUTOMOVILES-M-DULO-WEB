@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="panel-shell">
+  <div class="panel-top">
+    <img class="panel-logo" src="{{ url_for('static', filename='imagenes/ESCUDO COLOR.png') }}" alt="Logo Universidad de Cundinamarca" />
+  </div>
+
+  <h2 class="panel-title">Mi Cuenta</h2>
+
+  <section class="card" style="max-width: 720px; margin: 0 auto;">
+    <h3>Datos del usuario</h3>
+    <p><strong>Usuario:</strong> {{ user.username or '' }}</p>
+    <p><strong>Rol:</strong> {{ user.rol or '' }}</p>
+    <p>Si necesitas actualizar tus datos, solicita el ajuste al administrador del sistema.</p>
+
+    <div class="panel-actions" style="margin-top: 1rem;">
+      <a class="panel-action-btn" href="{{ url_for('main.dashboard') }}">Volver al panel</a>
+      <a class="panel-action-btn" href="{{ url_for('auth.logout') }}">Cerrar sesion</a>
+    </div>
+  </section>
+</section>
+{% endblock %}

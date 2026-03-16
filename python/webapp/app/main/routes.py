@@ -26,3 +26,9 @@ def dashboard():
     panel_admin_roles = {"admin_sistema", "admin", "administrador", "seguridad_udec", "vigilante", "vigilancia"}
     panel_type = "admin" if rol in panel_admin_roles else "general"
     return render_template("dashboard.html", user=current_user, panel_type=panel_type)
+
+
+@main_bp.get("/mi-cuenta")
+@login_required
+def mi_cuenta():
+    return render_template("main/mi_cuenta.html", user=current_user)

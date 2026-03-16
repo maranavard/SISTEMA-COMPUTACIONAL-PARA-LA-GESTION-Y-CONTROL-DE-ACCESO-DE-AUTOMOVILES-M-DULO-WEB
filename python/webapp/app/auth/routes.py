@@ -104,6 +104,76 @@ def login_post():
     return redirect(url_for("main.dashboard"))
 
 
+@auth_bp.get("/register")
+def register():
+    if current_user.is_authenticated:
+        return redirect(url_for("main.dashboard"))
+    return render_template("auth/register.html")
+
+
+@auth_bp.post("/register")
+def register_post():
+    if current_user.is_authenticated:
+        return redirect(url_for("main.dashboard"))
+
+    username = (request.form.get("username", "") or "").strip()
+    email = (request.form.get("email", "") or "").strip()
+    password = (request.form.get("password", "") or "").strip()
+    confirm_password = (request.form.get("confirm_password", "") or "").strip()
+    nombre = (request.form.get("nombre", "") or "").strip()
+    apellido = (request.form.get("apellido", "") or "").strip()
+    numero_identificacion = (request.form.get("numero_identificacion", "") or "").strip()
+
+    if not username or not email or not password:
+        flash("Usuario, correo y contraseña son obligatorios.", "error")
+        return redirect(url_for("auth.register"))
+
+    if len(password) < 6:
+        flash("La contraseña debe tener al menos 6 caracteres.", "error")
+        return redirect(url_for("auth.register"))
+
+    if password != confirm_password:
+        flash("La confirmación de contraseña no coincide.", "error")
+        return redirect(url_for("auth.register"))
+
+    try:
+        existing_user = User.get_by_username(username)
+    except Exception as exc:
+        flash(f"No se pudo validar el usuario: {exc}", "error")
+        return redirect(url_for("auth.register"))
+
+    if existing_user:
+        flash("El nombre de usuario ya está en uso.", "error")
+        return redirect(url_for("auth.register"))
+
+    try:
+        existing_email = User.get_by_email(email)
+    except Exception:
+        existing_email = None
+
+    if existing_email:
+        flash("El correo ya está registrado.", "error")
+        return redirect(url_for("auth.register"))
+
+    try:
+        User.create_user(
+            username=username,
+            raw_password=password,
+            role="estudiante_udec",
+            estado="activo",
+            nombre=nombre,
+            apellido=apellido,
+            email=email,
+            numero_identificacion=numero_identificacion,
+        )
+    except Exception as exc:
+        flash(f"No se pudo crear la cuenta: {exc}", "error")
+        return redirect(url_for("auth.register"))
+
+    flash("Cuenta creada correctamente. Ya puedes iniciar sesión.", "success")
+    return redirect(url_for("auth.login"))
+
+
 @auth_bp.get("/logout")
 def logout():
     # Cierra sesión actual.

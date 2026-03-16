@@ -68,7 +68,7 @@
     </div>
   </div>
   {% else %}
-  <h2 class="panel-title">Panel principal</h2>
+  <h2 class="panel-title">Panel principal para estudiantes, visitantes y funcionarios</h2>
   <div class="panel-grid panel-grid-4">
     <a class="panel-card" href="{{ url_for('conductores.list_items') }}">
       <span class="panel-card-icon" aria-hidden="true">
@@ -82,7 +82,7 @@
       </span>
       <span class="panel-card-label">Vehiculos</span>
     </a>
-    <a class="panel-card" href="{{ url_for('users.list_users') }}">
+    <a class="panel-card" href="{{ url_for('main.mi_cuenta') }}">
       <span class="panel-card-icon" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.6"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
       </span>

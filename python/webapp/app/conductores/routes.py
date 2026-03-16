@@ -4,7 +4,7 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import login_required
 
 from app.models.conductor import Conductor
-from app.utils.authz import admin_required
+from app.utils.authz import community_required
 
 
 conductores_bp = Blueprint("conductores", __name__, url_prefix="/conductores")
@@ -12,7 +12,7 @@ conductores_bp = Blueprint("conductores", __name__, url_prefix="/conductores")
 
 @conductores_bp.get("/")
 @login_required
-@admin_required
+@community_required
 def list_items():
     items = Conductor.list_items()
     return render_template("conductores/index.html", items=items)
@@ -20,7 +20,7 @@ def list_items():
 
 @conductores_bp.post("/crear")
 @login_required
-@admin_required
+@community_required
 def create_item():
     payload = {
         "nombre": request.form.get("nombre", "").strip(),
@@ -48,7 +48,7 @@ def create_item():
 
 @conductores_bp.post("/<int:item_id>/actualizar")
 @login_required
-@admin_required
+@community_required
 def update_item(item_id: int):
     payload = {
         "nombre": request.form.get("nombre", "").strip(),

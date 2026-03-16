@@ -1,54 +1,26 @@
 """Módulo de novedades: ingreso/salida por placa y consulta histórica."""
 
 from datetime import datetime
-from functools import wraps
-
-from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
+from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from app.models.novedad import Novedad
+from app.utils.authz import community_required
 
 
 novedades_bp = Blueprint("novedades", __name__, url_prefix="/novedades")
 
 
-def control_access_required(view_func):
-    """Permite acceso a roles de administración y seguridad/control."""
-
-    @wraps(view_func)
-    def wrapper(*args, **kwargs):
-        if not current_user.is_authenticated:
-            abort(401)
-
-        rol_raw = (getattr(current_user, "rol", "") or "").strip().lower()
-        rol = rol_raw
-
-        if rol.startswith("{") and rol.endswith("}"):
-            parts = [item.strip().strip('"') for item in rol[1:-1].split(",") if item.strip()]
-            rol = parts[0] if parts else ""
-        elif rol.startswith("[") and rol.endswith("]"):
-            parts = [item.strip().strip('"') for item in rol[1:-1].split(",") if item.strip()]
-            rol = parts[0] if parts else ""
-
-        allowed = {"admin_sistema", "admin", "administrador", "seguridad_udec", "vigilante", "vigilancia"}
-        if rol not in allowed:
-            abort(403)
-
-        return view_func(*args, **kwargs)
-
-    return wrapper
-
-
 @novedades_bp.get("/")
 @login_required
-@control_access_required
+@community_required
 def index():
     return render_template("novedades/index.html")
 
 
 @novedades_bp.post("/registrar")
 @login_required
-@control_access_required
+@community_required
 def registrar_novedad():
     placa = (request.form.get("placa", "") or "").strip().upper()
     payload = {
@@ -76,7 +48,7 @@ def registrar_novedad():
 
 @novedades_bp.get("/gestion")
 @login_required
-@control_access_required
+@community_required
 def gestion():
     placa = (request.args.get("placa", "") or "").strip().upper()
     tipo = (request.args.get("tipo", "") or "").strip().lower()
