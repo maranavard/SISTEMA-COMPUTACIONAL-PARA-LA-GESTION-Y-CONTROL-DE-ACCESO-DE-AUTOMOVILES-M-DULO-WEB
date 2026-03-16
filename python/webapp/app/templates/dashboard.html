@@ -1,11 +1,105 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<section class="card">
-  <h2>Panel principal</h2>
-  <p><strong>Usuario:</strong> {{ user.username }}</p>
-  <p><strong>Rol:</strong> {{ user.rol }}</p>
-  <p>Base Sprint 1 activa: autenticación + sesión + acceso protegido.</p>
-  <a class="btn-link" href="{{ url_for('auth.logout') }}">Cerrar sesión</a>
+<section class="panel-shell">
+  <div class="panel-top">
+    <img class="panel-logo" src="{{ url_for('static', filename='imagenes/ESCUDO COLOR.png') }}" alt="Logo Universidad de Cundinamarca" />
+  </div>
+
+  {% if panel_type == 'admin' %}
+  <h2 class="panel-title">Panel de control</h2>
+  <div class="panel-grid">
+    <a class="panel-card" href="{{ url_for('users.list_users') }}">
+      <span class="panel-card-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.6"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </span>
+      <span class="panel-card-label">Usuarios</span>
+    </a>
+    <a class="panel-card" href="{{ url_for('conductores.list_items') }}">
+      <span class="panel-card-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="8" cy="9" r="3" stroke="currentColor" stroke-width="1.5"/><circle cx="16" cy="9" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M2.5 19a5.5 5.5 0 0 1 11 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M10.5 19a5.5 5.5 0 0 1 11 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </span>
+      <span class="panel-card-label">Conductores</span>
+    </a>
+    <a class="panel-card" href="{{ url_for('vehiculos.list_items') }}">
+      <span class="panel-card-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M3 14l2-5h14l2 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><rect x="3" y="14" width="18" height="5" rx="1" stroke="currentColor" stroke-width="1.6"/><circle cx="7" cy="19" r="1.6" fill="currentColor"/><circle cx="17" cy="19" r="1.6" fill="currentColor"/></svg>
+      </span>
+      <span class="panel-card-label">Vehiculos</span>
+    </a>
+    <a class="panel-card" href="{{ url_for('espacios.list_items') }}">
+      <span class="panel-card-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M4 20V4h7a4 4 0 1 1 0 8H4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 12h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </span>
+      <span class="panel-card-label">Espacios</span>
+    </a>
+    <a class="panel-card" href="{{ url_for('visitantes.list_items') }}">
+      <span class="panel-card-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.6"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M17 5l1.4 1.4L21 3.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+      <span class="panel-card-label">Visitantes</span>
+    </a>
+    <a class="panel-card" href="{{ url_for('novedades.index') }}">
+      <span class="panel-card-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="6" y="3" width="12" height="18" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M9 8h6M9 12h6M9 16h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </span>
+      <span class="panel-card-label">Novedades</span>
+    </a>
+    <a class="panel-card" href="{{ url_for('reportes.gestion') }}">
+      <span class="panel-card-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M6 3h8l4 4v14H6z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M14 3v4h4M9 12h6M9 16h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </span>
+      <span class="panel-card-label">Reportes</span>
+    </a>
+    <a class="panel-card" href="{{ url_for('consultas.index') }}">
+      <span class="panel-card-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="6" cy="6" r="2" stroke="currentColor" stroke-width="1.5"/><circle cx="18" cy="6" r="2" stroke="currentColor" stroke-width="1.5"/><circle cx="6" cy="18" r="2" stroke="currentColor" stroke-width="1.5"/><circle cx="18" cy="18" r="2" stroke="currentColor" stroke-width="1.5"/><path d="M8 6h8M6 8v8M18 8v8M8 18h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </span>
+      <span class="panel-card-label">Consultas</span>
+    </a>
+  </div>
+  <div class="panel-strip">
+    <div class="panel-strip-text">Tu camino al exito profesional comienza ahora en Ucundinamarca</div>
+    <div class="panel-actions">
+      <a class="panel-action-btn" href="{{ url_for('control_accesos.index') }}">Control de Accesos</a>
+      <a class="panel-action-btn" href="{{ url_for('control_accesos.autorizacion') }}">Autorizaciones</a>
+      <a class="panel-action-btn" href="{{ url_for('auth.logout') }}">Cerrar sesion</a>
+    </div>
+  </div>
+  {% else %}
+  <h2 class="panel-title">Panel principal</h2>
+  <div class="panel-grid panel-grid-4">
+    <a class="panel-card" href="{{ url_for('conductores.list_items') }}">
+      <span class="panel-card-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="8" cy="9" r="3" stroke="currentColor" stroke-width="1.5"/><circle cx="16" cy="9" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M2.5 19a5.5 5.5 0 0 1 11 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M10.5 19a5.5 5.5 0 0 1 11 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </span>
+      <span class="panel-card-label">Conductores</span>
+    </a>
+    <a class="panel-card" href="{{ url_for('vehiculos.list_items') }}">
+      <span class="panel-card-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M3 14l2-5h14l2 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><rect x="3" y="14" width="18" height="5" rx="1" stroke="currentColor" stroke-width="1.6"/><circle cx="7" cy="19" r="1.6" fill="currentColor"/><circle cx="17" cy="19" r="1.6" fill="currentColor"/></svg>
+      </span>
+      <span class="panel-card-label">Vehiculos</span>
+    </a>
+    <a class="panel-card" href="{{ url_for('users.list_users') }}">
+      <span class="panel-card-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.6"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </span>
+      <span class="panel-card-label">Usuarios</span>
+    </a>
+    <a class="panel-card" href="{{ url_for('visitantes.list_items') }}">
+      <span class="panel-card-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.6"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M17 5l1.4 1.4L21 3.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+      <span class="panel-card-label">Visitantes</span>
+    </a>
+  </div>
+  <div class="panel-strip">
+    <div class="panel-strip-text">Tu camino al exito profesional comienza ahora en Ucundinamarca</div>
+    <div class="panel-actions">
+      <a class="panel-action-btn" href="{{ url_for('auth.logout') }}">Cerrar sesion</a>
+    </div>
+  </div>
+  {% endif %}
 </section>
 {% endblock %}

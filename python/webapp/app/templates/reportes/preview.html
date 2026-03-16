@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block body_class %}reportes-page{% endblock %}
+
+{% block content %}
+<section class="reportes-screen">
+  <div class="reportes-hero">
+    <img class="reportes-hero-logo" src="{{ url_for('static', filename='imagenes/ESCUDO COLOR.png') }}" alt="Logo Universidad de Cundinamarca" />
+    <div class="reportes-hero-actions reportes-hero-actions-between">
+      <a class="reportes-pill" href="{{ url_for('reportes.gestion') }}">Gestión de Reportes</a>
+      <a class="reportes-pill reportes-pill-active" href="{{ url_for('main.dashboard') }}">Panel de Control</a>
+    </div>
+  </div>
+
+  <section class="reportes-card">
+    <h2>Reporte de {{ report.label }}</h2>
+    <p class="reportes-subtitle">{{ report.description }}</p>
+
+    <div class="table-wrap">
+      <table class="users-table reportes-table">
+        <thead>
+          <tr>
+            {% for column in columns %}
+            <th>{{ column | replace('_', ' ') | title }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% if rows %}
+            {% for row in rows %}
+            <tr>
+              {% for column in columns %}
+              <td>{{ row.get(column, '') }}</td>
+              {% endfor %}
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="{{ columns|length if columns else 1 }}">No hay datos disponibles para este reporte.</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if printable %}
+    <p class="reportes-print-hint">Usa el cuadro de impresión de tu navegador para guardar este reporte en PDF.</p>
+    {% endif %}
+  </section>
+</section>
+
+{% if printable %}
+<script>
+  window.addEventListener('load', function () {
+    window.print();
+  });
+</script>
+{% endif %}
+{% endblock %}

@@ -11,6 +11,7 @@ Este repositorio contiene la base técnica del proyecto de control de acceso veh
 - [Diseño DB Sprint 1](docs/diseno-db-sprint1.md)
 - [Ejecución en pgAdmin](docs/ejecucion-pgadmin.md)
 - [Backend Flask Sprint 1](docs/backend-flask-sprint1.md)
+- [Mapa del código Sprint 1](docs/mapa-codigo-sprint1.md)
 
 ## Estructura actual
 

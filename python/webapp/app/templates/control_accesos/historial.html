@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+
+{% block body_class %}control-accesos-page{% endblock %}
+
+{% block content %}
+<section class="control-accesos-screen">
+  <div class="control-accesos-hero">
+    <img class="control-accesos-hero-logo" src="{{ url_for('static', filename='imagenes/ESCUDO COLOR.png') }}" alt="Logo Universidad de Cundinamarca" />
+    <div class="control-accesos-hero-actions">
+      <a class="control-accesos-pill control-accesos-pill-active" href="{{ url_for('main.dashboard') }}">Panel de Control</a>
+    </div>
+  </div>
+
+  <section class="control-accesos-card">
+    <h2>Historial de Accesos</h2>
+
+    <div class="table-wrap">
+      <table class="users-table control-accesos-table">
+        <thead>
+          <tr>
+            <th>Fecha y hora</th>
+            <th>Usuario</th>
+            <th>Espacio</th>
+            <th>Accion</th>
+            <th>Acciones PDF</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in items %}
+          <tr>
+            <td>{{ item.fecha_hora_registro or item.fecha_hora_prevista or '' }}</td>
+            <td>{{ item.numero_identificacion or '' }}</td>
+            <td>{{ item.area_destino or '' }}</td>
+            <td>{{ item.estado or '' }}</td>
+            <td>
+              <div class="control-accesos-actions">
+                <a class="control-accesos-icon-btn" href="{{ url_for('control_accesos.historial_visualizar', item_id=item.id) }}" title="Visualizar" aria-label="Visualizar"><span aria-hidden="true">👁</span></a>
+                <a class="control-accesos-icon-btn" href="{{ url_for('control_accesos.historial_pdf', item_id=item.id) }}" title="PDF" aria-label="PDF" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">📄</span></a>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="5">No hay registros de acceso disponibles.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</section>
+{% endblock %}

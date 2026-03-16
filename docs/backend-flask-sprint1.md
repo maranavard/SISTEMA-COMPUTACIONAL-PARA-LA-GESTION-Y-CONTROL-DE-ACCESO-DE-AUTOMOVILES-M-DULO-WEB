@@ -12,6 +12,9 @@
 - Inicio de sesión con `Flask-Login`.
 - Sesión persistente y cierre de sesión.
 - Ruta protegida `/dashboard`.
+- Módulo CRUD de usuarios en `/usuarios`.
+- Módulo CRUD de conductores en `/conductores`.
+- Control de autorización: solo rol admin puede gestionar usuarios.
 - Conexión PostgreSQL para leer usuarios.
 - Soporte de contraseña hash (`pbkdf2` / `scrypt`) y fallback a texto plano.
 
@@ -25,6 +28,19 @@
 4. Crear archivo `.env` (copiando `.env.example`) y ajustar credenciales.
 5. Ejecutar:
    - `python run.py`
+
+## Uso del módulo usuarios
+
+- Ingresar con un usuario de rol `admin_sistema` (o `admin`/`administrador`).
+- Abrir `/usuarios`.
+- Desde ahí puedes:
+   - Crear usuarios.
+   - Editar rol/estado.
+   - Cambiar contraseña.
+
+- Desde `/conductores` puedes:
+   - Crear conductores.
+   - Editar datos de conductor.
 
 ## Nota de compatibilidad con BD actual
 

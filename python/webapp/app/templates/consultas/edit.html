@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block body_class %}consultas-page{% endblock %}
+
+{% block content %}
+<section class="consultas-screen">
+  <div class="consultas-hero">
+    <img class="consultas-hero-logo" src="{{ url_for('static', filename='imagenes/ESCUDO COLOR.png') }}" alt="Logo Universidad de Cundinamarca" />
+    <div class="consultas-hero-actions consultas-hero-actions-between">
+      <a class="consultas-pill" href="{{ url_for('consultas.index') }}">Consulta por Placa</a>
+      <a class="consultas-pill consultas-pill-active" href="{{ url_for('main.dashboard') }}">Panel de Control</a>
+    </div>
+  </div>
+
+  <section class="consultas-card consultas-edit-card">
+    <h2>Editar Vehículo</h2>
+    <form method="post" action="{{ url_for('consultas.guardar_edicion', item_id=item.id) }}" class="consultas-edit-form">
+      <label class="form-field-label" for="edit-placa">Placa</label>
+      <input id="edit-placa" name="placa" type="text" value="{{ item.placa or '' }}" required />
+
+      <label class="form-field-label" for="edit-marca">Marca</label>
+      <input id="edit-marca" name="marca" type="text" value="{{ item.marca or '' }}" />
+
+      <label class="form-field-label" for="edit-modelo">Modelo</label>
+      <input id="edit-modelo" name="modelo" type="text" value="{{ item.modelo or '' }}" />
+
+      <label class="form-field-label" for="edit-color">Color</label>
+      <input id="edit-color" name="color" type="text" value="{{ item.color or '' }}" />
+
+      <label class="form-field-label" for="edit-tipo">Tipo de Vehículo (ID)</label>
+      <input id="edit-tipo" name="tipo_vehiculo_id" type="number" value="{{ item.tipo_vehiculo_id or '' }}" />
+
+      <label class="form-field-label" for="edit-estado">Estado</label>
+      <input id="edit-estado" name="estado" type="text" value="{{ item.estado or '' }}" />
+
+      <button type="submit" class="consultas-submit-btn">Guardar cambios</button>
+    </form>
+  </section>
+</section>
+{% endblock %}

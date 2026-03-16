@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block body_class %}novedades-page{% endblock %}
+
+{% block content %}
+<section class="novedades-screen">
+  <div class="novedades-hero">
+    <img class="novedades-hero-logo" src="{{ url_for('static', filename='imagenes/ESCUDO COLOR.png') }}" alt="Logo Universidad de Cundinamarca" />
+    <div class="novedades-hero-actions">
+      <a class="novedades-pill novedades-pill-active" href="{{ url_for('main.dashboard') }}">Panel de Control</a>
+    </div>
+  </div>
+
+  <div class="novedades-register-card">
+    <h2>Formulario de Registro de Novedades</h2>
+    <form method="post" action="{{ url_for('novedades.registrar_novedad') }}" class="novedades-register-form">
+      <label class="form-field-label" for="novedad-tipo">Tipo de novedad</label>
+      <input id="novedad-tipo" name="tipo_novedad" type="text" placeholder="Tipo de novedad" required />
+      <label class="form-field-label" for="novedad-placa">Placa</label>
+      <input id="novedad-placa" name="placa" type="text" placeholder="Placa" required />
+      <label class="form-field-label" for="novedad-fecha-hora">Fecha/ Hora</label>
+      <input id="novedad-fecha-hora" name="fecha_hora" type="datetime-local" required />
+      <label class="form-field-label" for="novedad-observaciones">Observaciones</label>
+      <input id="novedad-observaciones" name="observaciones" type="text" placeholder="Observaciones" required />
+      <label class="form-field-label" for="novedad-estado">Estado</label>
+      <input id="novedad-estado" name="estado" type="text" placeholder="Estado" value="registrado" required />
+      <button type="submit" class="novedades-register-btn">Registrar</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

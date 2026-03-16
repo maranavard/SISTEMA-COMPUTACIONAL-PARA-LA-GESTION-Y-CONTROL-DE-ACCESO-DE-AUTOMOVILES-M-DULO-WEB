@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block body_class %}espacios-page{% endblock %}
+
+{% block content %}
+<section class="espacios-screen">
+  <div class="espacios-hero">
+    <img class="espacios-hero-logo" src="{{ url_for('static', filename='imagenes/ESCUDO COLOR.png') }}" alt="Logo Universidad de Cundinamarca" />
+    <div class="espacios-hero-actions">
+      <a class="espacios-pill" href="{{ url_for('espacios.list_items') }}">Gestión de Espacios</a>
+    </div>
+  </div>
+
+  <section class="espacios-card">
+    <h2>Detalle del Espacio</h2>
+    <div class="espacios-detail-grid">
+      <p><strong>ID:</strong> {{ item.id or '' }}</p>
+      <p><strong>Número:</strong> {{ item.numero or '' }}</p>
+      <p><strong>Estado:</strong> {{ item.estado or '' }}</p>
+      <p><strong>Tipo Vehículo (ID):</strong> {{ item.tipo_vehiculo_id or '' }}</p>
+      <p><strong>Fecha actualización:</strong> {{ item.fecha_actualizacion or '' }}</p>
+    </div>
+  </section>
+</section>
+{% endblock %}

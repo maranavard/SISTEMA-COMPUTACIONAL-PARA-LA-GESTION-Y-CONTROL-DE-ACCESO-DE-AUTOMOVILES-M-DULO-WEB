@@ -1,0 +1,166 @@
+{% extends 'base.html' %}
+
+{% block body_class %}espacios-page{% endblock %}
+
+{% block content %}
+<section class="espacios-screen">
+  <div class="espacios-hero">
+    <img class="espacios-hero-logo" src="{{ url_for('static', filename='imagenes/ESCUDO COLOR.png') }}" alt="Logo Universidad de Cundinamarca" />
+    <div class="espacios-hero-actions">
+      <a class="espacios-pill espacios-pill-active" href="{{ url_for('main.dashboard') }}">Panel de Control</a>
+    </div>
+  </div>
+
+  <section class="espacios-card">
+    <h2>Gestión de Espacios de Parqueo</h2>
+
+    {% if assignment_notice %}
+    <div class="espacios-mini-screen" id="espacios-mini-screen" role="status" aria-live="polite">
+      <button type="button" class="espacios-mini-close" id="espacios-mini-close" aria-label="Cerrar aviso">×</button>
+      <p class="espacios-mini-title">ESPACIO ASIGNADO</p>
+      <p class="espacios-mini-space">{{ assignment_notice.space }}</p>
+      <p class="espacios-mini-plate">Placa: <strong>{{ assignment_notice.plate }}</strong></p>
+      <p class="espacios-mini-hint">Ubique el vehículo en el cupo indicado.</p>
+    </div>
+    {% endif %}
+
+    <div class="espacios-summary">
+      <span>Total: {{ summary.total }}</span>
+      <span>Disponibles: {{ summary.disponible }}</span>
+      <span>Ocupados: {{ summary.ocupado }}</span>
+      <span>Inhabilitados: {{ summary.inhabilitado }}</span>
+    </div>
+
+    <div class="espacios-map-wrap">
+      <div class="espacios-map-header">Maqueta del parqueadero (1 - 50)</div>
+      <div class="espacios-map-grid">
+        {% for slot in slots %}
+        <button type="button" class="parking-slot parking-slot-{{ slot.estado }}" data-slot-number="{{ slot.numero }}" title="Seleccionar casilla {{ slot.numero }}">
+          <span class="parking-slot-number">{{ slot.numero }}</span>
+          <span class="parking-slot-state">{{ slot.estado_label }}</span>
+        </button>
+        {% endfor %}
+      </div>
+      <div class="espacios-map-legend">
+        <span><i class="legend-box legend-disponible"></i>Disponible</span>
+        <span><i class="legend-box legend-ocupado"></i>Ocupado</span>
+        <span><i class="legend-box legend-inhabilitado"></i>Inhabilitado</span>
+      </div>
+    </div>
+
+    <div class="espacios-actions-grid">
+      <form method="post" action="{{ url_for('espacios.upsert_slot') }}" class="espacios-form-card">
+        <h3>Registro manual de espacio</h3>
+        <p class="espacios-form-hint">Primero selecciona una casilla en la maqueta y luego define su estado.</p>
+        <label class="form-field-label" for="espacio-numero">Número de espacio</label>
+        <select id="espacio-numero" name="numero" required>
+          {% for n in range(1, 51) %}
+          <option value="{{ n }}">{{ n }}</option>
+          {% endfor %}
+        </select>
+
+        <label class="form-field-label" for="espacio-estado">Estado</label>
+        <select id="espacio-estado" name="estado" required>
+          <option value="disponible">Disponible</option>
+          <option value="ocupado">Ocupado</option>
+          <option value="inhabilitado">Inhabilitado</option>
+        </select>
+
+        <label class="form-field-label" for="espacio-tipo">Tipo vehículo (ID)</label>
+        <input id="espacio-tipo" name="tipo_vehiculo_id" type="number" placeholder="Ej: 1" />
+
+        <button type="submit" class="espacios-primary-btn">Registrar / Actualizar</button>
+      </form>
+
+      <form method="post" action="{{ url_for('espacios.asignacion_automatica') }}" class="espacios-form-card">
+        <h3>Asignación automática inteligente (respaldo manual)</h3>
+        <label class="form-field-label" for="asig-placa">Placa del vehículo</label>
+        <input id="asig-placa" name="placa" type="text" placeholder="ABC123" required />
+        <p class="espacios-form-hint">Úsalo cuando la cámara no detecte la placa. Si está registrada, el sistema asigna el cupo automáticamente.</p>
+        <button type="submit" class="espacios-primary-btn">Asignar cupo (manual por placa)</button>
+      </form>
+    </div>
+
+    <div class="table-wrap">
+      <table class="users-table espacios-table">
+        <thead>
+          <tr>
+            <th><input type="checkbox" aria-label="Seleccionar todos" /></th>
+            <th>Numero</th>
+            <th>Tipo</th>
+            <th>Placa</th>
+            <th>Acción</th>
+            <th>Hora</th>
+            <th>Fecha</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in table_items %}
+          <tr>
+            <td><input type="checkbox" aria-label="Seleccionar espacio {{ item.numero }}" /></td>
+            <td>{{ item.numero or '' }}</td>
+            <td>{{ item.tipo_vehiculo_nombre or item.tipo_vehiculo_id or '' }}</td>
+            <td>{{ item.placa_display or '' }}</td>
+            <td class="espacios-action-icons">
+              <div class="espacios-action-buttons">
+                <a class="espacios-action-icon" href="{{ url_for('espacios.editar_item', item_id=item.id) }}" title="Editar" aria-label="Editar"><span aria-hidden="true">✎</span></a>
+                <form method="post" action="{{ url_for('espacios.borrar_item', item_id=item.id) }}" class="espacios-inline-form">
+                  <button type="submit" class="espacios-action-icon" title="Borrar" aria-label="Borrar" onclick="return confirm('¿Seguro que deseas eliminar este espacio?');"><span aria-hidden="true">🗑</span></button>
+                </form>
+                <a class="espacios-action-icon" href="{{ url_for('espacios.visualizar_item', item_id=item.id) }}" title="Visualizar" aria-label="Visualizar"><span aria-hidden="true">👁</span></a>
+              </div>
+            </td>
+            <td>{{ item.fecha_actualizacion.strftime('%H:%M:%S') if item.fecha_actualizacion else '' }}</td>
+            <td>{{ item.fecha_actualizacion.strftime('%Y-%m-%d') if item.fecha_actualizacion else '' }}</td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="7">Aún no hay espacios registrados para mostrar.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</section>
+
+<script>
+  (function () {
+    const selector = document.getElementById('espacio-numero');
+    const slots = document.querySelectorAll('.parking-slot[data-slot-number]');
+    if (!selector || !slots.length) {
+      return;
+    }
+
+    function highlightSelected(selectedValue) {
+      slots.forEach((slot) => {
+        if (slot.dataset.slotNumber === selectedValue) {
+          slot.classList.add('parking-slot-selected');
+        } else {
+          slot.classList.remove('parking-slot-selected');
+        }
+      });
+    }
+
+    highlightSelected(selector.value);
+
+    slots.forEach((slot) => {
+      slot.addEventListener('click', () => {
+        const slotNumber = slot.dataset.slotNumber;
+        selector.value = slotNumber;
+        highlightSelected(slotNumber);
+      });
+    });
+
+    selector.addEventListener('change', () => highlightSelected(selector.value));
+
+    const miniScreen = document.getElementById('espacios-mini-screen');
+    const miniClose = document.getElementById('espacios-mini-close');
+    if (miniScreen && miniClose) {
+      miniClose.addEventListener('click', () => {
+        miniScreen.style.display = 'none';
+      });
+    }
+  })();
+</script>
+{% endblock %}

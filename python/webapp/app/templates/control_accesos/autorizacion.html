@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+
+{% block body_class %}control-accesos-page{% endblock %}
+
+{% block content %}
+<section class="control-accesos-screen">
+  <div class="control-accesos-hero">
+    <img class="control-accesos-hero-logo" src="{{ url_for('static', filename='imagenes/ESCUDO COLOR.png') }}" alt="Logo Universidad de Cundinamarca" />
+    <div class="control-accesos-hero-actions">
+      <a class="control-accesos-pill control-accesos-pill-active" href="{{ url_for('main.dashboard') }}">Panel de Control</a>
+    </div>
+  </div>
+
+  <section class="control-accesos-card">
+    <h2>Autorización de Acceso</h2>
+
+    <form method="get" action="{{ url_for('control_accesos.autorizacion') }}" class="control-accesos-search-form">
+      <div class="control-accesos-search-input-wrap">
+        <input name="documento" type="text" placeholder="Documento del visitante" value="{{ documento or '' }}" />
+        <span class="control-accesos-search-icon" aria-hidden="true">⌕</span>
+      </div>
+      <button type="submit">Buscar</button>
+    </form>
+
+    <div class="table-wrap">
+      <table class="users-table control-accesos-table">
+        <thead>
+          <tr>
+            <th>Nombre visitante</th>
+            <th>No. identificación</th>
+            <th>Área Destino</th>
+            <th>Motivo Visita</th>
+            <th>Placa</th>
+            <th>Fecha y hora prevista</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in items %}
+          <tr>
+            <td>{{ (item.nombres or '') ~ ' ' ~ (item.apellidos or '') }}</td>
+            <td>{{ item.numero_identificacion or '' }}</td>
+            <td>{{ item.area_destino or '' }}</td>
+            <td>{{ item.motivo_visita or '' }}</td>
+            <td>{{ item.placa or '' }}</td>
+            <td>{{ item.fecha_hora_prevista or '' }}</td>
+          </tr>
+          {% else %}
+            {% for _ in range(4) %}
+            <tr>
+              <td>&nbsp;</td>
+              <td>&nbsp;</td>
+              <td>&nbsp;</td>
+              <td>&nbsp;</td>
+              <td>&nbsp;</td>
+              <td>&nbsp;</td>
+            </tr>
+            {% endfor %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="control-accesos-footer-actions">
+      {% if selected_item %}
+      <form method="post" action="{{ url_for('control_accesos.autorizar', item_id=selected_item.id) }}" class="control-accesos-inline-form">
+        <button type="submit" class="control-accesos-footer-btn">Autorizar</button>
+      </form>
+      <form method="post" action="{{ url_for('control_accesos.rechazar', item_id=selected_item.id) }}" class="control-accesos-inline-form">
+        <button type="submit" class="control-accesos-footer-btn">Rechazar</button>
+      </form>
+      <a class="control-accesos-footer-btn" href="{{ url_for('control_accesos.autorizacion_detalle', item_id=selected_item.id) }}">Ver detalles</a>
+      {% else %}
+      <button type="button" class="control-accesos-footer-btn" disabled>Autorizar</button>
+      <button type="button" class="control-accesos-footer-btn" disabled>Rechazar</button>
+      <button type="button" class="control-accesos-footer-btn" disabled>Ver detalles</button>
+      {% endif %}
+    </div>
+  </section>
+</section>
+{% endblock %}

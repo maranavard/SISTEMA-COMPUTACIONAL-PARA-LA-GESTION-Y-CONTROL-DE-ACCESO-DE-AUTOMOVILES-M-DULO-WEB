@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+
+{% block body_class %}vehiculos-page{% endblock %}
+
+{% block content %}
+<section class="vehiculos-screen">
+  <div class="vehiculos-hero">
+    <img class="vehiculos-hero-logo" src="{{ url_for('static', filename='imagenes/ESCUDO COLOR.png') }}" alt="Logo Universidad de Cundinamarca" />
+    <div class="vehiculos-hero-actions">
+      <a class="vehiculos-pill vehiculos-pill-active" href="{{ url_for('main.dashboard') }}">Panel de Control</a>
+    </div>
+  </div>
+
+  <div class="vehiculos-register-card">
+    <h2>Formulario de Registro de Vehiculos</h2>
+    <form method="post" action="{{ url_for('vehiculos.create_item') }}" class="vehiculos-register-form">
+      <input name="placa" type="text" placeholder="Placa" required />
+      <input name="marca" type="text" placeholder="Marca" required />
+      <input name="color" type="text" placeholder="Color" required />
+      <input name="modelo" type="text" placeholder="Modelo" required />
+      <label class="form-field-label" for="vehiculo-fecha-registro">Fecha de Registro</label>
+      <input id="vehiculo-fecha-registro" name="fecha_registro" type="datetime-local" required />
+
+      <input name="tipo_vehiculo_id" type="number" placeholder="Tipo de vehiculo (ID)" />
+      <input name="estado" type="text" placeholder="Estado" value="activo" />
+      <input name="conductor_id" type="number" placeholder="ID conductor" />
+      <input name="user_id" type="number" placeholder="ID usuario" />
+      <button type="submit" class="vehiculos-register-btn">Registrar</button>
+    </form>
+  </div>
+
+  <div class="vehiculos-register-card vehiculos-consulta-card">
+    <h3>Consulta por placa</h3>
+    <form method="get" action="{{ url_for('vehiculos.consultar_por_placa') }}" class="vehiculos-consulta-form">
+      <input name="placa" type="text" placeholder="Digite la placa" value="{{ placa_consulta or '' }}" required />
+      <button type="submit">Consultar</button>
+    </form>
+
+    {% if placa_consulta %}
+      {% if vehiculo_consulta %}
+      <div class="vehiculos-consulta-result">
+        <p><strong>Placa:</strong> {{ vehiculo_consulta.placa or '' }}</p>
+        <p><strong>Marca:</strong> {{ vehiculo_consulta.marca or '' }}</p>
+        <p><strong>Modelo:</strong> {{ vehiculo_consulta.modelo or '' }}</p>
+        <p><strong>Color:</strong> {{ vehiculo_consulta.color or '' }}</p>
+        <p><strong>Tipo:</strong> {{ vehiculo_consulta.tipo_vehiculo_nombre or '' }}</p>
+        <p><strong>Estado:</strong> {{ vehiculo_consulta.estado or '' }}</p>
+        <p><strong>Fecha de registro:</strong> {{ vehiculo_consulta.fecha_registro or '' }}</p>
+      </div>
+      {% else %}
+      <p class="vehiculos-consulta-empty">No se encontró información para la placa {{ placa_consulta }}.</p>
+      {% endif %}
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

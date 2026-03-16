@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+
+{% block body_class %}espacios-page{% endblock %}
+
+{% block content %}
+<section class="espacios-screen">
+  <div class="espacios-hero">
+    <img class="espacios-hero-logo" src="{{ url_for('static', filename='imagenes/ESCUDO COLOR.png') }}" alt="Logo Universidad de Cundinamarca" />
+    <div class="espacios-hero-actions">
+      <a class="espacios-pill" href="{{ url_for('espacios.list_items') }}">Gestión de Espacios</a>
+    </div>
+  </div>
+
+  <section class="espacios-card">
+    <h2>Editar Espacio</h2>
+    <form method="post" action="{{ url_for('espacios.guardar_edicion', item_id=item.id) }}" class="espacios-edit-form">
+      <label class="form-field-label" for="edit-numero">Número de espacio</label>
+      <input id="edit-numero" name="numero" type="text" value="{{ item.numero or '' }}" required />
+
+      <label class="form-field-label" for="edit-estado">Estado</label>
+      <select id="edit-estado" name="estado" required>
+        <option value="disponible" {% if (item.estado or '')|lower in ['disponible', 'libre', 'dispo'] %}selected{% endif %}>Disponible</option>
+        <option value="ocupado" {% if (item.estado or '')|lower in ['ocupado', 'ocupa', 'ocupada'] %}selected{% endif %}>Ocupado</option>
+        <option value="inhabilitado" {% if (item.estado or '')|lower in ['inhabilitado', 'inactivo', 'bloqueado', 'no_disponible', 'fuera_servicio'] %}selected{% endif %}>Inhabilitado</option>
+      </select>
+
+      <label class="form-field-label" for="edit-tipo">Tipo vehículo (ID)</label>
+      <input id="edit-tipo" name="tipo_vehiculo_id" type="number" value="{{ item.tipo_vehiculo_id or '' }}" />
+
+      <label class="form-field-label" for="edit-fecha">Fecha actualización</label>
+      <input id="edit-fecha" name="fecha_actualizacion" type="datetime-local" value="{{ item.fecha_actualizacion or '' }}" />
+
+      <button type="submit" class="espacios-primary-btn">Guardar cambios</button>
+    </form>
+  </section>
+</section>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block body_class %}novedades-page{% endblock %}
+
+{% block content %}
+<section class="novedades-screen">
+  <div class="novedades-hero">
+    <img class="novedades-hero-logo" src="{{ url_for('static', filename='imagenes/ESCUDO COLOR.png') }}" alt="Logo Universidad de Cundinamarca" />
+    <div class="novedades-hero-actions">
+      <a class="novedades-pill" href="{{ url_for('novedades.index') }}">Registro de Novedades</a>
+      <a class="novedades-pill novedades-pill-active" href="{{ url_for('main.dashboard') }}">Panel de Control</a>
+    </div>
+  </div>
+
+  <section class="card novedades-gestion-card">
+    <h2>Gestión de Novedades</h2>
+    <p>Visualización y consulta de novedades registradas por usuarios y personal de vigilancia.</p>
+
+    <div class="table-wrap">
+      <table class="users-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Tipo</th>
+            <th>Placa</th>
+            <th>Estado</th>
+            <th>Fecha/Hora</th>
+            <th>Observaciones</th>
+            <th>Usuario ID</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for n in items %}
+          <tr>
+            <td>{{ n.id }}</td>
+            <td>{{ n.tipo_novedad or '' }}</td>
+            <td>{{ n.placa or '' }}</td>
+            <td>{{ n.estado or '' }}</td>
+            <td>{{ n.fecha_hora or '' }}</td>
+            <td>{{ n.observaciones or '' }}</td>
+            <td>{{ n.id_usuario or '' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</section>
+{% endblock %}

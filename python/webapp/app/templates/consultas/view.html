@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block body_class %}consultas-page{% endblock %}
+
+{% block content %}
+<section class="consultas-screen">
+  <div class="consultas-hero">
+    <img class="consultas-hero-logo" src="{{ url_for('static', filename='imagenes/ESCUDO COLOR.png') }}" alt="Logo Universidad de Cundinamarca" />
+    <div class="consultas-hero-actions consultas-hero-actions-between">
+      <a class="consultas-pill" href="{{ url_for('consultas.index') }}">Consulta por Placa</a>
+      <a class="consultas-pill consultas-pill-active" href="{{ url_for('main.dashboard') }}">Panel de Control</a>
+    </div>
+  </div>
+
+  <section class="consultas-card consultas-detail-card">
+    <h2>Detalle del Vehículo</h2>
+    <div class="consultas-detail-grid">
+      <p><strong>Placa:</strong> {{ item.placa or '' }}</p>
+      <p><strong>Marca:</strong> {{ item.marca or '' }}</p>
+      <p><strong>Modelo:</strong> {{ item.modelo or '' }}</p>
+      <p><strong>Color:</strong> {{ item.color or '' }}</p>
+      <p><strong>Tipo:</strong> {{ item.tipo_vehiculo_nombre or '' }}</p>
+      <p><strong>Estado:</strong> {{ item.estado or '' }}</p>
+      <p><strong>Fecha registro:</strong> {{ item.fecha_registro or '' }}</p>
+      <p><strong>ID:</strong> {{ item.id or '' }}</p>
+    </div>
+  </section>
+</section>
+{% endblock %}

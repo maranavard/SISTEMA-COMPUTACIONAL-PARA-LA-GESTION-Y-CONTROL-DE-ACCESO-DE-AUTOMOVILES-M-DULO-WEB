@@ -6,10 +6,15 @@
   <title>{{ title or 'Sistema Control Vehicular' }}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}" />
 </head>
-<body>
+<body class="{% block body_class %}{% endblock %}">
+  {% block header %}
   <header class="header">
-    <h1>Sistema Control Vehicular UDEC</h1>
+    <div class="header-brand">
+      <img class="header-logo" src="{{ url_for('static', filename='imagenes/ESCUDO COLOR.png') }}" alt="Logo Universidad de Cundinamarca" />
+      <h1>Sistema Control Vehicular UDEC</h1>
+    </div>
   </header>
+  {% endblock %}
 
   <main class="container">
     {% with messages = get_flashed_messages(with_categories=true) %}

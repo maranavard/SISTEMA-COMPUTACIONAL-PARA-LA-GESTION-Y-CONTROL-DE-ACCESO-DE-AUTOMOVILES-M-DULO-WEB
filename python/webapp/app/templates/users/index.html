@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block body_class %}users-page{% endblock %}
+
+{% block content %}
+<section class="users-screen">
+  <div class="users-hero">
+    <img class="users-hero-logo" src="{{ url_for('static', filename='imagenes/ESCUDO COLOR.png') }}" alt="Logo Universidad de Cundinamarca" />
+    <div class="users-hero-actions">
+      <a class="users-pill users-pill-active" href="{{ url_for('main.dashboard') }}">Panel de Control</a>
+    </div>
+  </div>
+
+  <div class="users-register-card">
+    <h2>Formulario de Registro de usuario</h2>
+    <form method="post" action="{{ url_for('users.create_user') }}" class="users-register-form">
+      <input name="nombre" type="text" placeholder="Nombre" required />
+      <input name="apellido" type="text" placeholder="Apellido" required />
+      <input name="username" type="text" placeholder="Nombre de usuario" required />
+      <input name="email" type="email" placeholder="Correo institucional" required />
+      <input name="password" type="password" placeholder="Contraseña" required />
+      <label class="form-field-label" for="user-role">Rol</label>
+      <select id="user-role" name="role" required>
+        <option value="admin_sistema">admin_sistema</option>
+        <option value="seguridad_udec">seguridad_udec</option>
+        <option value="funcionario_area">funcionario_area</option>
+        <option value="conductor_udec" selected>conductor_udec</option>
+      </select>
+      <input name="numero_identificacion" type="text" placeholder="No. Identificación" required />
+      <input type="hidden" name="estado" value="activo" />
+      <button type="submit" class="users-register-btn">Registrar</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

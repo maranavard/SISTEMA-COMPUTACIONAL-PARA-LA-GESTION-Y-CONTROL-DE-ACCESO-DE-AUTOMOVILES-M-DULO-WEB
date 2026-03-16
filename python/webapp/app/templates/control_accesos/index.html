@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+
+{% block body_class %}control-accesos-page{% endblock %}
+
+{% block content %}
+<section class="control-accesos-screen">
+  <div class="control-accesos-hero">
+    <img class="control-accesos-hero-logo" src="{{ url_for('static', filename='imagenes/ESCUDO COLOR.png') }}" alt="Logo Universidad de Cundinamarca" />
+    <div class="control-accesos-hero-actions">
+      <a class="control-accesos-pill control-accesos-pill-active" href="{{ url_for('main.dashboard') }}">Panel de Control</a>
+    </div>
+  </div>
+
+  <section class="control-accesos-card control-accesos-register-card">
+    <h2>Control de Accesos</h2>
+    <form method="post" action="{{ url_for('control_accesos.registrar') }}" class="control-accesos-form">
+      <input name="identidad" type="text" placeholder="Placa , Nombre , Apellido" required />
+      <input name="usuario" type="text" placeholder="Usuario" required />
+      <input name="espacio" type="text" placeholder="Espacio" required />
+      <div class="control-accesos-date-row">
+        <label class="form-field-label" for="acceso-fecha">Fecha/ Hora</label>
+        <input id="acceso-fecha" name="fecha_hora" type="datetime-local" required />
+      </div>
+      <input name="accion" type="text" placeholder="Acción" required />
+      <input name="movimiento" type="text" placeholder="Entrada" value="Entrada" required />
+
+      <button type="submit" class="control-accesos-btn">Registrar</button>
+      <a class="control-accesos-btn" href="{{ url_for('control_accesos.historial') }}">Historial de Accesos</a>
+    </form>
+  </section>
+</section>
+{% endblock %}

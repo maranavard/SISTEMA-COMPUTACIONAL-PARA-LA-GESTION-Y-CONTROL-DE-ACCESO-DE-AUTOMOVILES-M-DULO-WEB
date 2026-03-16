@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block body_class %}reportes-page{% endblock %}
+
+{% block content %}
+<section class="reportes-screen">
+  <div class="reportes-hero">
+    <img class="reportes-hero-logo" src="{{ url_for('static', filename='imagenes/ESCUDO COLOR.png') }}" alt="Logo Universidad de Cundinamarca" />
+    <div class="reportes-hero-actions">
+      <a class="reportes-pill reportes-pill-active" href="{{ url_for('main.dashboard') }}">Panel de Control</a>
+    </div>
+  </div>
+
+  <section class="reportes-card">
+    <h2>Gestión de Reportes</h2>
+
+    <div class="table-wrap">
+      <table class="users-table reportes-table">
+        <thead>
+          <tr>
+            <th>Módulo</th>
+            <th>Descripción</th>
+            <th>Parámetros</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for module in modules %}
+          <tr>
+            <td>{{ module.label }}</td>
+            <td>{{ module.description }}</td>
+            <td>{{ module.parameters }}</td>
+            <td>
+              <div class="reportes-actions">
+                <a class="report-icon-btn" href="{{ url_for('reportes.descargar_excel', module_key=module.key) }}" title="Descargar Excel" aria-label="Descargar Excel">
+                  <span aria-hidden="true">⤓</span>
+                </a>
+                <a class="report-icon-btn" href="{{ url_for('reportes.imprimir', module_key=module.key) }}" title="Imprimir / PDF" aria-label="Imprimir / PDF" target="_blank" rel="noopener noreferrer">
+                  <span aria-hidden="true">🖨</span>
+                </a>
+                <a class="report-icon-btn" href="{{ url_for('reportes.visualizar', module_key=module.key) }}" title="Visualizar" aria-label="Visualizar">
+                  <span aria-hidden="true">👁</span>
+                </a>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</section>
+{% endblock %}
