@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
-import csv
+import json
+from datetime import date, datetime
 from functools import wraps
-from io import StringIO
+from io import BytesIO
 
 from flask import Blueprint, Response, abort, flash, redirect, render_template, url_for
 from flask_login import current_user, login_required
+from openpyxl import Workbook
 
 from app.models.novedad import Novedad
 from app.models.vehiculo import Vehiculo
@@ -121,6 +123,16 @@ def _load_rows(module_key: str) -> tuple[dict, list[dict], list[str]]:
     return definition, rows, columns
 
 
+def _excel_cell_value(value):
+    if isinstance(value, datetime):
+        return value.strftime("%Y-%m-%d %H:%M:%S")
+    if isinstance(value, date):
+        return value.strftime("%Y-%m-%d")
+    if isinstance(value, (dict, list)):
+        return json.dumps(value, ensure_ascii=False)
+    return "" if value is None else str(value)
+
+
 @reportes_bp.get("/")
 @login_required
 @control_access_required
@@ -182,19 +194,22 @@ def descargar_excel(module_key: str):
         flash(f"No se pudo generar el archivo Excel: {exc}", "error")
         return redirect(url_for("reportes.gestion"))
 
-    output = StringIO()
-    writer = csv.writer(output)
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "Reporte"
 
     if columns:
-        writer.writerow(columns)
+        sheet.append(columns)
         for row in rows:
-            writer.writerow([row.get(column, "") for column in columns])
+            sheet.append([_excel_cell_value(row.get(column, "")) for column in columns])
 
-    csv_bytes = output.getvalue().encode("utf-8-sig")
-    filename = f"reporte_{module_key}.csv"
+    output = BytesIO()
+    workbook.save(output)
+    output.seek(0)
+    filename = f"reporte_{module_key}.xlsx"
 
     headers = {
         "Content-Disposition": f"attachment; filename={filename}",
-        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     }
-    return Response(csv_bytes, headers=headers)
+    return Response(output.getvalue(), headers=headers)

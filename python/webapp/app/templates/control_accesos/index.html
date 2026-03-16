@@ -28,5 +28,19 @@
       <a class="control-accesos-btn" href="{{ url_for('control_accesos.historial') }}">Historial de Accesos</a>
     </form>
   </section>
+
+  <section class="control-accesos-card control-accesos-register-card">
+    <h2>Validación de Acceso Vehicular</h2>
+    <form method="post" action="{{ url_for('control_accesos.registrar_vehicular') }}" class="control-accesos-form">
+      <input name="placa" type="text" placeholder="Placa del vehículo" required />
+      <label class="form-field-label" for="vehicular-movimiento">Movimiento</label>
+      <select id="vehicular-movimiento" name="movimiento" required>
+        <option value="entrada">Entrada</option>
+        <option value="salida">Salida</option>
+      </select>
+      <button type="submit" class="control-accesos-btn">Validar Acceso</button>
+      <a class="control-accesos-btn" href="{{ url_for('control_accesos.historial') }}">Historial de Accesos</a>
+    </form>
+  </section>
 </section>
 {% endblock %}

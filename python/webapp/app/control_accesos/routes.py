@@ -5,6 +5,8 @@ from functools import wraps
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
+from app.models.novedad import Novedad
+from app.models.vehiculo import Vehiculo
 from app.models.visitante import Visitante
 
 
@@ -106,6 +108,53 @@ def registrar():
         return redirect(url_for("control_accesos.index"))
 
     return redirect(url_for("control_accesos.autorizacion", documento=usuario))
+
+
+@control_accesos_bp.post("/vehicular")
+@login_required
+@control_access_required
+def registrar_vehicular():
+    placa = (request.form.get("placa", "") or "").strip().upper()
+    movimiento = (request.form.get("movimiento", "entrada") or "entrada").strip().lower()
+
+    if not placa:
+        flash("Debes indicar la placa para validar el acceso vehicular.", "error")
+        return redirect(url_for("control_accesos.index"))
+
+    try:
+        if movimiento in {"entrada", "ingreso"}:
+            doc_status = Vehiculo.get_document_status_by_placa(placa=placa, warning_days=30)
+            level = (doc_status.get("level") or "").strip().lower()
+            message = (doc_status.get("message") or "").strip()
+            block_auto = bool(doc_status.get("block_automatic_assignment"))
+
+            if message and level in {"warning", "error"}:
+                flash(message, "warning" if level == "warning" else "error")
+
+            if block_auto:
+                return redirect(url_for("control_accesos.index"))
+
+            result = Novedad.register_ingreso_by_placa(placa=placa, user_id=int(current_user.id))
+            assigned_space = result.get("assigned_space_num")
+            if not assigned_space:
+                flash("No hay espacios disponibles para permitir el ingreso.", "error")
+                return redirect(url_for("control_accesos.index"))
+
+            flash(f"Ingreso validado para {placa}. Cupo asignado: {assigned_space}.", "success")
+            return redirect(url_for("espacios.list_items", assigned_space=assigned_space, assigned_plate=placa))
+
+        Novedad.register_salida_by_placa(placa=placa, user_id=int(current_user.id), observaciones="Salida validada en control de accesos")
+        flash(f"Salida validada correctamente para la placa {placa}.", "success")
+    except Exception as exc:
+        error_text = str(exc)
+        if "No hay espacios disponibles" in error_text:
+            flash("No hay espacios disponibles para permitir el ingreso.", "error")
+        elif "placa" in error_text.lower() or "vehículo" in error_text.lower() or "vehiculo" in error_text.lower():
+            flash("La placa no está registrada en el sistema.", "error")
+        else:
+            flash(f"No se pudo validar el acceso vehicular: {exc}", "error")
+
+    return redirect(url_for("control_accesos.index"))
 
 
 @control_accesos_bp.get("/historial")

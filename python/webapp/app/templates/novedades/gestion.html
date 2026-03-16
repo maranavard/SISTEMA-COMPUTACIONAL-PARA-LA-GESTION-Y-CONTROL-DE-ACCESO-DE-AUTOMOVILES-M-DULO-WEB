@@ -16,6 +16,17 @@
     <h2>Gestión de Novedades</h2>
     <p>Visualización y consulta de novedades registradas por usuarios y personal de vigilancia.</p>
 
+    <form method="get" action="{{ url_for('novedades.gestion') }}" class="users-form" style="margin-bottom: 1rem;">
+      <input name="placa" type="text" placeholder="Filtrar por placa" value="{{ (filtros.placa if filtros else '') or '' }}" />
+      <input name="tipo" type="text" placeholder="Filtrar por tipo" value="{{ (filtros.tipo if filtros else '') or '' }}" />
+      <label class="form-field-label" for="novedad-fecha-desde">Desde</label>
+      <input id="novedad-fecha-desde" name="fecha_desde" type="date" value="{{ (filtros.fecha_desde if filtros else '') or '' }}" />
+      <label class="form-field-label" for="novedad-fecha-hasta">Hasta</label>
+      <input id="novedad-fecha-hasta" name="fecha_hasta" type="date" value="{{ (filtros.fecha_hasta if filtros else '') or '' }}" />
+      <button type="submit">Filtrar</button>
+      <a href="{{ url_for('novedades.gestion') }}">Limpiar</a>
+    </form>
+
     <div class="table-wrap">
       <table class="users-table">
         <thead>
@@ -39,6 +50,10 @@
             <td>{{ n.fecha_hora or '' }}</td>
             <td>{{ n.observaciones or '' }}</td>
             <td>{{ n.id_usuario or '' }}</td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="7">No se encontraron novedades con los filtros seleccionados.</td>
           </tr>
           {% endfor %}
         </tbody>

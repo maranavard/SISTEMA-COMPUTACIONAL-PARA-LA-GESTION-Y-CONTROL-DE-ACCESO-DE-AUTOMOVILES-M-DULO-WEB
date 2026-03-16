@@ -1,5 +1,6 @@
 """Módulo de novedades: ingreso/salida por placa y consulta histórica."""
 
+from datetime import datetime
 from functools import wraps
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
@@ -77,5 +78,58 @@ def registrar_novedad():
 @login_required
 @control_access_required
 def gestion():
-    items = Novedad.list_recent(limit=120)
-    return render_template("novedades/gestion.html", items=items)
+    placa = (request.args.get("placa", "") or "").strip().upper()
+    tipo = (request.args.get("tipo", "") or "").strip().lower()
+    fecha_desde_raw = (request.args.get("fecha_desde", "") or "").strip()
+    fecha_hasta_raw = (request.args.get("fecha_hasta", "") or "").strip()
+
+    items = Novedad.list_recent(limit=300)
+
+    if placa:
+        items = [
+            item for item in items
+            if placa in str(item.get("placa") or "").upper()
+        ]
+
+    if tipo:
+        items = [
+            item for item in items
+            if tipo in str(item.get("tipo_novedad") or "").lower()
+        ]
+
+    fecha_desde = None
+    fecha_hasta = None
+    try:
+        if fecha_desde_raw:
+            fecha_desde = datetime.strptime(fecha_desde_raw, "%Y-%m-%d").date()
+        if fecha_hasta_raw:
+            fecha_hasta = datetime.strptime(fecha_hasta_raw, "%Y-%m-%d").date()
+    except ValueError:
+        flash("Formato de fecha inválido en filtros. Usa AAAA-MM-DD.", "error")
+
+    if fecha_desde or fecha_hasta:
+        filtered = []
+        for item in items:
+            fecha_item = item.get("fecha_hora")
+            if not fecha_item:
+                continue
+            fecha_item_date = fecha_item.date() if hasattr(fecha_item, "date") else None
+            if not fecha_item_date:
+                continue
+            if fecha_desde and fecha_item_date < fecha_desde:
+                continue
+            if fecha_hasta and fecha_item_date > fecha_hasta:
+                continue
+            filtered.append(item)
+        items = filtered
+
+    return render_template(
+        "novedades/gestion.html",
+        items=items,
+        filtros={
+            "placa": placa,
+            "tipo": tipo,
+            "fecha_desde": fecha_desde_raw,
+            "fecha_hasta": fecha_hasta_raw,
+        },
+    )
