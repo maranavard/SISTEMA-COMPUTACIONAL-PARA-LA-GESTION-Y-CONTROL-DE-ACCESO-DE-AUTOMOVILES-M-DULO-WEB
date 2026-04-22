@@ -1,0 +1,28 @@
+@startuml
+actor Vigilante
+participant "UI Web" as UI
+participant "ControlAccesosRoutes" as C
+participant "VehiculoModel" as V
+participant "NovedadModel" as N
+database "PostgreSQL" as DB
+
+Vigilante -> UI : Placa + tipo movimiento
+UI -> C : POST /control-accesos/vehicular
+C -> V : validar documentacion por placa
+V -> DB : SELECT vehiculo/conductor/documentos
+DB --> V : estado documental
+alt ingreso permitido
+  C -> N : register_ingreso_by_placa()
+  N -> DB : asignar cupo + registrar novedad
+  DB --> N : resultado
+  N --> C : cupo asignado
+  C --> UI : ingreso validado
+else salida
+  C -> N : register_salida_by_placa()
+  N -> DB : INSERT salida
+  DB --> N : ok
+  C --> UI : salida validada
+else bloqueado
+  C --> UI : mensaje de rechazo
+end
+@enduml

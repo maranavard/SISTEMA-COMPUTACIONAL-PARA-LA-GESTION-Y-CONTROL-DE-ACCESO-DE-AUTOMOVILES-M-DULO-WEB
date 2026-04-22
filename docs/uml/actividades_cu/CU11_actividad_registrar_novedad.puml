@@ -1,0 +1,12 @@
+@startuml
+title CU11 Registrar novedad
+start
+:Abrir formulario de novedad;
+:Diligenciar datos;
+if (Datos completos) then (Si)
+  :Guardar novedad en historial;
+else (No)
+  :Mostrar campos requeridos;
+endif
+stop
+@enduml

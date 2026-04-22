@@ -1,0 +1,15 @@
+@startuml
+actor Administrador
+participant "UI Web" as UI
+participant "NovedadesRoutes" as R
+participant "NovedadModel" as N
+database "PostgreSQL" as DB
+
+Administrador -> UI : Definir filtros
+UI -> R : GET historial con filtros
+R -> N : ejecutar busqueda filtrada
+N -> DB : SELECT con filtros
+DB --> N : registros
+N --> R : historial
+R --> UI : tabla de novedades
+@enduml

@@ -12,6 +12,7 @@ from flask import current_app
 from flask_login import current_user, login_user, logout_user
 
 from app.models.user import User
+from app.utils.field_validators import is_valid_cedula, is_valid_email, normalize_cedula, normalize_email
 
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
@@ -117,15 +118,23 @@ def register_post():
         return redirect(url_for("main.dashboard"))
 
     username = (request.form.get("username", "") or "").strip()
-    email = (request.form.get("email", "") or "").strip()
+    email = normalize_email(request.form.get("email", ""))
     password = (request.form.get("password", "") or "").strip()
     confirm_password = (request.form.get("confirm_password", "") or "").strip()
     nombre = (request.form.get("nombre", "") or "").strip()
     apellido = (request.form.get("apellido", "") or "").strip()
-    numero_identificacion = (request.form.get("numero_identificacion", "") or "").strip()
+    numero_identificacion = normalize_cedula(request.form.get("numero_identificacion", ""))
 
     if not username or not email or not password:
         flash("Usuario, correo y contraseña son obligatorios.", "error")
+        return redirect(url_for("auth.register"))
+
+    if not is_valid_email(email):
+        flash("Formato de correo inválido. Usa un correo válido (ej: usuario@dominio.com).", "error")
+        return redirect(url_for("auth.register"))
+
+    if numero_identificacion and not is_valid_cedula(numero_identificacion):
+        flash("Formato de cédula inválido. Debe contener solo números (6 a 12 dígitos).", "error")
         return redirect(url_for("auth.register"))
 
     if len(password) < 6:
@@ -191,9 +200,13 @@ def forgot_password():
 
 @auth_bp.post("/forgot-password")
 def forgot_password_post():
-    email = (request.form.get("email", "") or "").strip()
+    email = normalize_email(request.form.get("email", ""))
     if not email:
         flash("Debes ingresar el correo registrado.", "error")
+        return redirect(url_for("auth.forgot_password"))
+
+    if not is_valid_email(email):
+        flash("Formato de correo inválido. Usa un correo válido (ej: usuario@dominio.com).", "error")
         return redirect(url_for("auth.forgot_password"))
 
     user = User.get_by_email(email)

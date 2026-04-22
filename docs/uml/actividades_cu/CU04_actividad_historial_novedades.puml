@@ -1,0 +1,12 @@
+@startuml
+title CU04 Consultar historial de novedades
+start
+:Ingresar al historial;
+:Aplicar filtros placa/tipo/fecha;
+if (Existen resultados) then (Si)
+  :Mostrar historial filtrado;
+else (No)
+  :Mostrar lista vacia;
+endif
+stop
+@enduml

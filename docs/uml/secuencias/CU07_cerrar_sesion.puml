@@ -1,0 +1,11 @@
+@startuml
+actor Usuario
+participant "UI Web" as UI
+participant "AuthRoutes" as A
+participant "Flask-Login" as L
+
+Usuario -> UI : Clic en Cerrar sesion
+UI -> A : GET /logout
+A -> L : logout_user()
+A --> UI : redireccion a login
+@enduml

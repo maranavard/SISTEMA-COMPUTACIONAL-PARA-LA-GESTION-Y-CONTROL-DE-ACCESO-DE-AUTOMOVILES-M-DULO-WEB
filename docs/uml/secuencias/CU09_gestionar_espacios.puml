@@ -1,0 +1,15 @@
+@startuml
+actor Vigilante
+participant "UI Web" as UI
+participant "EspaciosRoutes" as E
+participant "EspacioModel" as M
+database "PostgreSQL" as DB
+
+Vigilante -> UI : Cambiar estado de cupo
+UI -> E : POST actualizacion espacio
+E -> M : update_item()/upsert_by_numero()
+M -> DB : UPDATE/INSERT espacio
+DB --> M : ok/error
+M --> E : resultado
+E --> UI : confirmacion o error
+@enduml

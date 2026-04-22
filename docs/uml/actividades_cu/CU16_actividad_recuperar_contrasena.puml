@@ -1,0 +1,13 @@
+@startuml
+title CU16 Recuperar contrasena
+start
+:Solicitar recuperacion;
+:Enviar enlace por correo;
+:Ingresar nueva contrasena;
+if (Token vigente) then (Si)
+  :Actualizar contrasena;
+else (No)
+  :Solicitar nuevo enlace;
+endif
+stop
+@enduml

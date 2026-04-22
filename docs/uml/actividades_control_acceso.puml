@@ -1,0 +1,39 @@
+@startuml
+start
+:Vigilante inicia proceso de control;
+:Capturar placa y tipo de movimiento
+(entrada/salida);
+
+if (¿Placa informada?) then (Sí)
+  if (¿Movimiento = entrada?) then (Sí)
+    :Validar documentación por placa;
+    if (¿Documentación válida?) then (Sí)
+      :Intentar asignación automática de cupo;
+      if (¿Cupo asignado?) then (Sí)
+        :Registrar novedad de ingreso;
+        :Sincronizar evento local (best effort);
+        :Notificar ingreso aprobado;
+      else (No)
+        :Aplicar fallback manual de espacio;
+        if (¿Espacio disponible?) then (Sí)
+          :Registrar ingreso con fallback;
+          :Notificar cupo asignado;
+        else (No)
+          :Notificar sin disponibilidad;
+        endif
+      endif
+    else (No)
+      :Bloquear asignación automática;
+      :Notificar validación manual requerida;
+    endif
+  else (No)
+    :Registrar salida por placa;
+    :Sincronizar evento local (best effort);
+    :Notificar salida registrada;
+  endif
+else (No)
+  :Mostrar error por falta de placa;
+endif
+
+stop
+@enduml

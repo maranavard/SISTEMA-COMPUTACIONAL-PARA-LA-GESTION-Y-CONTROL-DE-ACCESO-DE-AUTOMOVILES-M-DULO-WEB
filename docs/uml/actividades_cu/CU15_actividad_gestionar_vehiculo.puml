@@ -1,0 +1,12 @@
+@startuml
+title CU15 Gestionar vehiculo propio
+start
+:Abrir modulo Vehiculos;
+:Crear/editar registro;
+if (Placa disponible) then (Si)
+  :Guardar vehiculo;
+else (No)
+  :Mostrar placa duplicada;
+endif
+stop
+@enduml

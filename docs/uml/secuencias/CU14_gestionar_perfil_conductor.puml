@@ -1,0 +1,15 @@
+@startuml
+actor Estudiante
+participant "UI Web" as UI
+participant "ConductoresRoutes" as C
+participant "ConductorModel" as M
+database "PostgreSQL" as DB
+
+Estudiante -> UI : Editar perfil conductor
+UI -> C : POST actualizacion
+C -> M : update_item()
+M -> DB : UPDATE conductores
+DB --> M : ok/error
+M --> C : resultado
+C --> UI : confirmacion
+@enduml

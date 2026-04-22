@@ -33,6 +33,28 @@ def create_app() -> Flask:
     # Inicializa manejo de sesiones/autenticación.
     login_manager.init_app(app)
 
+    @app.template_filter("role_label")
+    def role_label(value):
+        role = (str(value or "").strip().lower())
+        if not role:
+            return ""
+
+        labels = {
+            "admin_sistema": "Administrador del sistema",
+            "admin": "Administrador",
+            "administrador": "Administrador",
+            "seguridad_udec": "Seguridad UDEC",
+            "funcionario_area": "Funcionario de área",
+            "conductor_udec": "Conductor UDEC",
+            "estudiante_udec": "Estudiante UDEC",
+            "visitante_udec": "Visitante UDEC",
+        }
+
+        if role in labels:
+            return labels[role]
+
+        return role.replace("_", " ").strip().title()
+
     # Import local para evitar ciclos de importación.
     from .auth.routes import auth_bp
     from .main.routes import main_bp
@@ -45,6 +67,8 @@ def create_app() -> Flask:
     from .reportes.routes import reportes_bp
     from .consultas.routes import consultas_bp
     from .control_accesos.routes import control_accesos_bp
+    from .horarios.routes import horarios_bp
+    from .areas.routes import areas_bp
 
     # Registro de módulos de rutas.
     app.register_blueprint(auth_bp)
@@ -58,5 +82,7 @@ def create_app() -> Flask:
     app.register_blueprint(reportes_bp)
     app.register_blueprint(consultas_bp)
     app.register_blueprint(control_accesos_bp)
+    app.register_blueprint(horarios_bp)
+    app.register_blueprint(areas_bp)
 
     return app

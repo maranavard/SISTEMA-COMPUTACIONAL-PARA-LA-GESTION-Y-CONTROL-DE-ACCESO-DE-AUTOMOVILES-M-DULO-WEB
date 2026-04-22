@@ -16,6 +16,35 @@
     <h2>Reporte de {{ report.label }}</h2>
     <p class="reportes-subtitle">{{ report.description }}</p>
 
+    {% if not printable %}
+    <form method="get" action="{{ url_for('reportes.visualizar', module_key=module_key) }}" class="users-form">
+      <div class="grid-two">
+        <input name="placa" type="text" placeholder="Filtrar por placa" value="{{ filters.placa or '' }}" />
+        <input name="fecha" type="date" value="{{ filters.fecha or '' }}" />
+        <input name="usuario" type="text" placeholder="Filtrar por usuario" value="{{ filters.usuario or '' }}" />
+        <input name="vigilante" type="text" placeholder="Filtrar por vigilante" value="{{ filters.vigilante or '' }}" />
+      </div>
+      <div class="reportes-actions" style="margin-top: 0.65rem;">
+        <button type="submit">Buscar</button>
+        <a class="report-icon-btn" href="{{ url_for('reportes.visualizar', module_key=module_key) }}" title="Limpiar filtros" aria-label="Limpiar filtros"><span aria-hidden="true">⟲</span></a>
+        <a
+          class="report-icon-btn"
+          href="{{ url_for('reportes.descargar_excel', module_key=module_key, placa=filters.placa, fecha=filters.fecha, usuario=filters.usuario, vigilante=filters.vigilante) }}"
+          title="Descargar Excel"
+          aria-label="Descargar Excel"
+        ><span aria-hidden="true">⤓</span></a>
+        <a
+          class="report-icon-btn"
+          href="{{ url_for('reportes.imprimir', module_key=module_key, placa=filters.placa, fecha=filters.fecha, usuario=filters.usuario, vigilante=filters.vigilante) }}"
+          title="Imprimir / PDF"
+          aria-label="Imprimir / PDF"
+          target="_blank"
+          rel="noopener noreferrer"
+        ><span aria-hidden="true">🖨</span></a>
+      </div>
+    </form>
+    {% endif %}
+
     <div class="table-wrap">
       <table class="users-table reportes-table">
         <thead>

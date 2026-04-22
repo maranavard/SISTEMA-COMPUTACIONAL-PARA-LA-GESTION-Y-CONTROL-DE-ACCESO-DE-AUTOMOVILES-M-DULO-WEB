@@ -1,0 +1,22 @@
+@startuml
+actor Usuario
+participant "UI Web" as UI
+participant "AuthRoutes" as A
+participant "UserModel" as U
+participant "Flask-Login" as L
+database "PostgreSQL" as DB
+
+Usuario -> UI : Usuario + contrasena
+UI -> A : POST /login
+A -> U : get_by_username()
+U -> DB : SELECT usuario
+DB --> U : registro
+U --> A : usuario
+A -> U : verify_password()
+alt valido
+  A -> L : login_user()
+  A --> UI : redireccion a dashboard
+else invalido
+  A --> UI : mensaje de error
+end
+@enduml

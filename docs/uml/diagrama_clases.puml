@@ -1,0 +1,108 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+class User <<model>> {
+  +id: int
+  +username: str
+  +password: str
+  +rol: str
+  +get_by_id(user_id): User
+  +get_by_username(username): User
+  +get_by_email(email): User
+  +list_users(): list
+  +create_user(...)
+  +update_user(...)
+  +update_password(...)
+  +verify_password(candidate_password): bool
+}
+
+class Vehiculo <<model>> {
+  +list_items(): list
+  +get_by_id(item_id): dict
+  +get_by_placa(placa): dict
+  +create_item(data)
+  +update_item(item_id, data)
+  +delete_item(item_id)
+  +get_document_status_by_placa(placa, warning_days): dict
+}
+
+class Novedad <<model>> {
+  +list_recent(limit): list
+  +register_ingreso_by_placa(placa, user_id): dict
+  +register_salida_by_placa(placa, user_id, observaciones): int
+  +create_reporte(payload): int
+  -_assign_space_manual_fallback(placa, user_id): dict
+  -_insert_ingreso_novedad(...)
+}
+
+class Espacio <<model>> {
+  +list_items(): list
+  +get_by_numero(numero): dict
+  +get_by_id(item_id): dict
+  +upsert_by_numero(data)
+  +build_slots(total_slots): list
+  +slot_summary(slots): dict
+  +adapt_estado_for_db(requested_estado): tuple
+}
+
+class Visitante <<model>> {
+  +list_items(): list
+  +create_item(data)
+  +update_item(item_id, data)
+}
+
+class Conductor <<model>> {
+  +list_items(): list
+  +create_item(data)
+  +update_item(item_id, data)
+}
+
+class LocalSyncService <<service>> {
+  +sync_event(entidad, operacion, payload): dict
+  +retry_pending(limit): dict
+  +enqueue_pending(entidad, operacion, payload, error_text)
+  -_apply_to_local(entidad, operacion, payload)
+  -_sync_vehiculo(local_conn, payload)
+  -_sync_novedad(local_conn, payload)
+}
+
+class DB <<infra>> {
+  +get_connection()
+  +get_local_connection()
+}
+
+class AuthZ <<security>> {
+  +normalize_role(role_value): str
+  +roles_required(allowed_roles)
+  +admin_required(view_func)
+  +community_required(view_func)
+}
+
+class AuthRoutes <<blueprint>>
+class ControlAccesosRoutes <<blueprint>>
+class ReportesRoutes <<blueprint>>
+class ConsultasRoutes <<blueprint>>
+class MainRoutes <<blueprint>>
+
+User ..> DB
+Vehiculo ..> DB
+Novedad ..> DB
+Espacio ..> DB
+Visitante ..> DB
+Conductor ..> DB
+LocalSyncService ..> DB
+
+Vehiculo ..> LocalSyncService
+Novedad ..> LocalSyncService
+Novedad ..> Espacio
+
+AuthRoutes ..> User
+AuthRoutes ..> AuthZ
+ControlAccesosRoutes ..> Vehiculo
+ControlAccesosRoutes ..> Novedad
+ControlAccesosRoutes ..> Visitante
+ReportesRoutes ..> Novedad
+ReportesRoutes ..> Vehiculo
+ConsultasRoutes ..> Vehiculo
+MainRoutes ..> AuthZ
+@enduml

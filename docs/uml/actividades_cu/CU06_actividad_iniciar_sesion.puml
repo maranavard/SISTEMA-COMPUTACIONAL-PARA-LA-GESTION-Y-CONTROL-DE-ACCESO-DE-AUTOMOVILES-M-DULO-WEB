@@ -1,0 +1,12 @@
+@startuml
+title CU06 Iniciar sesion
+start
+:Ingresar credenciales;
+:Validar usuario y clave;
+if (Credenciales validas) then (Si)
+  :Abrir dashboard por rol;
+else (No)
+  :Mostrar error de autenticacion;
+endif
+stop
+@enduml

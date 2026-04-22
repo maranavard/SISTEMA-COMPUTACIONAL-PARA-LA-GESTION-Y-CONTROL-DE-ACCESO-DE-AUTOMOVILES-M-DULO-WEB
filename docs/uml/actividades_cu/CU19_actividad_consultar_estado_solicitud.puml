@@ -1,0 +1,12 @@
+@startuml
+title CU19 Consultar estado de solicitud
+start
+:Ingresar documento/datos;
+:Consultar estado;
+if (Registro encontrado) then (Si)
+  :Mostrar pendiente/aprobado/rechazado;
+else (No)
+  :Mostrar no autorizado;
+endif
+stop
+@enduml

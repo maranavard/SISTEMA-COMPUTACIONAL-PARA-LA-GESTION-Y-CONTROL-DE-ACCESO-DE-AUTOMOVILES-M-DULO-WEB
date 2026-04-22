@@ -17,7 +17,7 @@
       <p><strong>ID:</strong> {{ item.id or '' }}</p>
       <p><strong>Número:</strong> {{ item.numero or '' }}</p>
       <p><strong>Estado:</strong> {{ item.estado or '' }}</p>
-      <p><strong>Tipo Vehículo (ID):</strong> {{ item.tipo_vehiculo_id or '' }}</p>
+      <p><strong>Tipo de Vehículo:</strong> {{ item.tipo_vehiculo_nombre or item.tipo_vehiculo_id or '' }}</p>
       <p><strong>Fecha actualización:</strong> {{ item.fecha_actualizacion or '' }}</p>
     </div>
   </section>

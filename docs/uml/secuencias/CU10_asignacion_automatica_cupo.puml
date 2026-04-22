@@ -1,0 +1,21 @@
+@startuml
+actor Vigilante
+participant "ControlAccesosRoutes" as C
+participant "NovedadModel" as N
+participant "EspacioModel" as E
+database "PostgreSQL" as DB
+
+Vigilante -> C : Solicitar ingreso por placa
+C -> N : register_ingreso_by_placa()
+N -> DB : funcion SQL asignacion automatica
+alt asignacion automatica exitosa
+  DB --> N : cupo asignado
+else sin respuesta util
+  N -> E : build_slots() y elegir disponible
+  E -> DB : consultar/actualizar cupo
+  DB --> E : ok
+  N -> DB : insertar novedad ingreso
+end
+N --> C : cupo final
+C --> Vigilante : notificacion de asignacion
+@enduml

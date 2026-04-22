@@ -16,8 +16,13 @@
     <form method="post" action="{{ url_for('visitantes.create_item') }}" class="visitantes-register-form">
       <input name="nombres" type="text" placeholder="Nombre" required />
       <input name="apellidos" type="text" placeholder="Apellido" required />
-      <input name="numero_identificacion" type="text" placeholder="No. Identificación" required />
-      <input name="area_destino" type="text" placeholder="Área Destino" required />
+      <input name="numero_identificacion" type="text" placeholder="No. Identificación" inputmode="numeric" pattern="[0-9]{6,12}" title="Solo números, entre 6 y 12 dígitos" required />
+      <select name="area_destino" required>
+        <option value="" selected disabled>Selecciona Area Destino</option>
+        {% for area in areas_destino %}
+        <option value="{{ area }}">{{ area }}</option>
+        {% endfor %}
+      </select>
       <input name="motivo_visita" type="text" placeholder="Motivo de visita" required />
       <input name="placa" type="text" placeholder="No. Placa" />
       <label class="form-field-label" for="visitante-fecha-registro">Fecha y hora del Registro</label>

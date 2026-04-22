@@ -1,0 +1,15 @@
+@startuml
+actor Administrador
+participant "UI Web" as UI
+participant "ReportesRoutes" as R
+participant "Generador Excel/PDF" as G
+database "PostgreSQL" as DB
+
+Administrador -> UI : Exportar reporte
+UI -> R : GET exportacion
+R -> DB : consultar datos
+DB --> R : datos
+R -> G : construir archivo
+G --> R : archivo listo
+R --> UI : descarga XLSX / vista imprimible PDF
+@enduml

@@ -66,8 +66,13 @@
           <option value="inhabilitado">Inhabilitado</option>
         </select>
 
-        <label class="form-field-label" for="espacio-tipo">Tipo vehículo (ID)</label>
-        <input id="espacio-tipo" name="tipo_vehiculo_id" type="number" placeholder="Ej: 1" />
+        <label class="form-field-label" for="espacio-tipo">Tipo de vehículo</label>
+        <select id="espacio-tipo" name="tipo_vehiculo_id">
+          <option value="">Seleccione tipo de vehículo</option>
+          {% for tipo in tipos_vehiculo %}
+          <option value="{{ tipo.id }}">{{ tipo.nombre }}</option>
+          {% endfor %}
+        </select>
 
         <button type="submit" class="espacios-primary-btn">Registrar / Actualizar</button>
       </form>
@@ -104,8 +109,19 @@
             <td class="espacios-action-icons">
               <div class="espacios-action-buttons">
                 <a class="espacios-action-icon" href="{{ url_for('espacios.editar_item', item_id=item.id) }}" title="Editar" aria-label="Editar"><span aria-hidden="true">✎</span></a>
-                <form method="post" action="{{ url_for('espacios.borrar_item', item_id=item.id) }}" class="espacios-inline-form">
-                  <button type="submit" class="espacios-action-icon" title="Borrar" aria-label="Borrar" onclick="return confirm('¿Seguro que deseas eliminar este espacio?');"><span aria-hidden="true">🗑</span></button>
+                <form method="post" action="{{ url_for('control_accesos.registrar_vehicular') }}" class="espacios-inline-form">
+                  <input type="hidden" name="movimiento" value="salida" />
+                  <input type="hidden" name="placa" value="{{ item.placa_salida or '' }}" />
+                  <button
+                    type="submit"
+                    class="espacios-action-icon"
+                    title="Salida"
+                    aria-label="Salida"
+                    {% if not item.placa_salida %}disabled{% endif %}
+                    onclick="return confirm('¿Confirmas registrar la salida de este vehículo?');"
+                  >
+                    <span aria-hidden="true">↪</span>
+                  </button>
                 </form>
                 <a class="espacios-action-icon" href="{{ url_for('espacios.visualizar_item', item_id=item.id) }}" title="Visualizar" aria-label="Visualizar"><span aria-hidden="true">👁</span></a>
               </div>

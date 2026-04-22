@@ -14,10 +14,10 @@
 
     <form method="post" action="{{ url_for('auth.register_post') }}" class="form login-form">
       <input name="username" type="text" placeholder="Nombre de usuario" required />
-      <input name="email" type="email" placeholder="Correo institucional" required />
+      <input name="email" type="email" placeholder="Correo institucional" pattern="[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}" title="Ingresa un correo válido (ej: usuario@dominio.com)" required />
       <input name="nombre" type="text" placeholder="Nombre" />
       <input name="apellido" type="text" placeholder="Apellido" />
-      <input name="numero_identificacion" type="text" placeholder="Número de identificación" />
+      <input name="numero_identificacion" type="text" placeholder="Número de identificación" inputmode="numeric" pattern="[0-9]{6,12}" title="Solo números, entre 6 y 12 dígitos" />
       <input name="password" type="password" placeholder="Contraseña (mínimo 6 caracteres)" required />
       <input name="confirm_password" type="password" placeholder="Confirmar contraseña" required />
 

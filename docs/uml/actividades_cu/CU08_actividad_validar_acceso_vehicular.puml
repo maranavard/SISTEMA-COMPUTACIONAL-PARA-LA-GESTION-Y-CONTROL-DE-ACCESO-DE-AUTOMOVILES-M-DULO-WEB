@@ -1,0 +1,14 @@
+@startuml
+title CU08 Validar acceso vehicular
+start
+:Ingresar placa;
+:Seleccionar entrada o salida;
+:Validar documentacion;
+if (Acceso permitido) then (Si)
+  :Registrar movimiento;
+  :Notificar validacion;
+else (No)
+  :Denegar acceso y mostrar motivo;
+endif
+stop
+@enduml

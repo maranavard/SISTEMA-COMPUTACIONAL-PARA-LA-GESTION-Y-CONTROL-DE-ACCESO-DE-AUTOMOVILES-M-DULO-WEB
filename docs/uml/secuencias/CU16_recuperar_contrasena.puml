@@ -1,0 +1,26 @@
+@startuml
+actor Usuario
+participant "UI Web" as UI
+participant "AuthRoutes" as A
+participant "UserModel" as U
+participant "Servicio Correo" as Mail
+database "PostgreSQL" as DB
+
+Usuario -> UI : Solicitar recuperacion
+UI -> A : POST /forgot-password
+A -> U : get_by_email()
+U -> DB : SELECT usuario
+DB --> U : resultado
+alt correo valido
+  A -> Mail : enviar enlace con token
+  A --> UI : mensaje de envio
+  Usuario -> UI : abrir enlace y nueva clave
+  UI -> A : POST /reset-password
+  A -> U : update_password()
+  U -> DB : UPDATE password
+  DB --> U : ok
+  A --> UI : confirmacion
+else no encontrado
+  A --> UI : mensaje de error
+end
+@enduml

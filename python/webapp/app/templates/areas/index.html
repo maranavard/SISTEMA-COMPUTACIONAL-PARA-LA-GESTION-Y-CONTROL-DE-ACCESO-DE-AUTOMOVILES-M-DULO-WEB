@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block body_class %}users-page{% endblock %}
+
+{% block content %}
+<section class="users-screen">
+  <div class="users-hero">
+    <img class="users-hero-logo" src="{{ url_for('static', filename='imagenes/ESCUDO COLOR.png') }}" alt="Logo Universidad de Cundinamarca" />
+    <div class="users-hero-actions users-hero-actions-between">
+      <a class="users-pill" href="{{ url_for('main.dashboard') }}">Panel de Control</a>
+      <a class="users-pill users-pill-active" href="{{ url_for('areas.index') }}">Areas Destino</a>
+    </div>
+  </div>
+
+  <section class="users-card">
+    <h2>Gestion de Areas Destino</h2>
+
+    <form method="post" action="{{ url_for('areas.crear') }}" class="users-form" style="margin-bottom: 1rem;">
+      <div class="grid-two">
+        <input name="nombre" type="text" placeholder="Nueva area" maxlength="80" required />
+        <button type="submit">Agregar area</button>
+      </div>
+    </form>
+
+    <div class="table-wrap">
+      <table class="users-table">
+        <thead>
+          <tr>
+            <th>Area</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if areas %}
+            {% for area in areas %}
+            <tr>
+              <td>
+                <form id="area-form-{{ area.id }}" method="post" action="{{ url_for('areas.actualizar', area_id=area.id) }}" class="users-form" style="display:flex; gap:0.5rem; align-items:center; margin:0;">
+                  <input name="nombre" type="text" value="{{ area.nombre }}" maxlength="80" required />
+                </form>
+              </td>
+              <td>{{ 'Activa' if area.activo else 'Inactiva' }}</td>
+              <td>
+                <button type="submit" form="area-form-{{ area.id }}">Modificar</button>
+              </td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="3">No hay areas registradas.</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</section>
+{% endblock %}

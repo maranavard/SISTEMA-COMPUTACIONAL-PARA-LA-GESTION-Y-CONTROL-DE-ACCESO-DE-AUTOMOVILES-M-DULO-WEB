@@ -4,14 +4,163 @@ Soporta tablas `public.vehiculos` o `public.vehicles`.
 """
 
 from datetime import date
+import re
+import unicodedata
 
 from psycopg2 import sql
 
 from app.db import get_connection
+from app.models.documento_vehiculo import DocumentoVehiculo
 from app.utils.local_sync import LocalSyncService
 
 
 class Vehiculo:
+    @staticmethod
+    def normalize_plate(placa: str) -> str:
+        raw = (placa or "").strip().upper()
+        # Acepta entradas con espacios/guiones y las normaliza a formato compacto.
+        return re.sub(r"[^A-Z0-9]", "", raw)
+
+    @classmethod
+    def resolve_vehicle_type_name(cls, tipo_vehiculo_id: str | int | None) -> str:
+        if tipo_vehiculo_id in (None, ""):
+            return ""
+
+        tipo_id = str(tipo_vehiculo_id).strip()
+        if not tipo_id:
+            return ""
+
+        for item in cls.list_vehicle_types():
+            if str(item.get("id")) == tipo_id:
+                return str(item.get("nombre") or "").strip().lower()
+        return ""
+
+    @classmethod
+    def validate_plate_format(cls, placa: str, tipo_vehiculo_id: str | int | None) -> tuple[bool, str]:
+        plate = cls.normalize_plate(placa)
+        tipo_nombre = cls.resolve_vehicle_type_name(tipo_vehiculo_id)
+
+        if not plate:
+            return False, "Debes ingresar una placa válida."
+
+        if tipo_nombre == "automóvil":
+            if not re.fullmatch(r"[A-Z]{3}[0-9]{3}", plate):
+                return False, "Formato inválido para automóvil. Usa 3 letras y 3 números (ej: ABC123)."
+            return True, ""
+
+        if tipo_nombre == "motocicleta":
+            if not re.fullmatch(r"[A-Z]{3}[0-9]{2}[A-Z]?", plate):
+                return False, (
+                    "Formato inválido para motocicleta. Usa 3 letras, 2 números y 1 letra opcional "
+                    "(ej: ABC12D o ABC12)."
+                )
+            return True, ""
+
+        return True, ""
+
+    @staticmethod
+    def list_vehicle_types() -> list[dict]:
+        table_query = """
+            SELECT table_name
+            FROM information_schema.tables
+            WHERE table_schema = 'public'
+              AND table_name IN ('tipo_vehiculo', 'tipos_vehiculo', 'tipo_vehiculos')
+            ORDER BY CASE table_name
+                WHEN 'tipo_vehiculo' THEN 0
+                WHEN 'tipos_vehiculo' THEN 1
+                ELSE 2
+            END
+            LIMIT 1
+        """
+
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(table_query)
+                row = cur.fetchone()
+                if not row:
+                    return []
+
+                table_name = row[0]
+                cur.execute(
+                    """
+                    SELECT column_name
+                    FROM information_schema.columns
+                    WHERE table_schema = 'public'
+                      AND table_name = %s
+                    """,
+                    (table_name,),
+                )
+                cols = {r[0] for r in cur.fetchall()}
+
+                id_col = "id" if "id" in cols else ("id_tipo_vehiculo" if "id_tipo_vehiculo" in cols else None)
+                if not id_col:
+                    return []
+
+                nombre_col = None
+                for candidate in ("nombre", "tipo", "descripcion", "codigo"):
+                    if candidate in cols:
+                        nombre_col = candidate
+                        break
+
+                if not nombre_col:
+                    return []
+
+                query = f"""
+                    SELECT {id_col} AS id, {nombre_col} AS nombre
+                    FROM public.{table_name}
+                    ORDER BY {nombre_col}
+                """
+                cur.execute(query)
+                rows = cur.fetchall()
+
+        def _normalize_text(value: str) -> str:
+            text = (value or "").strip().lower()
+            text = unicodedata.normalize("NFKD", text)
+            text = "".join(ch for ch in text if not unicodedata.combining(ch))
+            return text
+
+        canonical_labels = {
+            "automovil": "automóvil",
+            "motocicleta": "motocicleta",
+            "bus": "bus",
+            "camion": "camión",
+        }
+
+        found: dict[str, dict] = {}
+        for row in rows:
+            item_id, raw_name = row[0], str(row[1] or "")
+            name = _normalize_text(raw_name)
+
+            matched_key = None
+            if any(token in name for token in ("bus", "autobus", "buseta", "microbus")):
+                matched_key = "bus"
+            elif any(token in name for token in ("motocicleta", "moto")):
+                matched_key = "motocicleta"
+            elif any(token in name for token in ("camion",)):
+                matched_key = "camion"
+            elif any(token in name for token in ("automovil", "auto", "carro", "sedan", "particular")):
+                matched_key = "automovil"
+
+            if matched_key and matched_key not in found:
+                found[matched_key] = {"id": item_id, "nombre": canonical_labels[matched_key]}
+
+        ordered_keys = ["automovil", "motocicleta", "bus", "camion"]
+        default_ids = {
+            "automovil": 1,
+            "motocicleta": 2,
+            "bus": 3,
+            "camion": 4,
+        }
+
+        result = []
+        for key in ordered_keys:
+            if key in found:
+                result.append(found[key])
+            else:
+                result.append({"id": default_ids[key], "nombre": canonical_labels[key]})
+
+        return result
+
     @staticmethod
     def _get_table_name() -> str:
         query = """
@@ -204,7 +353,7 @@ class Vehiculo:
         }
 
     @classmethod
-    def create_item(cls, data: dict) -> None:
+    def create_item(cls, data: dict) -> int | None:
         table_name = cls._get_table_name()
         cols = cls._get_columns(table_name)
 
@@ -239,21 +388,27 @@ class Vehiculo:
         if not insert_cols:
             return
 
-        query = sql.SQL("INSERT INTO public.{table} ({fields}) VALUES ({values})").format(
+        query = sql.SQL("INSERT INTO public.{table} ({fields}) VALUES ({values}) RETURNING id").format(
             table=sql.Identifier(table_name),
             fields=sql.SQL(", ").join(sql.Identifier(column_name) for column_name in insert_cols),
             values=sql.SQL(", ").join(sql.Placeholder() for _ in insert_cols),
         )
 
+        inserted_id = None
         with get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(query, insert_vals)
+                row = cur.fetchone()
+                if row:
+                    inserted_id = row[0]
             conn.commit()
 
         try:
             LocalSyncService.sync_event(entidad="vehiculos", operacion="upsert", payload=data)
         except Exception:
             pass
+
+        return inserted_id
 
     @classmethod
     def update_item(cls, item_id: int, data: dict) -> None:
@@ -359,6 +514,22 @@ class Vehiculo:
                 "message": f"La placa {plate} no está registrada en el sistema.",
                 "block_automatic_assignment": True,
             }
+
+        vehicle_doc_status = DocumentoVehiculo.get_status_summary(
+            vehiculo_id=int(vehicle_row[0]),
+            warning_days=warning_days,
+        )
+        if not vehicle_doc_status.get("ok"):
+            return {
+                "ok": False,
+                "level": "error",
+                "message": f"{vehicle_doc_status.get('message') or 'Documentación vehicular inválida.'}",
+                "block_automatic_assignment": True,
+            }
+
+        vehicle_warning_text = ""
+        if (vehicle_doc_status.get("level") or "").strip().lower() == "warning":
+            vehicle_warning_text = str(vehicle_doc_status.get("message") or "").strip()
 
         conductor_id = vehicle_row[2]
         if conductor_id is None:
@@ -483,16 +654,27 @@ class Vehiculo:
             }
 
         if days_to_expire <= warning_days:
+            warning_parts = [f"Alerta documental: pase de {plate} vence en {days_to_expire} días."]
+            if vehicle_warning_text:
+                warning_parts.append(vehicle_warning_text)
             return {
                 "ok": True,
                 "level": "warning",
-                "message": f"Alerta documental: pase de {plate} vence en {days_to_expire} días.",
+                "message": " ".join(warning_parts),
+                "block_automatic_assignment": False,
+            }
+
+        if vehicle_warning_text:
+            return {
+                "ok": True,
+                "level": "warning",
+                "message": vehicle_warning_text,
                 "block_automatic_assignment": False,
             }
 
         return {
             "ok": True,
             "level": "success",
-            "message": f"Documentación vigente para {plate}.",
+            "message": f"Documentación vigente para {plate} (conductor y vehículo).",
             "block_automatic_assignment": False,
         }

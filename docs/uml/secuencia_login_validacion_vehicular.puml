@@ -1,0 +1,77 @@
+@startuml
+actor "Seguridad/Vigilante" as Guard
+participant "Browser" as B
+participant "auth.routes\n/login" as Auth
+participant "User model" as User
+participant "Flask-Login" as Login
+participant "main.routes\n/dashboard" as Main
+participant "control_accesos.routes\n/vehicular" as CA
+participant "Vehiculo model" as Veh
+participant "Novedad model" as Nov
+participant "Espacio model" as Esp
+database "PostgreSQL Web" as DB
+database "PostgreSQL Local" as DBL
+participant "LocalSyncService" as Sync
+
+Guard -> B : POST /auth/login (username,password)
+B -> Auth : login_post()
+Auth -> User : get_by_username(username)
+User -> DB : SELECT usuario
+DB --> User : row usuario
+User --> Auth : User
+Auth -> User : verify_password(password)
+alt credenciales válidas
+  Auth -> Login : login_user(user)
+  Auth --> B : redirect /dashboard
+  B -> Main : GET /dashboard
+  Main --> B : dashboard por rol
+else inválidas
+  Auth --> B : flash error + redirect /auth/login
+end
+
+Guard -> B : POST /control-accesos/vehicular (placa,movimiento)
+B -> CA : registrar_vehicular()
+alt movimiento = entrada
+  CA -> Veh : get_document_status_by_placa(placa)
+  Veh -> DB : SELECT vehiculo + conductor + vigencia pase
+  DB --> Veh : estado documental
+  Veh --> CA : {ok, level, block_automatic_assignment, message}
+
+  alt block_automatic_assignment = true
+    CA --> B : flash + redirect /control-accesos
+  else permitido
+    CA -> Nov : register_ingreso_by_placa(placa,user_id)
+    Nov -> DB : SELECT assign_space_and_register_ingreso(...)
+    DB --> Nov : assigned_space_id/num o null
+
+    alt cupo asignado por función SQL
+      Nov -> Sync : sync_event("novedad","insert",payload)
+      Sync -> DBL : replicar evento (best effort)
+      DBL --> Sync : ok/fail
+      Sync --> Nov : resultado
+      Nov --> CA : assigned_space_num
+      CA --> B : flash success + redirect /espacios
+    else fallback manual
+      Nov -> Esp : build_slots(50)
+      Esp -> DB : consultar espacios
+      DB --> Esp : slots
+      Nov -> Esp : upsert_by_numero(ocupado)
+      Esp -> DB : INSERT/UPDATE espacio
+      DB --> Esp : ok
+      Nov -> DB : INSERT novedad ingreso
+      DB --> Nov : ok
+      Nov --> CA : assigned_space_num o none
+      CA --> B : flash y redirect
+    end
+  end
+else movimiento = salida
+  CA -> Nov : register_salida_by_placa(placa,user_id)
+  Nov -> DB : INSERT novedad salida by placa
+  DB --> Nov : id novedad / error
+  Nov -> Sync : sync_event("novedad","insert",payload)
+  Sync -> DBL : replicar salida
+  DBL --> Sync : ok/fail
+  Nov --> CA : resultado
+  CA --> B : flash + redirect /control-accesos
+end
+@enduml

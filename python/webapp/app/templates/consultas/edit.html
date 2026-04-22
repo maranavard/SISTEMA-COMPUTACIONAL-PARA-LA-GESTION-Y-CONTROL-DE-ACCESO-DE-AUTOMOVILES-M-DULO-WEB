@@ -27,8 +27,13 @@
       <label class="form-field-label" for="edit-color">Color</label>
       <input id="edit-color" name="color" type="text" value="{{ item.color or '' }}" />
 
-      <label class="form-field-label" for="edit-tipo">Tipo de Vehículo (ID)</label>
-      <input id="edit-tipo" name="tipo_vehiculo_id" type="number" value="{{ item.tipo_vehiculo_id or '' }}" />
+      <label class="form-field-label" for="edit-tipo">Tipo de Vehículo</label>
+      <select id="edit-tipo" name="tipo_vehiculo_id">
+        <option value="">Seleccione tipo de vehículo</option>
+        {% for tipo in tipos_vehiculo %}
+        <option value="{{ tipo.id }}" {% if (item.tipo_vehiculo_id|string) == (tipo.id|string) %}selected{% endif %}>{{ tipo.nombre }}</option>
+        {% endfor %}
+      </select>
 
       <label class="form-field-label" for="edit-estado">Estado</label>
       <input id="edit-estado" name="estado" type="text" value="{{ item.estado or '' }}" />

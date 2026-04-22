@@ -1,0 +1,12 @@
+@startuml
+title CU12 Autorizar/Rechazar visitante
+start
+:Abrir solicitudes;
+:Seleccionar visitante;
+if (Autorizar ingreso) then (Si)
+  :Actualizar estado a autorizado;
+else (No)
+  :Actualizar estado a rechazado;
+endif
+stop
+@enduml

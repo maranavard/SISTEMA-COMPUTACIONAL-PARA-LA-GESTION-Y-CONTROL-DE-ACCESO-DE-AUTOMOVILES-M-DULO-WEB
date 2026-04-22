@@ -44,19 +44,28 @@ def editar(item_id: int):
         flash("No se encontró el vehículo para editar.", "error")
         return redirect(url_for("consultas.index"))
 
-    return render_template("consultas/edit.html", item=item)
+    tipos_vehiculo = Vehiculo.list_vehicle_types()
+    return render_template("consultas/edit.html", item=item, tipos_vehiculo=tipos_vehiculo)
 
 
 @consultas_bp.post("/<int:item_id>/editar")
 @login_required
 @community_required
 def guardar_edicion(item_id: int):
+    placa = Vehiculo.normalize_plate(request.form.get("placa", ""))
+    tipo_vehiculo_id = (request.form.get("tipo_vehiculo_id", "") or "").strip()
+
+    plate_ok, plate_error = Vehiculo.validate_plate_format(placa=placa, tipo_vehiculo_id=tipo_vehiculo_id)
+    if not plate_ok:
+        flash(plate_error, "error")
+        return redirect(url_for("consultas.editar", item_id=item_id))
+
     payload = {
-        "placa": (request.form.get("placa", "") or "").strip().upper(),
+        "placa": placa,
         "marca": (request.form.get("marca", "") or "").strip(),
         "modelo": (request.form.get("modelo", "") or "").strip(),
         "color": (request.form.get("color", "") or "").strip(),
-        "tipo_vehiculo_id": (request.form.get("tipo_vehiculo_id", "") or "").strip(),
+        "tipo_vehiculo_id": tipo_vehiculo_id,
         "estado": (request.form.get("estado", "") or "").strip(),
     }
 

@@ -1,0 +1,15 @@
+@startuml
+actor Estudiante
+participant "UI Web" as UI
+participant "AuthRoutes" as A
+participant "UserModel" as U
+database "PostgreSQL" as DB
+
+Estudiante -> UI : Completar formulario registro
+UI -> A : POST /register
+A -> U : validar existencia y datos
+U -> DB : INSERT usuario (rol estudiante)
+DB --> U : ok/error
+U --> A : resultado
+A --> UI : cuenta creada o mensaje de error
+@enduml

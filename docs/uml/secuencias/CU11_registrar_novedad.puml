@@ -1,0 +1,15 @@
+@startuml
+actor Vigilante
+participant "UI Web" as UI
+participant "NovedadesRoutes" as R
+participant "NovedadModel" as N
+database "PostgreSQL" as DB
+
+Vigilante -> UI : Diligenciar novedad
+UI -> R : POST crear novedad
+R -> N : create_reporte(payload)
+N -> DB : INSERT novedad
+DB --> N : id generado
+N --> R : exito/error
+R --> UI : mensaje + historial actualizado
+@enduml

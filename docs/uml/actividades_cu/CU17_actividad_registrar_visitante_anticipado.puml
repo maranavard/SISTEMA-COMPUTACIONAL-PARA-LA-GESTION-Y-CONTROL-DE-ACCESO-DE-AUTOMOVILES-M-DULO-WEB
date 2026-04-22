@@ -1,0 +1,12 @@
+@startuml
+title CU17 Registrar visitante anticipado
+start
+:Abrir modulo Visitantes;
+:Diligenciar formulario;
+if (Datos completos) then (Si)
+  :Guardar solicitud de visita;
+else (No)
+  :Mostrar error de datos;
+endif
+stop
+@enduml

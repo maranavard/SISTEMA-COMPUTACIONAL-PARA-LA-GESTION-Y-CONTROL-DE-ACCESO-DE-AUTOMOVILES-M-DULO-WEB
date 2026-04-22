@@ -1,0 +1,11 @@
+@startuml
+title CU18 Consultar estado de visitante
+start
+:Buscar solicitud por documento;
+if (Solicitud existe) then (Si)
+  :Mostrar estado de autorizacion;
+else (No)
+  :Mostrar no encontrada;
+endif
+stop
+@enduml

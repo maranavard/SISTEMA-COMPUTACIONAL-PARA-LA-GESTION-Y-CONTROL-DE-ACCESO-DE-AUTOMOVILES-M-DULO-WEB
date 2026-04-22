@@ -1,0 +1,20 @@
+@startuml
+actor Usuario
+participant "UI Web" as UI
+participant "ConsultasRoutes" as R
+participant "VehiculoModel" as V
+database "PostgreSQL" as DB
+
+Usuario -> UI : Ingresar placa
+UI -> R : GET/POST consulta placa
+R -> V : get_by_placa(placa)
+V -> DB : SELECT vehiculo
+DB --> V : resultado
+alt existe
+  V --> R : datos vehiculo
+  R --> UI : mostrar detalle
+else no existe
+  V --> R : null
+  R --> UI : mensaje "placa no registrada"
+end
+@enduml

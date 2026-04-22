@@ -1,0 +1,25 @@
+@startuml
+skinparam componentStyle rectangle
+
+node "Cliente\nNavegador Web" as Cliente {
+  artifact "UI Web\n(Jinja2/HTML/CSS/JS)" as UI
+}
+
+node "Servidor Aplicación\nFlask (Python)" as AppServer {
+  component "Módulos Flask\n(auth, control_accesos, reportes, etc.)" as FlaskModules
+  component "Servicios internos\nAuthZ, LocalSyncService" as Services
+}
+
+database "PostgreSQL Principal\n(Base Web)" as DBWeb
+node "Sede local / contingencia" as LocalSite {
+  database "PostgreSQL Local" as DBLocal
+}
+
+cloud "Servidor SMTP" as SMTP
+
+Cliente --> AppServer : HTTPS (requests/responses)
+AppServer --> DBWeb : SQL (psycopg2)
+AppServer --> DBLocal : Sincronización RF18
+AppServer --> SMTP : Envío correo reset contraseña
+
+@enduml

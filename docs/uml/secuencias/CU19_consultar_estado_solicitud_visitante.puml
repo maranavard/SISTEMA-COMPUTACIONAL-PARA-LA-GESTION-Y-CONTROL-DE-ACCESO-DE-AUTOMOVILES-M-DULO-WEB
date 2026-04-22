@@ -1,0 +1,19 @@
+@startuml
+actor Visitante
+participant "UI Web" as UI
+participant "Modulo Consulta Visitante" as R
+participant "VisitanteModel" as V
+database "PostgreSQL" as DB
+
+Visitante -> UI : Ingresar documento/datos
+UI -> R : GET consulta de estado
+R -> V : buscar solicitud
+V -> DB : SELECT registro visitante
+DB --> V : resultado
+alt existe
+  V --> R : estado (pendiente/aprobado/rechazado)
+  R --> UI : mostrar estado
+else no existe
+  R --> UI : mensaje solicitud no encontrada
+end
+@enduml

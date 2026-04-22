@@ -1,0 +1,13 @@
+@startuml
+title CU03 Exportar reportes
+start
+:Abrir reporte;
+:Seleccionar exportar;
+:Elegir formato;
+if (Generacion exitosa) then (Si)
+  :Descargar/imprimir archivo;
+else (No)
+  :Mostrar error de exportacion;
+endif
+stop
+@enduml

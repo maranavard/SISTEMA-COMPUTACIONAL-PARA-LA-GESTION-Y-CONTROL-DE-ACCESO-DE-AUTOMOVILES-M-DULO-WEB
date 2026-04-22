@@ -1,0 +1,12 @@
+@startuml
+title CU02 Consultar reportes
+start
+:Ingresar a Reportes;
+:Elegir tipo de reporte;
+if (Hay datos) then (Si)
+  :Visualizar resultados;
+else (No)
+  :Mostrar mensaje sin datos;
+endif
+stop
+@enduml

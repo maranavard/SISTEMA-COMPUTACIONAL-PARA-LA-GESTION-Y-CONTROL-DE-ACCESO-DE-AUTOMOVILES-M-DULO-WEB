@@ -1,0 +1,15 @@
+@startuml
+actor Vigilante
+participant "UI Web" as UI
+participant "ControlAccesosRoutes" as C
+participant "VisitanteModel" as V
+database "PostgreSQL" as DB
+
+Vigilante -> UI : Seleccionar solicitud
+UI -> C : POST autorizar/rechazar
+C -> V : update_item(estado)
+V -> DB : UPDATE registro_visitantes
+DB --> V : ok/error
+V --> C : resultado
+C --> UI : estado actualizado
+@enduml

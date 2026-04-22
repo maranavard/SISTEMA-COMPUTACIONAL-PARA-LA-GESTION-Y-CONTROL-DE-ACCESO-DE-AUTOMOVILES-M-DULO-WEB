@@ -1,0 +1,14 @@
+@startuml
+title CU01 Gestionar usuarios y roles
+start
+:Ingresar al modulo Usuarios;
+:Seleccionar crear/editar/inactivar;
+:Diligenciar formulario;
+if (Datos validos) then (Si)
+  :Guardar cambios;
+  :Confirmar actualizacion;
+else (No)
+  :Mostrar error de validacion;
+endif
+stop
+@enduml

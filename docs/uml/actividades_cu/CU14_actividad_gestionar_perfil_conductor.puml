@@ -1,0 +1,12 @@
+@startuml
+title CU14 Gestionar perfil de conductor
+start
+:Abrir modulo Conductores;
+:Editar informacion personal/documental;
+if (Datos validos) then (Si)
+  :Guardar perfil actualizado;
+else (No)
+  :Mostrar inconsistencias;
+endif
+stop
+@enduml

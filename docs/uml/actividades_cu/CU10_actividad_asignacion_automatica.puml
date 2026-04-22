@@ -1,0 +1,13 @@
+@startuml
+title CU10 Asignacion automatica de cupo
+start
+:Recibir solicitud de ingreso;
+:Validar disponibilidad;
+if (Hay cupo disponible) then (Si)
+  :Asignar cupo automaticamente;
+  :Registrar novedad de ingreso;
+else (No)
+  :Notificar sin disponibilidad;
+endif
+stop
+@enduml

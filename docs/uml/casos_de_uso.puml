@@ -1,0 +1,79 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
+
+actor "Administrador" as Admin
+actor "Vigilante / Seguridad" as Guard
+actor "Estudiante" as Student
+actor "Funcionario" as Staff
+actor "Visitante" as Visitor
+
+rectangle "Sistema Web de Control de Acceso Vehicular" {
+  package "Administrador" {
+    usecase "CU01 Gestionar\nusuarios y roles" as UC01
+    usecase "CU02 Consultar reportes" as UC02
+    usecase "CU03 Exportar reportes\n(XLSX/PDF)" as UC03
+    usecase "CU04 Consultar historial\nde novedades" as UC04
+    usecase "CU05 Consulta por placa" as UC05
+    usecase "CU06 Cerrar sesión" as UC06
+  }
+
+  package "Vigilante / Seguridad" {
+    usecase "CU07 Validar acceso vehicular\n(entrada/salida)" as UC07
+    usecase "CU08 Gestionar espacios\nde parqueo" as UC08
+    usecase "CU09 Asignación automática\nde cupo por placa" as UC09
+    usecase "CU10 Registrar novedad" as UC10
+    usecase "CU11 Consultar por placa" as UC11
+    usecase "CU12 Autorizar/Rechazar\nvisitante" as UC12
+  }
+
+  package "Estudiante" {
+    usecase "CU13 Registrarse\nen el sistema" as UC13
+    usecase "CU14 Iniciar sesión /\nCerrar sesión" as UC14
+    usecase "CU15 Gestionar perfil\nde conductor" as UC15
+    usecase "CU16 Gestionar\nvehículo propio" as UC16
+    usecase "CU17 Recuperar\ncontraseña" as UC17
+  }
+
+  package "Funcionario" {
+    usecase "CU18 Registrar\nvisitante anticipado" as UC18
+    usecase "CU19 Consultar estado\nde autorización" as UC19
+  }
+
+  package "Visitante" {
+    usecase "CU20 Consultar estado\nde su solicitud" as UC20
+  }
+
+  usecase "Validar documentación\npor placa" as UCDoc
+}
+
+Admin --> UC01
+Admin --> UC02
+Admin --> UC03
+Admin --> UC04
+Admin --> UC05
+Admin --> UC06
+
+Guard --> UC07
+Guard --> UC08
+Guard --> UC09
+Guard --> UC10
+Guard --> UC11
+Guard --> UC12
+
+Student --> UC13
+Student --> UC14
+Student --> UC15
+Student --> UC16
+Student --> UC17
+
+Staff --> UC18
+Staff --> UC19
+
+Visitor --> UC20
+
+UC03 .> UC02 : <<extend>>
+UC07 .> UCDoc : <<include>>
+UC07 .> UC09 : <<include>>
+@enduml

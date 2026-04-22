@@ -1,0 +1,86 @@
+@startuml
+skinparam componentStyle rectangle
+
+actor "Usuario Web" as U
+
+component "Frontend Web\n(Jinja2 + HTML/CSS/JS)" as Front
+component "Flask App Factory\n(create_app, LoginManager)" as App
+
+package "BluePrints" {
+  component "auth" as CAuth
+  component "main" as CMain
+  component "users" as CUsers
+  component "conductores" as CCond
+  component "vehiculos" as CVeh
+  component "visitantes" as CVis
+  component "espacios" as CEsp
+  component "novedades" as CNov
+  component "control_accesos" as CCA
+  component "consultas" as CCon
+  component "reportes" as CRep
+}
+
+package "Dominio / Modelos" {
+  component "User" as MUser
+  component "Conductor" as MCond
+  component "Vehiculo" as MVeh
+  component "Visitante" as MVis
+  component "Espacio" as MEsp
+  component "Novedad" as MNov
+}
+
+package "Infraestructura" {
+  component "db.py\nget_connection()" as CDB
+  component "authz.py\nroles_required/community_required" as CAuthz
+  component "LocalSyncService" as CSync
+  component "openpyxl\nExport Excel" as CExcel
+  component "SMTP\nReset Password" as CMail
+}
+
+database "PostgreSQL Web\n(sistema principal)" as DBWeb
+database "PostgreSQL Local\n(sede local RF18)" as DBLocal
+
+U --> Front
+Front --> App
+
+App --> CAuth
+App --> CMain
+App --> CUsers
+App --> CCond
+App --> CVeh
+App --> CVis
+App --> CEsp
+App --> CNov
+App --> CCA
+App --> CCon
+App --> CRep
+
+CAuth --> MUser
+CAuth --> CMail
+CMain --> CAuthz
+CUsers --> MUser
+CCond --> MCond
+CVeh --> MVeh
+CVis --> MVis
+CEsp --> MEsp
+CNov --> MNov
+CCA --> MVeh
+CCA --> MNov
+CCA --> MVis
+CCon --> MVeh
+CRep --> MNov
+CRep --> MVeh
+CRep --> CExcel
+
+MUser --> CDB
+MCond --> CDB
+MVeh --> CDB
+MVis --> CDB
+MEsp --> CDB
+MNov --> CDB
+
+MVeh --> CSync
+MNov --> CSync
+CSync --> DBLocal
+CDB --> DBWeb
+@enduml

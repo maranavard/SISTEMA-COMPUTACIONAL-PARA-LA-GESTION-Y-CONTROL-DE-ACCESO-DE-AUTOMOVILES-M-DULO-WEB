@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block body_class %}horarios-page{% endblock %}
+
+{% block content %}
+<section class="users-screen">
+  <div class="users-hero">
+    <img class="users-hero-logo" src="{{ url_for('static', filename='imagenes/ESCUDO COLOR.png') }}" alt="Logo Universidad de Cundinamarca" />
+    <div class="users-hero-actions users-hero-actions-between">
+      <a class="users-pill" href="{{ url_for('main.dashboard') }}">Panel de Control</a>
+      <a class="users-pill users-pill-active" href="{{ url_for('horarios.index') }}">Horarios y Festivos</a>
+    </div>
+  </div>
+
+  <section class="users-card">
+    <h2>Configuración de Horario Operativo</h2>
+    <form method="post" action="{{ url_for('horarios.guardar') }}" class="users-form">
+      <div class="grid-two">
+        <div>
+          <label class="form-field-label" for="hora_inicio">Hora inicio</label>
+          <input id="hora_inicio" name="hora_inicio" type="time" value="{{ config.hora_inicio }}" required />
+        </div>
+        <div>
+          <label class="form-field-label" for="hora_fin">Hora fin</label>
+          <input id="hora_fin" name="hora_fin" type="time" value="{{ config.hora_fin }}" required />
+        </div>
+      </div>
+
+      <p class="form-field-label">Días activos</p>
+      <div class="grid-two">
+        {% for dia in dias_catalogo %}
+        <label>
+          <input type="checkbox" name="dias_activos" value="{{ dia.id }}" {% if dia.id in config.dias_activos %}checked{% endif %} />
+          {{ dia.label }}
+        </label>
+        {% endfor %}
+      </div>
+
+      <label class="form-field-label" for="festivos">Festivos (uno por línea)</label>
+      <textarea id="festivos" name="festivos" rows="8" style="width:100%;" placeholder="AAAA-MM-DD | Descripción opcional">{{ festivos_texto }}</textarea>
+      <p>Ejemplo: 2026-01-01 | Año Nuevo</p>
+
+      <button type="submit">Guardar configuración</button>
+    </form>
+  </section>
+</section>
+{% endblock %}

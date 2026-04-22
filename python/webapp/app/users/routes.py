@@ -5,6 +5,7 @@ from flask_login import login_required
 
 from app.models.user import User
 from app.utils.authz import admin_required
+from app.utils.field_validators import is_valid_cedula, is_valid_email, normalize_cedula, normalize_email
 
 
 users_bp = Blueprint("users", __name__, url_prefix="/usuarios")
@@ -28,11 +29,19 @@ def create_user():
     estado = request.form.get("estado", "activo").strip() or "activo"
     nombre = request.form.get("nombre", "").strip()
     apellido = request.form.get("apellido", "").strip()
-    email = request.form.get("email", "").strip()
-    numero_identificacion = request.form.get("numero_identificacion", "").strip()
+    email = normalize_email(request.form.get("email", ""))
+    numero_identificacion = normalize_cedula(request.form.get("numero_identificacion", ""))
 
     if not username or not password or not email:
         flash("Usuario, correo institucional y contraseña son obligatorios.", "error")
+        return redirect(url_for("users.list_users"))
+
+    if not is_valid_email(email):
+        flash("Formato de correo inválido. Usa un correo válido (ej: usuario@dominio.com).", "error")
+        return redirect(url_for("users.list_users"))
+
+    if numero_identificacion and not is_valid_cedula(numero_identificacion):
+        flash("Formato de cédula inválido. Debe contener solo números (6 a 12 dígitos).", "error")
         return redirect(url_for("users.list_users"))
 
     try:
@@ -61,9 +70,17 @@ def update_user(user_id: int):
     estado = request.form.get("estado", "activo").strip() or "activo"
     nombre = request.form.get("nombre", "").strip()
     apellido = request.form.get("apellido", "").strip()
-    email = request.form.get("email", "").strip()
-    numero_identificacion = request.form.get("numero_identificacion", "").strip()
+    email = normalize_email(request.form.get("email", ""))
+    numero_identificacion = normalize_cedula(request.form.get("numero_identificacion", ""))
     new_password = request.form.get("new_password", "").strip()
+
+    if email and not is_valid_email(email):
+        flash("Formato de correo inválido. Usa un correo válido (ej: usuario@dominio.com).", "error")
+        return redirect(url_for("users.list_users"))
+
+    if numero_identificacion and not is_valid_cedula(numero_identificacion):
+        flash("Formato de cédula inválido. Debe contener solo números (6 a 12 dígitos).", "error")
+        return redirect(url_for("users.list_users"))
 
     try:
         User.update_user(

@@ -11,7 +11,7 @@
   <section class="card" style="max-width: 720px; margin: 0 auto;">
     <h3>Datos del usuario</h3>
     <p><strong>Usuario:</strong> {{ user.username or '' }}</p>
-    <p><strong>Rol:</strong> {{ user.rol or '' }}</p>
+    <p><strong>Rol:</strong> {{ (user.rol or '') | role_label }}</p>
     <p>Si necesitas actualizar tus datos, solicita el ajuste al administrador del sistema.</p>
 
     <div class="panel-actions" style="margin-top: 1rem;">

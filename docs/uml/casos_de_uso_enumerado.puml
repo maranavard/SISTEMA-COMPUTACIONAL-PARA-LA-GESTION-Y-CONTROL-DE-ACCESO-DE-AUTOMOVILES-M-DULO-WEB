@@ -1,0 +1,70 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam linetype ortho
+skinparam dpi 220
+
+actor "Administrador" as Admin
+actor "Vigilante / Seguridad" as Guard
+actor "Usuario autenticado" as AuthUser
+actor "Estudiante" as Student
+actor "Funcionario" as Staff
+actor "Visitante" as Visitor
+
+rectangle "Sistema Web de Control de Acceso Vehicular" {
+  usecase "CU01" as CU01
+  usecase "CU02" as CU02
+  usecase "CU03" as CU03
+  usecase "CU04" as CU04
+  usecase "CU05" as CU05
+  usecase "CU06" as CU06
+  usecase "CU07" as CU07
+  usecase "CU08" as CU08
+  usecase "CU09" as CU09
+  usecase "CU10" as CU10
+  usecase "CU11" as CU11
+  usecase "CU12" as CU12
+  usecase "CU13" as CU13
+  usecase "CU14" as CU14
+  usecase "CU15" as CU15
+  usecase "CU16" as CU16
+  usecase "CU17" as CU17
+  usecase "CU18" as CU18
+  usecase "CU19" as CU19
+}
+
+Admin -|> AuthUser
+Guard -|> AuthUser
+Student -|> AuthUser
+Staff -|> AuthUser
+
+AuthUser --> CU05
+AuthUser --> CU06
+AuthUser --> CU07
+AuthUser --> CU16
+
+Admin --> CU01
+Admin --> CU02
+Admin --> CU03
+Admin --> CU04
+
+Guard --> CU02
+Guard --> CU03
+Guard --> CU04
+Guard --> CU08
+Guard --> CU09
+Guard --> CU10
+Guard --> CU11
+Guard --> CU12
+
+CU13 <-- Student
+CU14 <-- Student
+CU15 <-- Student
+
+CU17 <-- Staff
+CU18 <-- Staff
+
+CU19 <-- Visitor
+
+@enduml

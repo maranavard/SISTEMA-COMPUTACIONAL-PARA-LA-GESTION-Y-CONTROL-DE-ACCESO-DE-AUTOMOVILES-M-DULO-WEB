@@ -1,0 +1,15 @@
+@startuml
+actor Funcionario
+participant "UI Web" as UI
+participant "ControlAccesosRoutes/VisitantesRoutes" as R
+participant "VisitanteModel" as V
+database "PostgreSQL" as DB
+
+Funcionario -> UI : Buscar por documento
+UI -> R : GET consulta estado
+R -> V : list_items()/filtro
+V -> DB : SELECT solicitudes
+DB --> V : resultados
+V --> R : estado de solicitud
+R --> UI : mostrar estado
+@enduml

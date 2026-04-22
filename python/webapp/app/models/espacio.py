@@ -318,6 +318,7 @@ class Espacio:
                 {f'e.{numero_col}' if numero_col else 'NULL::text'} AS numero,
                 {f'e.{estado_col}' if estado_col else 'NULL::text'} AS estado,
                 {f'e.{tipo_col}' if tipo_col else 'NULL::int'} AS tipo_vehiculo_id,
+                {f'(SELECT tv.nombre FROM public.tipo_vehiculo tv WHERE tv.id = e.{tipo_col} LIMIT 1)' if tipo_col else 'NULL::text'} AS tipo_vehiculo_nombre,
                 {f'e.{fecha_col}' if fecha_col else 'NULL::timestamp'} AS fecha_actualizacion
             FROM public.{table_name} e
             WHERE e.{id_col} = %s
@@ -337,7 +338,8 @@ class Espacio:
             "numero": row[1],
             "estado": row[2],
             "tipo_vehiculo_id": row[3],
-            "fecha_actualizacion": row[4],
+            "tipo_vehiculo_nombre": row[4],
+            "fecha_actualizacion": row[5],
         }
 
     @classmethod

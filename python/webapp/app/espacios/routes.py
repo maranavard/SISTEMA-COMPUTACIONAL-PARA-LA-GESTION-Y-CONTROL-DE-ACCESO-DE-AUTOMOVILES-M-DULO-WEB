@@ -18,6 +18,7 @@ espacios_bp = Blueprint("espacios", __name__, url_prefix="/espacios")
 @admin_required
 def list_items():
     items = Espacio.list_items()
+    tipos_vehiculo = Vehiculo.list_vehicle_types()
     slots = Espacio.build_slots(total_slots=50)
     summary = Espacio.slot_summary(slots)
 
@@ -81,13 +82,15 @@ def list_items():
     table_items = []
     for item in items:
         numero = str(item.get("numero") or "")
-        placa_display = latest_plate_by_space.get(numero)
+        placa_salida = latest_plate_by_space.get(numero, "")
+        placa_display = placa_salida
         if not placa_display:
             placa_display = item.get("estado") or ""
         table_items.append(
             {
                 **item,
                 "placa_display": placa_display,
+                "placa_salida": placa_salida,
             }
         )
 
@@ -105,6 +108,7 @@ def list_items():
         table_items=table_items,
         slots=slots,
         summary=summary,
+        tipos_vehiculo=tipos_vehiculo,
         assignment_notice=assignment_notice,
         recent_ingresos=recent_ingresos,
     )
@@ -202,7 +206,8 @@ def editar_item(item_id: int):
         flash("No se encontró el espacio para editar.", "error")
         return redirect(url_for("espacios.list_items"))
 
-    return render_template("espacios/edit.html", item=item)
+    tipos_vehiculo = Vehiculo.list_vehicle_types()
+    return render_template("espacios/edit.html", item=item, tipos_vehiculo=tipos_vehiculo)
 
 
 @espacios_bp.post("/<int:item_id>/editar")

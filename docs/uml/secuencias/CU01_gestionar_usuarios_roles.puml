@@ -1,0 +1,15 @@
+@startuml
+actor Administrador
+participant "UI Web" as UI
+participant "UsersRoutes" as R
+participant "UserModel" as U
+database "PostgreSQL" as DB
+
+Administrador -> UI : Abrir modulo Usuarios
+UI -> R : GET/POST gestion de usuario
+R -> U : validar y procesar datos
+U -> DB : INSERT/UPDATE usuarios
+DB --> U : resultado
+U --> R : exito/error
+R --> UI : mensaje + vista actualizada
+@enduml

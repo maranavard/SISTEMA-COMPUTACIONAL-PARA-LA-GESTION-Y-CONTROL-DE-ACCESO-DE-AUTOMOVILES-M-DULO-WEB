@@ -21,7 +21,10 @@
       {% if messages %}
         <ul class="alerts">
           {% for category, message in messages %}
-            <li class="alert {{ category }}">{{ message }}</li>
+            <li class="alert {{ category }}" role="status" aria-live="polite">
+              <span class="alert-text">{{ message }}</span>
+              <button type="button" class="alert-close" aria-label="Cerrar aviso">×</button>
+            </li>
           {% endfor %}
         </ul>
       {% endif %}
@@ -29,5 +32,35 @@
 
     {% block content %}{% endblock %}
   </main>
+
+  <script>
+    (function () {
+      const alerts = document.querySelectorAll('.alerts .alert');
+      if (!alerts.length) {
+        return;
+      }
+
+      function hideAlert(alertElement) {
+        if (!alertElement || alertElement.classList.contains('alert-hidden')) {
+          return;
+        }
+        alertElement.classList.add('alert-hidden');
+        window.setTimeout(() => {
+          alertElement.remove();
+          const alertList = document.querySelector('.alerts');
+          if (alertList && !alertList.children.length) {
+            alertList.remove();
+          }
+        }, 250);
+      }
+
+      alerts.forEach((alertElement) => {
+        const closeBtn = alertElement.querySelector('.alert-close');
+        if (closeBtn) {
+          closeBtn.addEventListener('click', () => hideAlert(alertElement));
+        }
+      });
+    })();
+  </script>
 </body>
 </html>

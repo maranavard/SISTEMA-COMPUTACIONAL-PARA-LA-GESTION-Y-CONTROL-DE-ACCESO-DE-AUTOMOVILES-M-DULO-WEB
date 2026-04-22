@@ -1,0 +1,8 @@
+@startuml
+title CU07 Cerrar sesion
+start
+:Seleccionar cerrar sesion;
+:Finalizar sesion activa;
+:Redirigir a login;
+stop
+@enduml

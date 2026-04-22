@@ -1,0 +1,12 @@
+@startuml
+title CU05 Consultar por placa
+start
+:Ingresar placa;
+:Ejecutar busqueda;
+if (Placa registrada) then (Si)
+  :Mostrar informacion del vehiculo;
+else (No)
+  :Mostrar placa no registrada;
+endif
+stop
+@enduml

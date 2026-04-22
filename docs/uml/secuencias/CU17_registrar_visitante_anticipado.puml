@@ -1,0 +1,15 @@
+@startuml
+actor Funcionario
+participant "UI Web" as UI
+participant "VisitantesRoutes" as V
+participant "VisitanteModel" as M
+database "PostgreSQL" as DB
+
+Funcionario -> UI : Diligenciar visitante
+UI -> V : POST registrar visitante
+V -> M : create_item()
+M -> DB : INSERT registro_visitantes
+DB --> M : ok/error
+M --> V : resultado
+V --> UI : confirmacion
+@enduml

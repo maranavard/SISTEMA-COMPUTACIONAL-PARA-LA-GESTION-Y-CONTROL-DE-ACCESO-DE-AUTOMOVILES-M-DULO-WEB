@@ -3,6 +3,7 @@
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
+from app.models.area_destino import AreaDestino
 from app.models.visitante import Visitante
 from app.utils.authz import community_required
 
@@ -14,18 +15,24 @@ visitantes_bp = Blueprint("visitantes", __name__, url_prefix="/visitantes")
 @login_required
 @community_required
 def list_items():
-    return render_template("visitantes/index.html")
+    areas_destino = AreaDestino.list_names()
+    return render_template("visitantes/index.html", areas_destino=areas_destino)
 
 
 @visitantes_bp.post("/crear")
 @login_required
 @community_required
 def create_item():
+    area_destino = request.form.get("area_destino", "").strip()
+    if not AreaDestino.exists_active(area_destino):
+        flash("Debes seleccionar un area destino valida.", "error")
+        return redirect(url_for("visitantes.list_items"))
+
     payload = {
         "nombres": request.form.get("nombres", "").strip(),
         "apellidos": request.form.get("apellidos", "").strip(),
         "numero_identificacion": request.form.get("numero_identificacion", "").strip(),
-        "area_destino": request.form.get("area_destino", "").strip(),
+        "area_destino": area_destino,
         "motivo_visita": request.form.get("motivo_visita", "").strip(),
         "placa": request.form.get("placa", "").strip().upper(),
         "fecha_hora_registro": request.form.get("fecha_hora_registro", "").strip(),
@@ -47,11 +54,16 @@ def create_item():
 @login_required
 @community_required
 def update_item(item_id: int):
+    area_destino = request.form.get("area_destino", "").strip()
+    if area_destino and not AreaDestino.exists_active(area_destino):
+        flash("El area destino seleccionada no es valida.", "error")
+        return redirect(url_for("visitantes.list_items"))
+
     payload = {
         "nombres": request.form.get("nombres", "").strip(),
         "apellidos": request.form.get("apellidos", "").strip(),
         "numero_identificacion": request.form.get("numero_identificacion", "").strip(),
-        "area_destino": request.form.get("area_destino", "").strip(),
+        "area_destino": area_destino,
         "motivo_visita": request.form.get("motivo_visita", "").strip(),
         "placa": request.form.get("placa", "").strip().upper(),
         "fecha_hora_prevista": request.form.get("fecha_hora_prevista", "").strip(),

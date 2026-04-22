@@ -1,0 +1,15 @@
+@startuml
+actor Administrador
+participant "UI Web" as UI
+participant "ReportesRoutes" as R
+participant "NovedadModel/VehiculoModel" as M
+database "PostgreSQL" as DB
+
+Administrador -> UI : Seleccionar tipo de reporte
+UI -> R : GET /reportes/modulo/{tipo}
+R -> M : cargar datos del reporte
+M -> DB : SELECT datos consolidados
+DB --> M : resultados
+M --> R : dataset
+R --> UI : render reporte
+@enduml
