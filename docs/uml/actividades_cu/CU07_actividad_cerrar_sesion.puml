@@ -1,4 +1,4 @@
-@startuml
+﻿@startuml CU07_actividad_cerrar_sesion
 title CU07 Cerrar sesion
 start
 :Seleccionar cerrar sesion;
@@ -6,3 +6,4 @@ start
 :Redirigir a login;
 stop
 @enduml
+

@@ -1,13 +1,14 @@
-@startuml
+﻿@startuml CU09_actividad_gestionar_espacios
 title CU09 Gestionar espacios de parqueo
 start
 :Abrir modulo Espacios;
-:Seleccionar cupo;
-:Cambiar estado;
-if (Actualizacion exitosa) then (Si)
-  :Guardar estado del espacio;
+:Consultar disponibilidad actual;
+:Seleccionar cupo o registro operativo;
+if (Datos validos) then (Si)
+  :Guardar actualizacion operativa;
 else (No)
   :Mostrar error de guardado;
 endif
 stop
 @enduml
+

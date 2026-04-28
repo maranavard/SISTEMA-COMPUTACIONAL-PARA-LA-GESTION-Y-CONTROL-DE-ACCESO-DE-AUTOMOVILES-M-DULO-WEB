@@ -15,6 +15,9 @@
   <section class="reportes-card">
     <h2>Reporte de {{ report.label }}</h2>
     <p class="reportes-subtitle">{{ report.description }}</p>
+    {% if is_guard_role %}
+    <p class="auth-form-hint">Perfil vigilante: solo consulta operativa del día. Exportación deshabilitada.</p>
+    {% endif %}
 
     {% if not printable %}
     <form method="get" action="{{ url_for('reportes.visualizar', module_key=module_key) }}" class="users-form">
@@ -27,6 +30,7 @@
       <div class="reportes-actions" style="margin-top: 0.65rem;">
         <button type="submit">Buscar</button>
         <a class="report-icon-btn" href="{{ url_for('reportes.visualizar', module_key=module_key) }}" title="Limpiar filtros" aria-label="Limpiar filtros"><span aria-hidden="true">⟲</span></a>
+        {% if can_export %}
         <a
           class="report-icon-btn"
           href="{{ url_for('reportes.descargar_excel', module_key=module_key, placa=filters.placa, fecha=filters.fecha, usuario=filters.usuario, vigilante=filters.vigilante) }}"
@@ -41,6 +45,7 @@
           target="_blank"
           rel="noopener noreferrer"
         ><span aria-hidden="true">🖨</span></a>
+        {% endif %}
       </div>
     </form>
     {% endif %}

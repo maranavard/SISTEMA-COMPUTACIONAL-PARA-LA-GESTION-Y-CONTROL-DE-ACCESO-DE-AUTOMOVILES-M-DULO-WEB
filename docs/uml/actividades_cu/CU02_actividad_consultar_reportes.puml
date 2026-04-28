@@ -1,8 +1,11 @@
-@startuml
+﻿@startuml CU02_actividad_consultar_reportes
 title CU02 Consultar reportes
 start
 :Ingresar a Reportes;
 :Elegir tipo de reporte;
+if (Rol Vigilante/Seguridad) then (Si)
+  :Forzar modulo Accesos/Salidas del dia;
+endif
 if (Hay datos) then (Si)
   :Visualizar resultados;
 else (No)
@@ -10,3 +13,4 @@ else (No)
 endif
 stop
 @enduml
+

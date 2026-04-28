@@ -1,0 +1,17 @@
+﻿@startuml CU23_actividad_recibir_eventos_hardware_api
+title CU23 Recibir eventos hardware por API
+start
+:Recibir peticion API con token y JSON;
+if (Token y payload validos) then (Si)
+  :Registrar evento de hardware;
+  if (Evento duplicado) then (Si)
+    :Responder duplicado;
+  else (No)
+    :Responder aceptado;
+  endif
+else (No)
+  :Responder no autorizado/estructura invalida;
+endif
+stop
+@enduml
+

@@ -8,13 +8,19 @@ from app.models.documento_vehiculo import DocumentoVehiculo
 from app.models.horario import HorarioOperacion
 from app.models.user import User
 from app.models.vehiculo import Vehiculo
-from app.utils.authz import community_required
+from app.utils.authz import community_required, normalize_role
 from app.utils.schedule_alerts import send_admin_offday_alert
 
 
 vehiculos_bp = Blueprint("vehiculos", __name__, url_prefix="/vehiculos")
 
 WARNING_DAYS = 30
+SENSITIVE_ALLOWED_ROLES = {"admin_sistema", "admin", "administrador"}
+
+
+def _can_manage_sensitive() -> bool:
+    rol = normalize_role(getattr(current_user, "rol", ""))
+    return rol in SENSITIVE_ALLOWED_ROLES
 
 
 def _normalize_lookup_text(value: str) -> str:
@@ -92,6 +98,7 @@ def _flash_vehicle_document_alert(vehiculo_id: int) -> None:
 @login_required
 @community_required
 def list_items():
+    can_manage_sensitive = _can_manage_sensitive()
     placa_consulta = (request.args.get("placa", "") or "").strip().upper()
     vehiculo_consulta = None
     tipos_vehiculo = Vehiculo.list_vehicle_types()
@@ -101,32 +108,33 @@ def list_items():
 
     warning_items = []
     error_items = []
-    for item in items:
-        vehiculo_id = item.get("id")
-        if not vehiculo_id:
-            continue
+    if can_manage_sensitive:
+        for item in items:
+            vehiculo_id = item.get("id")
+            if not vehiculo_id:
+                continue
 
-        docs = DocumentoVehiculo.get_vehicle_documents(int(vehiculo_id))
-        status = DocumentoVehiculo.get_status_summary(int(vehiculo_id), warning_days=WARNING_DAYS)
+            docs = DocumentoVehiculo.get_vehicle_documents(int(vehiculo_id))
+            status = DocumentoVehiculo.get_status_summary(int(vehiculo_id), warning_days=WARNING_DAYS)
 
-        item["fecha_vencimiento_soat_input"] = _date_to_input((docs.get("soat") or {}).get("fecha_vencimiento"))
-        item["fecha_vencimiento_tecnomecanica_input"] = _date_to_input((docs.get("tecnomecanica") or {}).get("fecha_vencimiento"))
-        item["fecha_vencimiento_tarjeta_propiedad_input"] = _date_to_input((docs.get("tarjeta_propiedad") or {}).get("fecha_vencimiento"))
-        item["doc_status_level"] = status.get("level") or "success"
-        item["doc_status_message"] = status.get("message") or ""
-        item["conductor_ref"] = str(item.get("conductor_id") or "")
-        item["user_ref"] = str(item.get("user_id") or "")
+            item["fecha_vencimiento_soat_input"] = _date_to_input((docs.get("soat") or {}).get("fecha_vencimiento"))
+            item["fecha_vencimiento_tecnomecanica_input"] = _date_to_input((docs.get("tecnomecanica") or {}).get("fecha_vencimiento"))
+            item["fecha_vencimiento_tarjeta_propiedad_input"] = _date_to_input((docs.get("tarjeta_propiedad") or {}).get("fecha_vencimiento"))
+            item["doc_status_level"] = status.get("level") or "success"
+            item["doc_status_message"] = status.get("message") or ""
+            item["conductor_ref"] = str(item.get("conductor_id") or "")
+            item["user_ref"] = str(item.get("user_id") or "")
 
-        if item["doc_status_level"] == "warning":
-            warning_items.append(item)
-        elif item["doc_status_level"] == "error":
-            error_items.append(item)
+            if item["doc_status_level"] == "warning":
+                warning_items.append(item)
+            elif item["doc_status_level"] == "error":
+                error_items.append(item)
 
     if placa_consulta:
         vehiculo_consulta = Vehiculo.get_by_placa(placa_consulta)
 
     doc_status_consulta = None
-    if vehiculo_consulta and vehiculo_consulta.get("id"):
+    if can_manage_sensitive and vehiculo_consulta and vehiculo_consulta.get("id"):
         try:
             doc_status_consulta = DocumentoVehiculo.get_status_summary(int(vehiculo_consulta.get("id")), warning_days=30)
         except Exception:
@@ -140,6 +148,7 @@ def list_items():
         items=items,
         warning_items=warning_items,
         error_items=error_items,
+        can_manage_sensitive=can_manage_sensitive,
         tipos_vehiculo=tipos_vehiculo,
         conductores=conductores,
         usuarios=usuarios,
@@ -150,6 +159,10 @@ def list_items():
 @login_required
 @community_required
 def create_item():
+    if not _can_manage_sensitive():
+        flash("No tienes permisos para registrar o editar información documental de vehículos.", "error")
+        return redirect(url_for("vehiculos.list_items"))
+
     placa = Vehiculo.normalize_plate(request.form.get("placa", ""))
     tipo_vehiculo_id = request.form.get("tipo_vehiculo_id", "").strip()
     conductor_ref = request.form.get("conductor_id", "")
@@ -235,6 +248,10 @@ def consultar_por_placa():
 @login_required
 @community_required
 def update_item(item_id: int):
+    if not _can_manage_sensitive():
+        flash("No tienes permisos para actualizar información documental de otros usuarios.", "error")
+        return redirect(url_for("vehiculos.list_items"))
+
     placa = Vehiculo.normalize_plate(request.form.get("placa", ""))
     tipo_vehiculo_id = request.form.get("tipo_vehiculo_id", "").strip()
     conductor_ref = request.form.get("conductor_id", "")

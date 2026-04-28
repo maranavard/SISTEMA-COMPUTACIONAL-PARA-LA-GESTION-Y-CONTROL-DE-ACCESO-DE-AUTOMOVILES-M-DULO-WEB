@@ -1,4 +1,4 @@
-@startuml
+﻿@startuml CU16_recuperar_contrasena
 actor Usuario
 participant "UI Web" as UI
 participant "AuthRoutes" as A

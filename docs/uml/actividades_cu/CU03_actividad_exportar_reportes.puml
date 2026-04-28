@@ -1,7 +1,9 @@
-@startuml
+﻿@startuml CU03_actividad_exportar_reportes
 title CU03 Exportar reportes
 start
 :Abrir reporte;
+:Validar rol para exportacion;
+if (Rol Administrador) then (Si)
 :Seleccionar exportar;
 :Elegir formato;
 if (Generacion exitosa) then (Si)
@@ -9,5 +11,9 @@ if (Generacion exitosa) then (Si)
 else (No)
   :Mostrar error de exportacion;
 endif
+else (No)
+  :Mostrar permiso denegado;
+endif
 stop
 @enduml
+

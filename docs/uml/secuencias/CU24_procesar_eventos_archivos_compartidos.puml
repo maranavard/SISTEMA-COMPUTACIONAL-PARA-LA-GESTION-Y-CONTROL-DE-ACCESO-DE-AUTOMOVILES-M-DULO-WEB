@@ -1,0 +1,21 @@
+﻿@startuml CU24_procesar_eventos_archivos_compartidos
+actor Administrador
+participant "UI Web" as UI
+participant "ControlHardwareRoutes" as H
+participant "Procesador de Lote" as P
+participant "ControlHardwareModel" as M
+database "PostgreSQL" as DB
+
+Administrador -> UI : Procesar archivos compartidos
+UI -> H : POST /control-hardware/procesar-archivos
+H -> P : leer inbox/*.json
+loop por cada archivo
+  P -> H : enviar evento parseado
+  H -> M : register_event(...)
+  M -> DB : INSERT control_hardware_events
+  DB --> M : accepted/duplicado/error
+  M --> H : estado
+  H -> P : mover a processed/error
+end
+H --> UI : reporte de lote procesado
+@enduml

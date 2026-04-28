@@ -11,6 +11,7 @@
     </div>
   </div>
 
+  {% if can_manage_sensitive %}
   <div class="vehiculos-register-card">
     <h2>Formulario de Registro de Vehiculos</h2>
     <form method="post" action="{{ url_for('vehiculos.create_item') }}" class="vehiculos-register-form">
@@ -46,6 +47,12 @@
       <button type="submit" class="vehiculos-register-btn">Registrar</button>
     </form>
   </div>
+  {% else %}
+  <div class="vehiculos-register-card">
+    <h2>Consulta básica de vehículos</h2>
+    <p class="auth-form-hint">Perfil de vigilancia: solo consulta por placa sin datos documentales sensibles.</p>
+  </div>
+  {% endif %}
 
   <div class="vehiculos-register-card vehiculos-consulta-card">
     <h3>Consulta por placa</h3>
@@ -63,9 +70,11 @@
         <p><strong>Color:</strong> {{ vehiculo_consulta.color or '' }}</p>
         <p><strong>Tipo:</strong> {{ vehiculo_consulta.tipo_vehiculo_nombre or '' }}</p>
         <p><strong>Estado:</strong> {{ vehiculo_consulta.estado or '' }}</p>
+        {% if can_manage_sensitive %}
         <p><strong>Fecha de registro:</strong> {{ vehiculo_consulta.fecha_registro or '' }}</p>
         {% if doc_status_consulta %}
         <p><strong>Estado documental:</strong> {{ doc_status_consulta.message or '' }}</p>
+        {% endif %}
         {% endif %}
       </div>
       {% else %}
@@ -74,6 +83,7 @@
     {% endif %}
   </div>
 
+  {% if can_manage_sensitive %}
   <div class="vehiculos-register-card">
     <h3>Control documental de vehículos</h3>
 
@@ -143,5 +153,6 @@
       </table>
     </div>
   </div>
+  {% endif %}
 </section>
 {% endblock %}

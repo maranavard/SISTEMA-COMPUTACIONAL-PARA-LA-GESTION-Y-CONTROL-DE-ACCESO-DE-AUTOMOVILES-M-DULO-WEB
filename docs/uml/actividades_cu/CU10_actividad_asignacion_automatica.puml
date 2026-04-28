@@ -1,13 +1,19 @@
-@startuml
+﻿@startuml CU10_actividad_asignacion_automatica
 title CU10 Asignacion automatica de cupo
 start
 :Recibir solicitud de ingreso;
-:Validar disponibilidad;
-if (Hay cupo disponible) then (Si)
-  :Asignar cupo automaticamente;
-  :Registrar novedad de ingreso;
+:Validar documentacion por placa;
+if (Documentacion valida) then (Si)
+  :Validar disponibilidad;
+  if (Hay cupo disponible) then (Si)
+    :Asignar cupo automaticamente;
+    :Registrar novedad de ingreso;
+  else (No)
+    :Notificar sin disponibilidad;
+  endif
 else (No)
-  :Notificar sin disponibilidad;
+  :Bloquear asignacion y mostrar motivo;
 endif
 stop
 @enduml
+

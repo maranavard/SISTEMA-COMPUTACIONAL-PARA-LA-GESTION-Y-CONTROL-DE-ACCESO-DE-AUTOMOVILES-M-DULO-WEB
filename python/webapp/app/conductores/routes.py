@@ -3,16 +3,22 @@
 from datetime import date, datetime
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
-from flask_login import login_required
+from flask_login import current_user, login_required
 
 from app.models.conductor import Conductor
-from app.utils.authz import community_required
+from app.utils.authz import community_required, normalize_role
 from app.utils.field_validators import is_valid_cedula, is_valid_email, normalize_cedula, normalize_email
 
 
 conductores_bp = Blueprint("conductores", __name__, url_prefix="/conductores")
 
 WARNING_DAYS = 30
+SENSITIVE_ALLOWED_ROLES = {"admin_sistema", "admin", "administrador"}
+
+
+def _can_manage_sensitive() -> bool:
+    rol = normalize_role(getattr(current_user, "rol", ""))
+    return rol in SENSITIVE_ALLOWED_ROLES
 
 
 def _parse_date(raw_value):
@@ -124,9 +130,10 @@ def _validate_fecha_vencimiento_pase(raw_value: str) -> tuple[bool, str]:
 @login_required
 @community_required
 def list_items():
+    can_manage_sensitive = _can_manage_sensitive()
     items = Conductor.list_items()
     cedula_filtro = (request.args.get("cedula", "") or "").strip()
-    if cedula_filtro:
+    if cedula_filtro and can_manage_sensitive:
         needle = cedula_filtro.lower()
         items = [
             item
@@ -137,19 +144,20 @@ def list_items():
     warning_items = []
     error_items = []
 
-    for item in items:
-        status = _document_status(item.get("fecha_vencimiento_pase"))
-        item["doc_status_level"] = status["level"]
-        item["doc_status_label"] = status["label"]
-        item["doc_status_message"] = status["message"]
-        item["dias_para_vencer"] = status["days"]
-        item["fecha_registro_input"] = _to_datetime_local_input(item.get("fecha_registro"))
-        item["fecha_vencimiento_pase_input"] = _to_date_input(item.get("fecha_vencimiento_pase"))
+    if can_manage_sensitive:
+        for item in items:
+            status = _document_status(item.get("fecha_vencimiento_pase"))
+            item["doc_status_level"] = status["level"]
+            item["doc_status_label"] = status["label"]
+            item["doc_status_message"] = status["message"]
+            item["dias_para_vencer"] = status["days"]
+            item["fecha_registro_input"] = _to_datetime_local_input(item.get("fecha_registro"))
+            item["fecha_vencimiento_pase_input"] = _to_date_input(item.get("fecha_vencimiento_pase"))
 
-        if status["level"] == "warning":
-            warning_items.append(item)
-        if status["level"] == "error":
-            error_items.append(item)
+            if status["level"] == "warning":
+                warning_items.append(item)
+            if status["level"] == "error":
+                error_items.append(item)
 
     return render_template(
         "conductores/index.html",
@@ -157,6 +165,7 @@ def list_items():
         cedula_filtro=cedula_filtro,
         warning_items=warning_items,
         error_items=error_items,
+        can_manage_sensitive=can_manage_sensitive,
     )
 
 
@@ -164,6 +173,10 @@ def list_items():
 @login_required
 @community_required
 def create_item():
+    if not _can_manage_sensitive():
+        flash("No tienes permisos para registrar o editar perfiles de conductor.", "error")
+        return redirect(url_for("conductores.list_items"))
+
     cedula = normalize_cedula(request.form.get("cedula", ""))
     email = normalize_email(request.form.get("email", ""))
 
@@ -210,6 +223,10 @@ def create_item():
 @login_required
 @community_required
 def update_item(item_id: int):
+    if not _can_manage_sensitive():
+        flash("No tienes permisos para actualizar información documental de otros usuarios.", "error")
+        return redirect(url_for("conductores.list_items"))
+
     cedula = normalize_cedula(request.form.get("cedula", ""))
     email = normalize_email(request.form.get("email", ""))
 

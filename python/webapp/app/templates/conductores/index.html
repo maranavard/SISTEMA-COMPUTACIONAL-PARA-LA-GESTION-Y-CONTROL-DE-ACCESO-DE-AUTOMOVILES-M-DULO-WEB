@@ -11,6 +11,7 @@
     </div>
   </div>
 
+  {% if can_manage_sensitive %}
   <div class="conductores-register-card">
     <h2>Formulario de Registro de conductor</h2>
     <form method="post" action="{{ url_for('conductores.create_item') }}" class="conductores-register-form">
@@ -43,7 +44,38 @@
       <button type="submit" class="conductores-register-btn">Registrar</button>
     </form>
   </div>
+  {% else %}
+  <div class="conductores-register-card">
+    <h2>Consulta básica de conductores</h2>
+    <p class="auth-form-hint">Perfil de vigilancia: solo consulta. La edición documental está restringida.</p>
+    <div class="table-wrap">
+      <table class="users-table">
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Cédula</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in items %}
+          <tr>
+            <td>{{ item.nombre or '' }} {{ item.apellido or '' }}</td>
+            <td>{{ item.cedula or '' }}</td>
+            <td>{{ item.estado or '' }}</td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="3">No hay conductores registrados.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
 
+  {% if can_manage_sensitive %}
   <div class="conductores-register-card">
     <h2>Control documental de conductores</h2>
 
@@ -133,5 +165,6 @@
       </table>
     </div>
   </div>
+  {% endif %}
 </section>
 {% endblock %}

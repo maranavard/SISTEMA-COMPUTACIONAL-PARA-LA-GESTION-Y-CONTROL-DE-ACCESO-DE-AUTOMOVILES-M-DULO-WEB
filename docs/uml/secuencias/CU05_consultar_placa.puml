@@ -1,4 +1,4 @@
-@startuml
+﻿@startuml CU05_consultar_placa
 actor Usuario
 participant "UI Web" as UI
 participant "ConsultasRoutes" as R

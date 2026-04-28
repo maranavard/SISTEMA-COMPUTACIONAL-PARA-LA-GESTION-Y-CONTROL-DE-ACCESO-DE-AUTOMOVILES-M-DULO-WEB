@@ -1,13 +1,14 @@
-@startuml
+﻿@startuml CU13_actividad_registrarse
 title CU13 Registrarse en el sistema
 start
 :Abrir formulario registro;
 :Diligenciar datos;
-if (Datos validos) then (Si)
-  :Crear cuenta estudiante;
+if (Datos y rol permitidos) then (Si)
+  :Crear cuenta de usuario;
   :Confirmar registro;
 else (No)
   :Mostrar error de validacion;
 endif
 stop
 @enduml
+

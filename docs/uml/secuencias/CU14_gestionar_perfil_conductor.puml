@@ -1,15 +1,20 @@
-@startuml
-actor Estudiante
+﻿@startuml CU14_gestionar_perfil_conductor
+actor "Usuario autenticado" as Usuario
 participant "UI Web" as UI
 participant "ConductoresRoutes" as C
 participant "ConductorModel" as M
 database "PostgreSQL" as DB
 
-Estudiante -> UI : Editar perfil conductor
+Usuario -> UI : Consultar/editar perfil conductor
 UI -> C : POST actualizacion
-C -> M : update_item()
-M -> DB : UPDATE conductores
-DB --> M : ok/error
-M --> C : resultado
-C --> UI : confirmacion
+C -> C : validar permisos sensibles
+alt Rol Administrador
+	C -> M : update_item()
+	M -> DB : UPDATE conductores
+	DB --> M : ok/error
+	M --> C : resultado
+	C --> UI : confirmacion
+else Otro rol
+	C --> UI : solo consulta / operacion no permitida
+end
 @enduml

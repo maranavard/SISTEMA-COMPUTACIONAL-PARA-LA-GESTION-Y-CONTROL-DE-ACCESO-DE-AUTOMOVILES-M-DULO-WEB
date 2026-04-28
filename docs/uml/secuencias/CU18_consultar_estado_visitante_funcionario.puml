@@ -1,13 +1,13 @@
-@startuml
-actor Funcionario
+﻿@startuml CU18_consultar_estado_visitante_funcionario
+actor "Administrador o Vigilante" as Actor
 participant "UI Web" as UI
-participant "ControlAccesosRoutes/VisitantesRoutes" as R
+participant "ControlAccesosRoutes" as R
 participant "VisitanteModel" as V
 database "PostgreSQL" as DB
 
-Funcionario -> UI : Buscar por documento
-UI -> R : GET consulta estado
-R -> V : list_items()/filtro
+Actor -> UI : Consultar estado de solicitudes
+UI -> R : GET /control-accesos/autorizacion
+R -> V : list_items() y filtrar pendientes
 V -> DB : SELECT solicitudes
 DB --> V : resultados
 V --> R : estado de solicitud

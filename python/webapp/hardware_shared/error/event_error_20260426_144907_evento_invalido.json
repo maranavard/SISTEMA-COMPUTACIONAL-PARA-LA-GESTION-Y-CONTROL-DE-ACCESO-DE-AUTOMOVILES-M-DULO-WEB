@@ -1,0 +1,11 @@
+{
+  "event_id": "33333333-3333-4333-8333-333333333333",
+  "event_type": "acceso_detectado",
+  "source_device": "cabina_norte_rpi_01",
+  "occurred_at": "2026-04-26T10:47:00-05:00",
+  "schema_version": "1.0",
+  "payload": {
+    "placa": "XYZ987",
+    "movimiento": "subir"
+  }
+}

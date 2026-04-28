@@ -1,15 +1,16 @@
-@startuml
-actor Estudiante
+﻿@startuml CU13_registrarse
+actor "Publico (sin sesion)" as Publico
 participant "UI Web" as UI
 participant "AuthRoutes" as A
 participant "UserModel" as U
 database "PostgreSQL" as DB
 
-Estudiante -> UI : Completar formulario registro
+Publico -> UI : Completar formulario registro
 UI -> A : POST /register
 A -> U : validar existencia y datos
-U -> DB : INSERT usuario (rol estudiante)
+U -> DB : INSERT usuario (rol permitido)
 DB --> U : ok/error
 U --> A : resultado
+A -> A : validar rol permitido\n(estudiante/docente/funcionario/vigilante)
 A --> UI : cuenta creada o mensaje de error
 @enduml

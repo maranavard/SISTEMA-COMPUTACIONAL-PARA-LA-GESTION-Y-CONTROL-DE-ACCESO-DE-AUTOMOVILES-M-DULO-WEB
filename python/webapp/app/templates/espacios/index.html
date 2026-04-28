@@ -13,6 +13,9 @@
 
   <section class="espacios-card">
     <h2>Gestión de Espacios de Parqueo</h2>
+    {% if is_guard_role %}
+    <p class="auth-form-hint">Turno de vigilancia: usa esta pantalla como operación principal de parqueo.</p>
+    {% endif %}
 
     {% if assignment_notice %}
     <div class="espacios-mini-screen" id="espacios-mini-screen" role="status" aria-live="polite">
@@ -108,7 +111,9 @@
             <td>{{ item.placa_display or '' }}</td>
             <td class="espacios-action-icons">
               <div class="espacios-action-buttons">
+                {% if not is_guard_role %}
                 <a class="espacios-action-icon" href="{{ url_for('espacios.editar_item', item_id=item.id) }}" title="Editar" aria-label="Editar"><span aria-hidden="true">✎</span></a>
+                {% endif %}
                 <form method="post" action="{{ url_for('control_accesos.registrar_vehicular') }}" class="espacios-inline-form">
                   <input type="hidden" name="movimiento" value="salida" />
                   <input type="hidden" name="placa" value="{{ item.placa_salida or '' }}" />
@@ -123,7 +128,9 @@
                     <span aria-hidden="true">↪</span>
                   </button>
                 </form>
+                {% if not is_guard_role %}
                 <a class="espacios-action-icon" href="{{ url_for('espacios.visualizar_item', item_id=item.id) }}" title="Visualizar" aria-label="Visualizar"><span aria-hidden="true">👁</span></a>
+                {% endif %}
               </div>
             </td>
             <td>{{ item.fecha_actualizacion.strftime('%H:%M:%S') if item.fecha_actualizacion else '' }}</td>

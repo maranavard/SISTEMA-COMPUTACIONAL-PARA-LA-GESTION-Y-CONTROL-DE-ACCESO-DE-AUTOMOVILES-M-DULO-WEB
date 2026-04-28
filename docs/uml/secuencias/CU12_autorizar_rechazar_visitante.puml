@@ -1,4 +1,4 @@
-@startuml
+﻿@startuml CU12_autorizar_rechazar_visitante
 actor Vigilante
 participant "UI Web" as UI
 participant "ControlAccesosRoutes" as C

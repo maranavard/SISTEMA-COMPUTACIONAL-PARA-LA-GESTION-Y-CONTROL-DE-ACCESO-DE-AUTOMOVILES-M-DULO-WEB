@@ -1,4 +1,4 @@
-@startuml
+﻿@startuml CU05_actividad_consultar_placa
 title CU05 Consultar por placa
 start
 :Ingresar placa;
@@ -10,3 +10,4 @@ else (No)
 endif
 stop
 @enduml
+

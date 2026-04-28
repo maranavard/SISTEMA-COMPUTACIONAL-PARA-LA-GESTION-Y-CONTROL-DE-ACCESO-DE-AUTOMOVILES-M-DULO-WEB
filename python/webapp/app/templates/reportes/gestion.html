@@ -32,12 +32,14 @@
             <td>{{ module.parameters }}</td>
             <td>
               <div class="reportes-actions">
+                {% if can_export %}
                 <a class="report-icon-btn" href="{{ url_for('reportes.descargar_excel', module_key=module.key) }}" title="Descargar Excel" aria-label="Descargar Excel">
                   <span aria-hidden="true">⤓</span>
                 </a>
                 <a class="report-icon-btn" href="{{ url_for('reportes.imprimir', module_key=module.key) }}" title="Imprimir / PDF" aria-label="Imprimir / PDF" target="_blank" rel="noopener noreferrer">
                   <span aria-hidden="true">🖨</span>
                 </a>
+                {% endif %}
                 <a class="report-icon-btn" href="{{ url_for('reportes.visualizar', module_key=module.key) }}" title="Visualizar" aria-label="Visualizar">
                   <span aria-hidden="true">👁</span>
                 </a>

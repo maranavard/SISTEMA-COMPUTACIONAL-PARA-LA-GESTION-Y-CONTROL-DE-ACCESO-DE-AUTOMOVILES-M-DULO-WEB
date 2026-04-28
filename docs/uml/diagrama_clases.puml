@@ -1,4 +1,4 @@
-@startuml
+@startuml diagrama_clases
 skinparam classAttributeIconSize 0
 
 class User <<model>> {
@@ -57,6 +57,34 @@ class Conductor <<model>> {
   +update_item(item_id, data)
 }
 
+class DocumentoVehiculo <<model>> {
+  +upsert_documents(vehiculo_id, docs_expiration)
+  +get_vehicle_documents(vehiculo_id): dict
+  +get_status_summary(vehiculo_id, warning_days): dict
+}
+
+class AreaDestino <<model>> {
+  +list_items(include_inactive): list
+  +list_names(): list
+  +create_area(nombre)
+  +update_area(area_id, nombre)
+  +delete_area(area_id)
+}
+
+class HorarioOperacion <<model>> {
+  +get_config(): dict
+  +update_config(hora_inicio, hora_fin, dias_activos, festivos_texto)
+  +evaluate_moment(moment): dict
+}
+
+class ControlHardware <<model>> {
+  +list_states(): list
+  +update_states(state_map, user_id)
+  +update_one(clave, encendido, user_id): bool
+  +register_event(...): bool
+  +list_recent_events(limit): list
+}
+
 class LocalSyncService <<service>> {
   +sync_event(entidad, operacion, payload): dict
   +retry_pending(limit): dict
@@ -76,13 +104,107 @@ class AuthZ <<security>> {
   +roles_required(allowed_roles)
   +admin_required(view_func)
   +community_required(view_func)
+  +parking_ops_required(view_func)
 }
 
-class AuthRoutes <<blueprint>>
-class ControlAccesosRoutes <<blueprint>>
-class ReportesRoutes <<blueprint>>
-class ConsultasRoutes <<blueprint>>
-class MainRoutes <<blueprint>>
+class AuthRoutes <<blueprint>> {
+  +login()
+  +login_post()
+  +register()
+  +register_post()
+  +forgot_password()
+  +reset_password(token)
+  +logout()
+}
+
+class ControlAccesosRoutes <<blueprint>> {
+  +index()
+  +registrar_vehicular()
+  +autorizacion()
+  +autorizar(item_id)
+  +rechazar(item_id)
+  +historial()
+}
+
+class ReportesRoutes <<blueprint>> {
+  +gestion()
+  +visualizar(module_key)
+  +imprimir(module_key)
+  +descargar_excel(module_key)
+}
+
+class ConsultasRoutes <<blueprint>> {
+  +index()
+  +visualizar(item_id)
+  +editar(item_id)
+  +guardar_edicion(item_id)
+  +borrar(item_id)
+}
+
+class MainRoutes <<blueprint>> {
+  +index()
+  +dashboard()
+  +mi_cuenta()
+}
+
+class UsersRoutes <<blueprint>> {
+  +list_users()
+  +create_user()
+  +update_user(user_id)
+}
+
+class ConductoresRoutes <<blueprint>> {
+  +list_items()
+  +create_item()
+  +update_item(item_id)
+}
+
+class VehiculosRoutes <<blueprint>> {
+  +list_items()
+  +create_item()
+  +consultar_por_placa()
+  +update_item(item_id)
+}
+
+class VisitantesRoutes <<blueprint>> {
+  +list_items()
+  +create_item()
+  +update_item(item_id)
+}
+
+class EspaciosRoutes <<blueprint>> {
+  +list_items()
+  +create_item()
+  +upsert_slot()
+  +update_item(item_id)
+  +asignacion_automatica()
+}
+
+class NovedadesRoutes <<blueprint>> {
+  +index()
+  +registrar_novedad()
+  +gestion()
+}
+
+class ControlHardwareRoutes <<blueprint>> {
+  +index()
+  +guardar()
+  +procesar_archivos()
+  +api_estado()
+  +api_comando()
+  +api_evento()
+}
+
+class AreasRoutes <<blueprint>> {
+  +index()
+  +crear()
+  +actualizar(area_id)
+}
+
+class HorariosRoutes <<blueprint>> {
+  +index()
+  +guardar()
+}
 
 User ..> DB
 Vehiculo ..> DB
@@ -90,19 +212,52 @@ Novedad ..> DB
 Espacio ..> DB
 Visitante ..> DB
 Conductor ..> DB
+DocumentoVehiculo ..> DB
+AreaDestino ..> DB
+HorarioOperacion ..> DB
+ControlHardware ..> DB
 LocalSyncService ..> DB
 
 Vehiculo ..> LocalSyncService
+Vehiculo ..> DocumentoVehiculo
 Novedad ..> LocalSyncService
 Novedad ..> Espacio
 
 AuthRoutes ..> User
 AuthRoutes ..> AuthZ
+UsersRoutes ..> User
+UsersRoutes ..> AuthZ
+ConductoresRoutes ..> Conductor
+ConductoresRoutes ..> AuthZ
+VehiculosRoutes ..> Vehiculo
+VehiculosRoutes ..> Conductor
+VehiculosRoutes ..> DocumentoVehiculo
+VehiculosRoutes ..> HorarioOperacion
+VehiculosRoutes ..> User
+VehiculosRoutes ..> AuthZ
+VisitantesRoutes ..> Visitante
+VisitantesRoutes ..> AreaDestino
+VisitantesRoutes ..> AuthZ
+EspaciosRoutes ..> Espacio
+EspaciosRoutes ..> Novedad
+EspaciosRoutes ..> Vehiculo
+EspaciosRoutes ..> AuthZ
+NovedadesRoutes ..> Novedad
+NovedadesRoutes ..> AuthZ
 ControlAccesosRoutes ..> Vehiculo
 ControlAccesosRoutes ..> Novedad
 ControlAccesosRoutes ..> Visitante
 ReportesRoutes ..> Novedad
 ReportesRoutes ..> Vehiculo
+ReportesRoutes ..> User
+ReportesRoutes ..> AuthZ
 ConsultasRoutes ..> Vehiculo
+ConsultasRoutes ..> AuthZ
 MainRoutes ..> AuthZ
+ControlHardwareRoutes ..> ControlHardware
+ControlHardwareRoutes ..> AuthZ
+AreasRoutes ..> AreaDestino
+AreasRoutes ..> AuthZ
+HorariosRoutes ..> HorarioOperacion
+HorariosRoutes ..> AuthZ
 @enduml

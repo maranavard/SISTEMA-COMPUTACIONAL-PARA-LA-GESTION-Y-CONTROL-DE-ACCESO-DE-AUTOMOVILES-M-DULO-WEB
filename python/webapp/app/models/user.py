@@ -29,11 +29,26 @@ class User(UserMixin):
         role_text = role_text.strip()
         if role_text.startswith("{") and role_text.endswith("}"):
             items = [item.strip().strip('"') for item in role_text[1:-1].split(",") if item.strip()]
-            return items[0] if items else "sin_rol"
+            role_text = items[0] if items else "sin_rol"
         if role_text.startswith("[") and role_text.endswith("]"):
             items = [item.strip().strip('"') for item in role_text[1:-1].split(",") if item.strip()]
-            return items[0] if items else "sin_rol"
+            role_text = items[0] if items else "sin_rol"
 
+        aliases = {
+            "vigilante/seguridad": "seguridad_udec",
+            "vigilante_seguridad": "seguridad_udec",
+            "seguridad": "seguridad_udec",
+            "funcionario": "funcionario_area",
+            "funcionario_udec": "funcionario_area",
+            "estudiante": "estudiante_udec",
+            "alumno": "estudiante_udec",
+            "profesor": "docente_udec",
+            "docente": "docente_udec",
+            "maestro": "docente_udec",
+            "conductor": "conductor_udec",
+            "visitante": "visitante_udec",
+        }
+        role_text = aliases.get(role_text, role_text)
         return role_text or "sin_rol"
 
     @staticmethod

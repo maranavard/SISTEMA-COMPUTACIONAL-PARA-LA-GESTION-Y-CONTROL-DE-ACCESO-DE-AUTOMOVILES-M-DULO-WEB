@@ -1,19 +1,20 @@
-@startuml
-actor Visitante
-participant "UI Web" as UI
-participant "Modulo Consulta Visitante" as R
+﻿@startuml CU19_consultar_estado_solicitud_visitante
+title CU19 - Consultar estado de solicitud (Visitante externo) [Pendiente]
+
+actor "Visitante externo" as Visitante
+participant "Canal Web Publico" as UI
+participant "Modulo Consulta Estado" as R
 participant "VisitanteModel" as V
 database "PostgreSQL" as DB
 
-Visitante -> UI : Ingresar documento/datos
-UI -> R : GET consulta de estado
-R -> V : buscar solicitud
-V -> DB : SELECT registro visitante
-DB --> V : resultado
-alt existe
-  V --> R : estado (pendiente/aprobado/rechazado)
-  R --> UI : mostrar estado
-else no existe
-  R --> UI : mensaje solicitud no encontrada
-end
+note over Visitante,DB
+Este caso de uso esta definido funcionalmente,
+pero su flujo publico aun no esta implementado
+en la version actual del sistema.
+end note
+
+Visitante -> UI : Ingresar identificador de solicitud
+UI -> R : Solicitar estado
+R --> UI : Funcionalidad pendiente
+UI --> Visitante : Mensaje de no disponibilidad
 @enduml

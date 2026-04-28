@@ -1,0 +1,15 @@
+﻿@startuml CU25_auditar_eventos_hardware
+actor Administrador
+participant "UI Web" as UI
+participant "ControlHardwareRoutes" as H
+participant "ControlHardwareModel" as M
+database "PostgreSQL" as DB
+
+Administrador -> UI : Consultar auditoria de eventos hardware
+UI -> H : GET /control-hardware/
+H -> M : list_recent_events(limit)
+M -> DB : SELECT control_hardware_events
+DB --> M : eventos recientes
+M --> H : lista de eventos
+H --> UI : tabla de auditoria
+@enduml

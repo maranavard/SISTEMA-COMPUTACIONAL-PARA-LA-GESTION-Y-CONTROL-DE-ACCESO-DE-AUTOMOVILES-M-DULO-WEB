@@ -1,0 +1,18 @@
+﻿@startuml CU24_actividad_procesar_eventos_archivos_compartidos
+title CU24 Procesar eventos por archivos compartidos
+start
+:Iniciar procesamiento manual de lote;
+:Leer archivos JSON en carpeta compartida;
+while (Quedan archivos por procesar?) is (Si)
+  :Validar estructura del evento;
+  if (Evento valido) then (Si)
+    :Registrar evento en auditoria;
+    :Mover archivo a procesados;
+  else (No)
+    :Mover archivo a carpeta de error;
+  endif
+endwhile (No)
+:Mostrar resumen del lote;
+stop
+@enduml
+

@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
 
+{% block body_class %}dashboard-page{% endblock %}
+
 {% block content %}
 <section class="panel-shell">
   <div class="panel-top">
@@ -8,6 +10,7 @@
 
   {% if panel_type == 'admin' %}
   <h2 class="panel-title">Panel de control</h2>
+  <p class="panel-role-pill">Rol actual: {{ (current_role or user.rol or '') | role_label }}</p>
   <div class="panel-grid">
     <a class="panel-card" href="{{ url_for('users.list_users') }}">
       <span class="panel-card-icon" aria-hidden="true">
@@ -60,17 +63,78 @@
   </div>
   <div class="panel-strip">
     <div class="panel-strip-text">Tu camino al exito profesional comienza ahora en Ucundinamarca</div>
-    <div class="panel-actions">
+    <div class="panel-actions panel-actions-admin">
       <a class="panel-action-btn" href="{{ url_for('control_accesos.index') }}">Control de Accesos</a>
       <a class="panel-action-btn" href="{{ url_for('control_accesos.autorizacion') }}">Autorizaciones</a>
       <a class="panel-action-btn" href="{{ url_for('novedades.gestion') }}">Historial Novedades</a>
       <a class="panel-action-btn" href="{{ url_for('horarios.index') }}">Horarios y Festivos</a>
       <a class="panel-action-btn" href="{{ url_for('areas.index') }}">Areas Destino</a>
+      <a class="panel-action-btn" href="{{ url_for('control_hardware.index') }}">Control de Hardware</a>
+      <a class="panel-action-btn" href="{{ url_for('auth.logout') }}">Cerrar sesion</a>
+    </div>
+  </div>
+  {% elif panel_type == 'vigilante' %}
+  <h2 class="panel-title">Panel operativo de vigilancia</h2>
+  <p class="panel-role-pill">Rol actual: {{ (current_role or user.rol or '') | role_label }}</p>
+  <div class="panel-grid panel-grid-4">
+    <a class="panel-card" href="{{ url_for('espacios.list_items') }}">
+      <span class="panel-card-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M4 20V4h7a4 4 0 1 1 0 8H4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 12h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </span>
+      <span class="panel-card-label">Espacios de Parqueo</span>
+    </a>
+    <a class="panel-card" href="{{ url_for('control_accesos.index') }}">
+      <span class="panel-card-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M3 12h18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M7 7h10v10H7z" stroke="currentColor" stroke-width="1.6"/></svg>
+      </span>
+      <span class="panel-card-label">Validar Acceso Vehicular</span>
+    </a>
+    <a class="panel-card" href="{{ url_for('control_accesos.autorizacion') }}">
+      <span class="panel-card-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M8 12l2.5 2.5L16 9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+      <span class="panel-card-label">Autorizar / Rechazar</span>
+    </a>
+    <a class="panel-card" href="{{ url_for('control_accesos.historial') }}">
+      <span class="panel-card-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 6v6l4 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/></svg>
+      </span>
+      <span class="panel-card-label">Estado de Visitantes</span>
+    </a>
+    <a class="panel-card" href="{{ url_for('control_hardware.index') }}">
+      <span class="panel-card-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M7 2v8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M17 2v8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><rect x="5" y="10" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.6"/></svg>
+      </span>
+      <span class="panel-card-label">Control Manual Hardware</span>
+    </a>
+    <a class="panel-card" href="{{ url_for('novedades.index') }}">
+      <span class="panel-card-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="6" y="3" width="12" height="18" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M9 8h6M9 12h6M9 16h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </span>
+      <span class="panel-card-label">Registrar Novedad</span>
+    </a>
+    <a class="panel-card" href="{{ url_for('novedades.gestion') }}">
+      <span class="panel-card-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h10M4 18h7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </span>
+      <span class="panel-card-label">Historial de Hoy</span>
+    </a>
+    <a class="panel-card" href="{{ url_for('consultas.index') }}">
+      <span class="panel-card-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="10" cy="10" r="6" stroke="currentColor" stroke-width="1.6"/><path d="M14.5 14.5L20 20" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </span>
+      <span class="panel-card-label">Consultar por Placa</span>
+    </a>
+  </div>
+  <div class="panel-strip">
+    <div class="panel-strip-text">Operación de acceso vehicular en tiempo real</div>
+    <div class="panel-actions">
       <a class="panel-action-btn" href="{{ url_for('auth.logout') }}">Cerrar sesion</a>
     </div>
   </div>
   {% else %}
-  <h2 class="panel-title">Panel principal para estudiantes, visitantes y funcionarios</h2>
+  <h2 class="panel-title">Panel principal para estudiantes, docentes y funcionarios</h2>
+  <p class="panel-role-pill">Rol actual: {{ (current_role or user.rol or '') | role_label }}</p>
   <div class="panel-grid panel-grid-4">
     <a class="panel-card" href="{{ url_for('conductores.list_items') }}">
       <span class="panel-card-icon" aria-hidden="true">

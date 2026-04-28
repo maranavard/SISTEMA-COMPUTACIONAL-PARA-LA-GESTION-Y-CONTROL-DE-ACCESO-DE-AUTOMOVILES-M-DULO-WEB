@@ -43,3 +43,12 @@ class Config:
     # Token de recuperación de contraseña.
     PASSWORD_RESET_SALT = os.getenv("PASSWORD_RESET_SALT", "password-reset-salt")
     PASSWORD_RESET_MAX_AGE_SECONDS = int(os.getenv("PASSWORD_RESET_MAX_AGE_SECONDS", "3600"))
+
+    # Token para integración JSON con módulo de hardware local.
+    HARDWARE_CONTROL_TOKEN = os.getenv("HARDWARE_CONTROL_TOKEN", "dev-hardware-token")
+
+    # Canal de archivos compartidos para eventos hardware (IEEE 3.1.3/3.1.4).
+    HARDWARE_SHARED_INBOX = os.getenv("HARDWARE_SHARED_INBOX", "hardware_shared/inbox")
+    HARDWARE_SHARED_PROCESSED = os.getenv("HARDWARE_SHARED_PROCESSED", "hardware_shared/processed")
+    HARDWARE_SHARED_ERROR = os.getenv("HARDWARE_SHARED_ERROR", "hardware_shared/error")
+    HARDWARE_SHARED_MAX_BATCH = int(os.getenv("HARDWARE_SHARED_MAX_BATCH", "30"))

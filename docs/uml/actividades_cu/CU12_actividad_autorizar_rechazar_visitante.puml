@@ -1,4 +1,4 @@
-@startuml
+﻿@startuml CU12_actividad_autorizar_rechazar_visitante
 title CU12 Autorizar/Rechazar visitante
 start
 :Abrir solicitudes;
@@ -10,3 +10,4 @@ else (No)
 endif
 stop
 @enduml
+

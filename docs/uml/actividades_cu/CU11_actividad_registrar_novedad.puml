@@ -1,4 +1,4 @@
-@startuml
+﻿@startuml CU11_actividad_registrar_novedad
 title CU11 Registrar novedad
 start
 :Abrir formulario de novedad;
@@ -10,3 +10,4 @@ else (No)
 endif
 stop
 @enduml
+

@@ -1,4 +1,4 @@
-@startuml
+﻿@startuml CU08_validar_acceso_vehicular
 actor Vigilante
 participant "UI Web" as UI
 participant "ControlAccesosRoutes" as C

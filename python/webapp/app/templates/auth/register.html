@@ -9,7 +9,7 @@
   <div class="login-card">
     <div class="login-logo-wrap">
       <img class="login-logo-img" src="{{ url_for('static', filename='imagenes/IMAGOTIPO VERTICAL COLOR.png') }}" alt="Logo Universidad de Cundinamarca" />
-      <p class="login-logo-text">Registro de estudiante</p>
+      <p class="login-logo-text">Registro de usuario</p>
     </div>
 
     <form method="post" action="{{ url_for('auth.register_post') }}" class="form login-form">
@@ -18,12 +18,61 @@
       <input name="nombre" type="text" placeholder="Nombre" />
       <input name="apellido" type="text" placeholder="Apellido" />
       <input name="numero_identificacion" type="text" placeholder="Número de identificación" inputmode="numeric" pattern="[0-9]{6,12}" title="Solo números, entre 6 y 12 dígitos" />
-      <input name="password" type="password" placeholder="Contraseña (mínimo 6 caracteres)" required />
-      <input name="confirm_password" type="password" placeholder="Confirmar contraseña" required />
+      <label class="form-field-label" for="register-role">Rol de acceso</label>
+      <select id="register-role" name="role" required>
+        <option value="estudiante_udec" selected>{{ 'estudiante_udec' | role_label }}</option>
+        <option value="docente_udec">{{ 'docente_udec' | role_label }}</option>
+        <option value="funcionario_area">{{ 'funcionario_area' | role_label }}</option>
+        <option value="vigilante">{{ 'vigilante' | role_label }}</option>
+      </select>
+      <div class="password-field-wrap">
+        <input id="register-password" name="password" type="password" placeholder="Contraseña (mínimo 6 caracteres)" required />
+        <button
+          type="button"
+          id="toggle-register-password"
+          class="password-toggle-btn register-toggle-btn is-hidden"
+          aria-label="Mostrar u ocultar contraseña"
+          aria-pressed="false"
+        >👁</button>
+      </div>
+      <div class="password-field-wrap">
+        <input id="register-confirm-password" name="confirm_password" type="password" placeholder="Confirmar contraseña" required />
+        <button
+          type="button"
+          id="toggle-register-confirm-password"
+          class="password-toggle-btn register-toggle-btn is-hidden"
+          aria-label="Mostrar u ocultar confirmación de contraseña"
+          aria-pressed="false"
+        >👁</button>
+      </div>
+      <p class="auth-form-hint">Docente, Estudiante y Funcionario usan el panel general. Vigilante usa el panel de control.</p>
 
       <button type="submit" class="btn-primary">Crear cuenta</button>
       <a class="forgot-link" href="{{ url_for('auth.login') }}">Ya tengo cuenta, iniciar sesión</a>
     </form>
   </div>
 </section>
+
+<script>
+  (function () {
+    function bindToggle(inputId, buttonId) {
+      const input = document.getElementById(inputId);
+      const button = document.getElementById(buttonId);
+      if (!input || !button) {
+        return;
+      }
+
+      button.addEventListener('click', function () {
+        const isVisible = input.type === 'text';
+        input.type = isVisible ? 'password' : 'text';
+        button.setAttribute('aria-pressed', isVisible ? 'false' : 'true');
+        button.classList.toggle('is-active', !isVisible);
+        button.classList.toggle('is-hidden', isVisible);
+      });
+    }
+
+    bindToggle('register-password', 'toggle-register-password');
+    bindToggle('register-confirm-password', 'toggle-register-confirm-password');
+  })();
+</script>
 {% endblock %}

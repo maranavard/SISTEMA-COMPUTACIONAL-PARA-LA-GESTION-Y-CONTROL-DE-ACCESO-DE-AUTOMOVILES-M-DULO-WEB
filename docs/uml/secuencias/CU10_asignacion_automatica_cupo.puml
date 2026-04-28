@@ -1,21 +1,29 @@
-@startuml
-actor Vigilante
-participant "ControlAccesosRoutes" as C
+﻿@startuml CU10_asignacion_automatica_cupo
+actor "Administrador o Vigilante" as Actor
+participant "UI Web" as UI
+participant "EspaciosRoutes" as E
 participant "NovedadModel" as N
-participant "EspacioModel" as E
+participant "VehiculoModel" as V
 database "PostgreSQL" as DB
 
-Vigilante -> C : Solicitar ingreso por placa
-C -> N : register_ingreso_by_placa()
-N -> DB : funcion SQL asignacion automatica
-alt asignacion automatica exitosa
-  DB --> N : cupo asignado
-else sin respuesta util
-  N -> E : build_slots() y elegir disponible
-  E -> DB : consultar/actualizar cupo
-  DB --> E : ok
-  N -> DB : insertar novedad ingreso
+Actor -> UI : Solicitar asignacion automatica por placa
+UI -> E : POST /espacios/asignacion-automatica
+E -> V : validar documentacion
+V -> DB : SELECT estado documental
+DB --> V : estado documental
+alt documentacion bloqueada
+  E --> UI : rechazo de asignacion
+else documentacion valida
+  E -> N : register_ingreso_by_placa()
 end
-N --> C : cupo final
-C --> Vigilante : notificacion de asignacion
+N -> DB : funcion SQL asignacion automatica
+alt asignacion exitosa
+  DB --> N : cupo asignado
+  N --> E : numero de cupo
+  E --> UI : confirmacion de asignacion
+else sin cupos disponibles
+  DB --> N : error no disponible
+  N --> E : fallo de asignacion
+  E --> UI : mensaje sin disponibilidad
+end
 @enduml

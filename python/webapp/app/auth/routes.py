@@ -12,10 +12,29 @@ from flask import current_app
 from flask_login import current_user, login_user, logout_user
 
 from app.models.user import User
+from app.utils.authz import normalize_role
 from app.utils.field_validators import is_valid_cedula, is_valid_email, normalize_cedula, normalize_email
 
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
+
+
+def _role_label(role_value: str) -> str:
+    role = normalize_role(role_value)
+    labels = {
+        "admin_sistema": "Administrador del sistema",
+        "admin": "Administrador",
+        "administrador": "Administrador",
+        "seguridad_udec": "Seguridad UDEC",
+        "vigilante": "Vigilante / Seguridad",
+        "vigilancia": "Vigilante / Seguridad",
+        "funcionario_area": "Funcionario de area",
+        "docente_udec": "Docente UDEC",
+        "conductor_udec": "Conductor UDEC",
+        "estudiante_udec": "Estudiante UDEC",
+        "visitante_udec": "Visitante UDEC",
+    }
+    return labels.get(role, role.replace("_", " ").strip().title() if role else "Sin rol")
 
 
 def _serializer() -> URLSafeTimedSerializer:
@@ -101,7 +120,7 @@ def login_post():
 
     # Crea sesión activa.
     login_user(user)
-    flash("Inicio de sesión exitoso.", "success")
+    flash(f"Inicio de sesion exitoso. Rol detectado: {_role_label(getattr(user, 'rol', ''))}.", "success")
     return redirect(url_for("main.dashboard"))
 
 
@@ -124,6 +143,7 @@ def register_post():
     nombre = (request.form.get("nombre", "") or "").strip()
     apellido = (request.form.get("apellido", "") or "").strip()
     numero_identificacion = normalize_cedula(request.form.get("numero_identificacion", ""))
+    selected_role = normalize_role(request.form.get("role", "estudiante_udec"))
 
     if not username or not email or not password:
         flash("Usuario, correo y contraseña son obligatorios.", "error")
@@ -143,6 +163,11 @@ def register_post():
 
     if password != confirm_password:
         flash("La confirmación de contraseña no coincide.", "error")
+        return redirect(url_for("auth.register"))
+
+    allowed_self_roles = {"estudiante_udec", "docente_udec", "funcionario_area", "vigilante"}
+    if selected_role not in allowed_self_roles:
+        flash("El rol seleccionado no es valido para auto-registro.", "error")
         return redirect(url_for("auth.register"))
 
     try:
@@ -168,7 +193,7 @@ def register_post():
         User.create_user(
             username=username,
             raw_password=password,
-            role="estudiante_udec",
+            role=selected_role,
             estado="activo",
             nombre=nombre,
             apellido=apellido,
@@ -179,7 +204,7 @@ def register_post():
         flash(f"No se pudo crear la cuenta: {exc}", "error")
         return redirect(url_for("auth.register"))
 
-    flash("Cuenta creada correctamente. Ya puedes iniciar sesión.", "success")
+    flash(f"Cuenta creada correctamente con rol {_role_label(selected_role)}. Ya puedes iniciar sesion.", "success")
     return redirect(url_for("auth.login"))
 
 

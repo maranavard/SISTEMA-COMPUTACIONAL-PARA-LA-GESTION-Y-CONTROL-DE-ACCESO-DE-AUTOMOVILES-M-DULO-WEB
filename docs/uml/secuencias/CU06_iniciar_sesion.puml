@@ -1,4 +1,4 @@
-@startuml
+﻿@startuml CU06_iniciar_sesion
 actor Usuario
 participant "UI Web" as UI
 participant "AuthRoutes" as A

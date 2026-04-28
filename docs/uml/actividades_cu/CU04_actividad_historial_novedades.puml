@@ -1,8 +1,11 @@
-@startuml
+﻿@startuml CU04_actividad_historial_novedades
 title CU04 Consultar historial de novedades
 start
 :Ingresar al historial;
 :Aplicar filtros placa/tipo/fecha;
+if (Rol Vigilante/Seguridad) then (Si)
+  :Limitar resultados al dia actual;
+endif
 if (Existen resultados) then (Si)
   :Mostrar historial filtrado;
 else (No)
@@ -10,3 +13,4 @@ else (No)
 endif
 stop
 @enduml
+

@@ -5,10 +5,15 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from app.models.novedad import Novedad
-from app.utils.authz import community_required
+from app.utils.authz import community_required, normalize_role
 
 
 novedades_bp = Blueprint("novedades", __name__, url_prefix="/novedades")
+
+
+def _is_guard_role() -> bool:
+    rol = normalize_role(getattr(current_user, "rol", ""))
+    return rol in {"vigilante", "vigilancia", "seguridad_udec"}
 
 
 @novedades_bp.get("/")
@@ -95,9 +100,19 @@ def gestion():
             filtered.append(item)
         items = filtered
 
+    guard_today_only = False
+    if _is_guard_role():
+        today = datetime.now().date()
+        items = [
+            item for item in items
+            if item.get("fecha_hora") and hasattr(item.get("fecha_hora"), "date") and item.get("fecha_hora").date() == today
+        ]
+        guard_today_only = True
+
     return render_template(
         "novedades/gestion.html",
         items=items,
+        guard_today_only=guard_today_only,
         filtros={
             "placa": placa,
             "tipo": tipo,

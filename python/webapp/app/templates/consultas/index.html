@@ -39,10 +39,12 @@
             <td>{{ item.color or '' }}</td>
             <td>
               <div class="consultas-actions">
+                {% if not is_guard_role %}
                 <a class="consultas-icon-btn" href="{{ url_for('consultas.editar', item_id=item.id) }}" title="Editar" aria-label="Editar"><span aria-hidden="true">✎</span></a>
                 <form method="post" action="{{ url_for('consultas.borrar', item_id=item.id) }}" class="consultas-inline-form">
                   <button type="submit" class="consultas-icon-btn" title="Borrar" aria-label="Borrar" onclick="return confirm('¿Seguro que deseas eliminar este vehículo?');"><span aria-hidden="true">🗑</span></button>
                 </form>
+                {% endif %}
                 <a class="consultas-icon-btn" href="{{ url_for('consultas.visualizar', item_id=item.id) }}" title="Visualizar" aria-label="Visualizar"><span aria-hidden="true">👁</span></a>
               </div>
             </td>

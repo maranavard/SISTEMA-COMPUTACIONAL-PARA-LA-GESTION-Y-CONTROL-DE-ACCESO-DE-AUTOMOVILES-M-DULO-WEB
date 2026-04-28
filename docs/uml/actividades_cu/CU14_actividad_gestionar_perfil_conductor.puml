@@ -1,12 +1,18 @@
-@startuml
+﻿@startuml CU14_actividad_gestionar_perfil_conductor
 title CU14 Gestionar perfil de conductor
 start
 :Abrir modulo Conductores;
-:Editar informacion personal/documental;
-if (Datos validos) then (Si)
-  :Guardar perfil actualizado;
+:Consultar informacion del conductor;
+if (Rol Administrador) then (Si)
+  :Editar informacion personal/documental;
+  if (Datos validos) then (Si)
+    :Guardar perfil actualizado;
+  else (No)
+    :Mostrar inconsistencias;
+  endif
 else (No)
-  :Mostrar inconsistencias;
+  :Mantener modo solo consulta;
 endif
 stop
 @enduml
+

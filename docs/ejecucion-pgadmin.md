@@ -52,3 +52,48 @@ Resultado esperado:
 
 - Copiar error completo de la pestaña `Messages`.
 - Compartir consulta ejecutada y mensaje exacto para diagnóstico.
+
+## 6) Generación y exportación del MER en pgAdmin
+
+### 6.1 Preparación
+
+1. Abrir pgAdmin y conectarse al servidor PostgreSQL.
+2. Ir a la base `sistema_control`.
+3. Verificar que el esquema activo sea `public`.
+
+### 6.2 Abrir la herramienta de ERD
+
+1. Abrir `Tools` -> `ERD Tool`.
+2. Seleccionar esquema `public`.
+3. Agregar las tablas al lienzo:
+   - Opción completa: todas las tablas de `public`.
+   - Opción funcional: solo las tablas del flujo principal (roles, usuarios, conductores, tipo_vehiculo, vehiculos, espacio, novedad, visitantes, autorizaciones_visitante, tipo_documento, documentos_vehiculo, sync_pendientes, sync_eventos_web, predicciones, asignaciones_log).
+
+### 6.3 Ordenar y revisar relaciones
+
+1. Ejecutar `Auto Layout` para ordenar automáticamente.
+2. Verificar visualmente relaciones clave:
+   - `usuarios.idrol` -> `roles.idrol`
+   - `conductores.user_id` -> `usuarios.id`
+   - `vehiculos.conductor_id` -> `conductores.id`
+   - `vehiculos.tipo_vehiculo_id` -> `tipo_vehiculo.id`
+   - `visitantes.id_conductor` -> `conductores.id`
+   - `visitantes.id_vehiculo` -> `vehiculos.id`
+   - `visitantes.id_autorizado_por` -> `usuarios.id`
+   - `autorizaciones_visitante.visitante_id` -> `visitantes.id`
+   - `documentos_vehiculo.tipo_documento_id` -> `tipo_documento.id`
+
+### 6.4 Exportación
+
+1. Guardar el archivo editable del diagrama (`.pgerd`).
+2. Exportar imagen para el informe (`PNG` o `SVG`).
+3. Si es para impresión, usar la mayor resolución posible.
+
+### 6.5 Evidencia mínima a incluir en el informe
+
+1. Captura del MER completo (todas las tablas).
+2. Captura del MER funcional (tablas núcleo del proceso).
+3. Párrafo de validación técnica con:
+   - Total de tablas en `public`: `22`.
+   - Faltantes del núcleo MER: ninguno.
+   - Estado final: apto para exportación y sustentación.

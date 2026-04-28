@@ -58,6 +58,14 @@ class Visitante:
         apellidos_col = cls._pick_existing(cols, "apellidos", "apellido")
         doc_col = cls._pick_existing(cols, "numero_identificacion", "identificacion", "documento")
         area_col = cls._pick_existing(cols, "area_destino", "area")
+        funcionario_col = cls._pick_existing(
+            cols,
+            "funcionario_recibe",
+            "funcionario_que_recibe",
+            "nombre_funcionario_recibe",
+            "funcionario_receptor",
+            "funcionario",
+        )
         motivo_col = cls._pick_existing(cols, "motivo_visita", "motivo")
         placa_col = cls._pick_existing(cols, "placa")
         fecha_reg_col = cls._pick_existing(cols, "fecha_hora_registro", "fecha_registro", "fecha")
@@ -71,6 +79,7 @@ class Visitante:
             "apellidos": f"v.{apellidos_col} AS apellidos" if apellidos_col else "NULL::text AS apellidos",
             "numero_identificacion": f"v.{doc_col} AS numero_identificacion" if doc_col else "NULL::text AS numero_identificacion",
             "area_destino": f"v.{area_col} AS area_destino" if area_col else "NULL::text AS area_destino",
+            "funcionario_recibe": f"v.{funcionario_col} AS funcionario_recibe" if funcionario_col else "NULL::text AS funcionario_recibe",
             "motivo_visita": f"v.{motivo_col} AS motivo_visita" if motivo_col else "NULL::text AS motivo_visita",
             "placa": f"v.{placa_col} AS placa" if placa_col else "NULL::text AS placa",
             "fecha_hora_registro": f"v.{fecha_reg_col} AS fecha_hora_registro" if fecha_reg_col else "NULL::timestamp AS fecha_hora_registro",
@@ -86,6 +95,7 @@ class Visitante:
                 {select_map['apellidos']},
                 {select_map['numero_identificacion']},
                 {select_map['area_destino']},
+                {select_map['funcionario_recibe']},
                 {select_map['motivo_visita']},
                 {select_map['placa']},
                 {select_map['fecha_hora_registro']},
@@ -108,12 +118,13 @@ class Visitante:
                 "apellidos": row[2],
                 "numero_identificacion": row[3],
                 "area_destino": row[4],
-                "motivo_visita": row[5],
-                "placa": row[6],
-                "fecha_hora_registro": row[7],
-                "fecha_hora_prevista": row[8],
-                "estado": row[9],
-                "registrado_por_usuario_id": row[10],
+                "funcionario_recibe": row[5],
+                "motivo_visita": row[6],
+                "placa": row[7],
+                "fecha_hora_registro": row[8],
+                "fecha_hora_prevista": row[9],
+                "estado": row[10],
+                "registrado_por_usuario_id": row[11],
             }
             for row in rows
         ]
@@ -128,6 +139,13 @@ class Visitante:
             "apellidos": ["apellidos", "apellido"],
             "numero_identificacion": ["numero_identificacion", "identificacion", "documento"],
             "area_destino": ["area_destino", "area"],
+            "funcionario_recibe": [
+                "funcionario_recibe",
+                "funcionario_que_recibe",
+                "nombre_funcionario_recibe",
+                "funcionario_receptor",
+                "funcionario",
+            ],
             "motivo_visita": ["motivo_visita", "motivo"],
             "placa": ["placa"],
             "fecha_hora_registro": ["fecha_hora_registro", "fecha_registro", "fecha"],
@@ -179,6 +197,13 @@ class Visitante:
             "apellidos": ["apellidos", "apellido"],
             "numero_identificacion": ["numero_identificacion", "identificacion", "documento"],
             "area_destino": ["area_destino", "area"],
+            "funcionario_recibe": [
+                "funcionario_recibe",
+                "funcionario_que_recibe",
+                "nombre_funcionario_recibe",
+                "funcionario_receptor",
+                "funcionario",
+            ],
             "motivo_visita": ["motivo_visita", "motivo"],
             "placa": ["placa"],
             "fecha_hora_registro": ["fecha_hora_registro", "fecha_registro", "fecha"],

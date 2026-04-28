@@ -14,9 +14,22 @@ from openpyxl import Workbook
 from app.models.novedad import Novedad
 from app.models.user import User
 from app.models.vehiculo import Vehiculo
+from app.utils.authz import normalize_role
 
 
 reportes_bp = Blueprint("reportes", __name__, url_prefix="/reportes")
+
+
+def _current_role() -> str:
+    return normalize_role(getattr(current_user, "rol", ""))
+
+
+def _is_guard_role() -> bool:
+    return _current_role() in {"vigilante", "vigilancia", "seguridad_udec"}
+
+
+def _is_admin_role() -> bool:
+    return _current_role() in {"admin_sistema", "admin", "administrador"}
 
 
 def control_access_required(view_func):
@@ -27,15 +40,7 @@ def control_access_required(view_func):
         if not current_user.is_authenticated:
             abort(401)
 
-        rol_raw = (getattr(current_user, "rol", "") or "").strip().lower()
-        rol = rol_raw
-
-        if rol.startswith("{") and rol.endswith("}"):
-            parts = [item.strip().strip('"') for item in rol[1:-1].split(",") if item.strip()]
-            rol = parts[0] if parts else ""
-        elif rol.startswith("[") and rol.endswith("]"):
-            parts = [item.strip().strip('"') for item in rol[1:-1].split(",") if item.strip()]
-            rol = parts[0] if parts else ""
+        rol = _current_role()
 
         allowed = {"admin_sistema", "admin", "administrador", "seguridad_udec", "vigilante", "vigilancia"}
         if rol not in allowed:
@@ -96,6 +101,8 @@ def _load_accesos_salidas(filters: dict | None = None) -> list[dict]:
     fecha_filter = _normalize_text(filters.get("fecha"))
     usuario_filter = _normalize_text(filters.get("usuario"))
     vigilante_filter = _normalize_text(filters.get("vigilante"))
+    only_today = _is_guard_role()
+    today_text = date.today().strftime("%Y-%m-%d") if only_today else ""
 
     for row in rows:
         tipo = (row.get("tipo_novedad") or "").strip().lower()
@@ -122,6 +129,9 @@ def _load_accesos_salidas(filters: dict | None = None) -> list[dict]:
             fecha_text = fecha_hora.strftime("%Y-%m-%d")
         else:
             fecha_text = str(fecha_hora or "")[:10]
+
+        if only_today and fecha_text != today_text:
+            continue
 
         placa_text = str(row.get("placa") or "")
 
@@ -218,6 +228,9 @@ def _get_module_key(module_key: str) -> str:
 
 def _load_rows(module_key: str) -> tuple[dict, list[dict], list[str], dict]:
     key = _get_module_key(module_key)
+    if _is_guard_role() and key != "accesos_salidas":
+        raise PermissionError("El perfil vigilante solo puede consultar reportes operativos del dia.")
+
     definition = REPORT_DEFINITIONS[key]
     filters = _parse_filters_from_request()
     rows = definition["loader"](filters) or []
@@ -243,11 +256,14 @@ def _excel_cell_value(value):
 @login_required
 @control_access_required
 def gestion():
-    modules = [
-        {"key": key, **value}
-        for key, value in REPORT_DEFINITIONS.items()
-    ]
-    return render_template("reportes/gestion.html", modules=modules)
+    is_guard_role = _is_guard_role()
+    modules = []
+    for key, value in REPORT_DEFINITIONS.items():
+        if is_guard_role and key != "accesos_salidas":
+            continue
+        modules.append({"key": key, **value})
+
+    return render_template("reportes/gestion.html", modules=modules, can_export=not is_guard_role)
 
 
 @reportes_bp.get("/modulo/<module_key>")
@@ -268,6 +284,8 @@ def visualizar(module_key: str):
         module_key=module_key,
         filters=filters,
         printable=False,
+        can_export=not _is_guard_role(),
+        is_guard_role=_is_guard_role(),
     )
 
 
@@ -275,6 +293,10 @@ def visualizar(module_key: str):
 @login_required
 @control_access_required
 def imprimir(module_key: str):
+    if _is_guard_role():
+        flash("No tienes permisos para exportar reportes.", "error")
+        return redirect(url_for("reportes.gestion"))
+
     try:
         definition, rows, columns, filters = _load_rows(module_key)
     except Exception as exc:
@@ -296,6 +318,10 @@ def imprimir(module_key: str):
 @login_required
 @control_access_required
 def descargar_excel(module_key: str):
+    if _is_guard_role():
+        flash("No tienes permisos para exportar reportes.", "error")
+        return redirect(url_for("reportes.gestion"))
+
     try:
         definition, rows, columns, _ = _load_rows(module_key)
     except Exception as exc:

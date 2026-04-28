@@ -13,11 +13,28 @@ def normalize_role(role_value) -> str:
     role_text = role_text.strip().lower()
     if role_text.startswith("{") and role_text.endswith("}"):
         parts = [item.strip().strip('"') for item in role_text[1:-1].split(",") if item.strip()]
-        return parts[0] if parts else ""
+        role_text = parts[0] if parts else ""
     if role_text.startswith("[") and role_text.endswith("]"):
         parts = [item.strip().strip('"') for item in role_text[1:-1].split(",") if item.strip()]
-        return parts[0] if parts else ""
-    return role_text
+        role_text = parts[0] if parts else ""
+
+    aliases = {
+        "vigilante/seguridad": "seguridad_udec",
+        "vigilante_seguridad": "seguridad_udec",
+        "seguridad": "seguridad_udec",
+        "vigilante": "vigilante",
+        "vigilancia": "vigilancia",
+        "funcionario": "funcionario_area",
+        "funcionario_udec": "funcionario_area",
+        "estudiante": "estudiante_udec",
+        "alumno": "estudiante_udec",
+        "profesor": "docente_udec",
+        "docente": "docente_udec",
+        "maestro": "docente_udec",
+        "conductor": "conductor_udec",
+        "visitante": "visitante_udec",
+    }
+    return aliases.get(role_text, role_text)
 
 
 def roles_required(allowed_roles: set[str]):
@@ -55,6 +72,9 @@ def community_required(view_func):
         "vigilancia",
         "conductor_udec",
         "estudiante_udec",
+        "docente_udec",
+        "profesor_udec",
+        "maestro_udec",
         "estudiante",
         "alumno",
         "usuario",
@@ -63,5 +83,18 @@ def community_required(view_func):
         "funcionario_area",
         "funcionario",
         "funcionario_udec",
+    }
+    return roles_required(allowed)(view_func)
+
+
+def parking_ops_required(view_func):
+    """Permite operación de parqueo a administración y vigilancia."""
+    allowed = {
+        "admin_sistema",
+        "admin",
+        "administrador",
+        "seguridad_udec",
+        "vigilante",
+        "vigilancia",
     }
     return roles_required(allowed)(view_func)

@@ -1,0 +1,15 @@
+﻿@startuml CU21_configurar_horarios_festivos
+actor Administrador
+participant "UI Web" as UI
+participant "HorariosRoutes" as H
+participant "HorarioOperacionModel" as M
+database "PostgreSQL" as DB
+
+Administrador -> UI : Configurar horario y festivos
+UI -> H : POST /horarios/guardar
+H -> M : update_config()
+M -> DB : UPDATE horario_operacion y festivos
+DB --> M : ok/error
+M --> H : resultado
+H --> UI : confirmacion o error
+@enduml

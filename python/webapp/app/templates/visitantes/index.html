@@ -12,6 +12,10 @@
   </div>
 
   <div class="visitantes-register-card">
+    {% if is_guard_role %}
+    <h2>Registro de visitante</h2>
+    <p class="auth-form-hint">Perfil de vigilancia: el registro anticipado de visitantes está restringido en este módulo.</p>
+    {% else %}
     <h2>Formulario de Registro de visitante</h2>
     <form method="post" action="{{ url_for('visitantes.create_item') }}" class="visitantes-register-form">
       <input name="nombres" type="text" placeholder="Nombre" required />
@@ -23,6 +27,7 @@
         <option value="{{ area }}">{{ area }}</option>
         {% endfor %}
       </select>
+      <input name="funcionario_recibe" type="text" placeholder="Nombre completo del funcionario que recibe" required />
       <input name="motivo_visita" type="text" placeholder="Motivo de visita" required />
       <input name="placa" type="text" placeholder="No. Placa" />
       <label class="form-field-label" for="visitante-fecha-registro">Fecha y hora del Registro</label>
@@ -33,6 +38,7 @@
       <input type="hidden" name="estado" value="pendiente" />
       <button type="submit" class="visitantes-register-btn">Registrar</button>
     </form>
+    {% endif %}
   </div>
 </section>
 {% endblock %}

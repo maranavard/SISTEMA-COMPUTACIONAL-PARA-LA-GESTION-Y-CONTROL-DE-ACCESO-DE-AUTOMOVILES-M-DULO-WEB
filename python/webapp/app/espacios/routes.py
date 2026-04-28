@@ -7,15 +7,20 @@ from app.models.espacio import Espacio
 from app.models.novedad import Novedad
 from app.models.vehiculo import Vehiculo
 from app.utils.lstm_predict import predict_next_40_minutes
-from app.utils.authz import admin_required
+from app.utils.authz import admin_required, normalize_role, parking_ops_required
 
 
 espacios_bp = Blueprint("espacios", __name__, url_prefix="/espacios")
 
 
+def _is_guard_role() -> bool:
+    rol = normalize_role(getattr(current_user, "rol", ""))
+    return rol in {"vigilante", "vigilancia", "seguridad_udec"}
+
+
 @espacios_bp.get("/")
 @login_required
-@admin_required
+@parking_ops_required
 def list_items():
     items = Espacio.list_items()
     tipos_vehiculo = Vehiculo.list_vehicle_types()
@@ -111,6 +116,7 @@ def list_items():
         tipos_vehiculo=tipos_vehiculo,
         assignment_notice=assignment_notice,
         recent_ingresos=recent_ingresos,
+        is_guard_role=_is_guard_role(),
     )
 
 
@@ -136,7 +142,7 @@ def create_item():
 
 @espacios_bp.post("/registrar")
 @login_required
-@admin_required
+@parking_ops_required
 def upsert_slot():
     numero = (request.form.get("numero", "") or "").strip()
     estado_solicitado = (request.form.get("estado", "") or "").strip().lower() or "disponible"
@@ -248,7 +254,7 @@ def borrar_item(item_id: int):
 
 @espacios_bp.post("/asignacion-automatica")
 @login_required
-@admin_required
+@parking_ops_required
 def asignacion_automatica():
     placa = (request.form.get("placa", "") or "").strip().upper()
     if not placa:

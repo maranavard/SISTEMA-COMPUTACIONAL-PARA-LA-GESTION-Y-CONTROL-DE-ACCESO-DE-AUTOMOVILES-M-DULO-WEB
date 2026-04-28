@@ -1,11 +1,11 @@
-@startuml
-actor Vigilante
+﻿@startuml CU11_registrar_novedad
+actor "Usuario autenticado" as Usuario
 participant "UI Web" as UI
 participant "NovedadesRoutes" as R
 participant "NovedadModel" as N
 database "PostgreSQL" as DB
 
-Vigilante -> UI : Diligenciar novedad
+Usuario -> UI : Diligenciar novedad
 UI -> R : POST crear novedad
 R -> N : create_reporte(payload)
 N -> DB : INSERT novedad

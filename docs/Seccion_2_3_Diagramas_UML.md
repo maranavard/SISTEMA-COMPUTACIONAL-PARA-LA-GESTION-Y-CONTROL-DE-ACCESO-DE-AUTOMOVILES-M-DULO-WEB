@@ -53,57 +53,151 @@ El diagrama de clases describe la estructura estática del sistema: clases princ
 
 **1) User (modelo de autenticación y administración de usuarios)**
 - Responsabilidad: representar usuarios del sistema y soportar autenticación/autorización básica.
-- Funciones principales: búsqueda por id/username/email, listado de usuarios, creación/edición, actualización de contraseña y verificación de credenciales.
-- Relación: se conecta a PostgreSQL mediante `db.get_connection()`.
+- Funciones principales: búsqueda por id/username/email, listado, creación/edición, cambio de contraseña y verificación de credenciales.
+- Ubicación en código: python/webapp/app/models/user.py.
+- Pantallazo sugerido: declaración de la clase y métodos principales (get_by_id, create_user, verify_password).
 
 **2) Vehiculo (modelo de vehículos)**
 - Responsabilidad: gestionar información de vehículos y validación documental por placa.
-- Funciones principales: CRUD de vehículos, consulta por placa/id, verificación de vigencia documental (estado de conductor y pase).
-- Relación: usa `LocalSyncService` para sincronización de eventos y consulta BD principal.
+- Funciones principales: CRUD, consulta por placa/id y estado documental.
+- Ubicación en código: python/webapp/app/models/vehiculo.py.
+- Pantallazo sugerido: clase Vehiculo + métodos list_items, get_by_placa, create_item.
 
 **3) Novedad (modelo de ingresos/salidas)**
-- Responsabilidad: registrar eventos operativos del parqueadero (ingreso/salida y reportes).
-- Funciones principales: registrar ingreso por placa, registrar salida por placa, listar novedades recientes, crear registros para reportes.
-- Relación: depende de `Espacio` para fallback de asignación y de `LocalSyncService` para sincronización.
+- Responsabilidad: registrar eventos operativos del parqueadero (ingreso, salida, reportes).
+- Funciones principales: register_ingreso_by_placa, register_salida_by_placa, list_recent.
+- Ubicación en código: python/webapp/app/models/novedad.py.
+- Pantallazo sugerido: clase Novedad + métodos de ingreso/salida.
 
 **4) Espacio (modelo de cupos/parqueaderos)**
-- Responsabilidad: administrar cupos de estacionamiento y su estado operativo.
-- Funciones principales: consulta/listado de espacios, creación/edición/eliminación, búsqueda por número, construcción de malla de slots, resumen de ocupación.
-- Relación: soporta la lógica de asignación usada por `Novedad`.
+- Responsabilidad: administrar cupos de estacionamiento y estado operativo.
+- Funciones principales: consulta por número/id, upsert, construcción de slots y resumen.
+- Ubicación en código: python/webapp/app/models/espacio.py.
+- Pantallazo sugerido: clase Espacio + métodos list_items y upsert_by_numero.
 
 **5) Visitante (modelo de control de visitantes)**
-- Responsabilidad: registrar y actualizar solicitudes/ingresos de visitantes.
-- Funciones principales: listado y operaciones de creación/actualización.
-- Relación: utilizado por rutas de `control_accesos` para autorización/rechazo.
+- Responsabilidad: registrar y actualizar visitantes.
+- Funciones principales: list_items, create_item, update_item.
+- Ubicación en código: python/webapp/app/models/visitante.py.
+- Pantallazo sugerido: clase Visitante completa.
 
 **6) Conductor (modelo de conductores)**
-- Responsabilidad: administrar datos de conductores vinculados al sistema.
-- Funciones principales: listado, creación y actualización de conductores.
-- Relación: su estado y vigencia documental impactan validaciones en `Vehiculo`.
+- Responsabilidad: administrar información de conductores.
+- Funciones principales: list_items, create_item, update_item.
+- Ubicación en código: python/webapp/app/models/conductor.py.
+- Pantallazo sugerido: clase Conductor completa.
 
-**7) LocalSyncService (servicio de sincronización RF18)**
-- Responsabilidad: replicar eventos web hacia base local y gestionar cola de pendientes.
-- Funciones principales: `sync_event`, `retry_pending`, `enqueue_pending`, sincronización por entidad (`vehiculos`, `novedad`).
-- Relación: usa `get_connection()` y `get_local_connection()` para BD principal y local.
+**7) DocumentoVehiculo (modelo documental)**
+- Responsabilidad: gestionar documentos obligatorios del vehículo y su vigencia.
+- Funciones principales: upsert_documents, get_vehicle_documents, get_status_summary.
+- Ubicación en código: python/webapp/app/models/documento_vehiculo.py.
+- Pantallazo sugerido: clase DocumentoVehiculo + método get_status_summary.
 
-**8) DB (infraestructura de conexión)**
-- Responsabilidad: centralizar parámetros y creación de conexiones a PostgreSQL.
-- Funciones principales: conexión a base principal y base local con fallback de codificación.
-- Relación: clase/utilidad base consumida por modelos y servicios.
+**8) AreaDestino (modelo de configuración de áreas)**
+- Responsabilidad: administrar catálogo de áreas destino para visitantes.
+- Funciones principales: list_items, create_area, update_area, delete_area.
+- Ubicación en código: python/webapp/app/models/area_destino.py.
+- Pantallazo sugerido: clase AreaDestino + métodos create_area y update_area.
 
-**9) AuthZ (autorización por rol)**
-- Responsabilidad: normalizar rol y aplicar restricciones por permisos.
-- Funciones principales: `normalize_role`, `roles_required`, `admin_required`, `community_required`.
-- Relación: utilizado por blueprints/rutas protegidas.
+**9) HorarioOperacion (modelo de configuración horaria y festivos)**
+- Responsabilidad: definir horario operativo y días festivos del sistema.
+- Funciones principales: get_config, update_config, evaluate_moment.
+- Ubicación en código: python/webapp/app/models/horario.py.
+- Pantallazo sugerido: clase HorarioOperacion + método evaluate_moment.
 
-**10) AuthRoutes, ControlAccesosRoutes, ReportesRoutes, ConsultasRoutes, MainRoutes (controladores/blueprints)**
-- Responsabilidad: exponer endpoints HTTP y coordinar interacción entre UI, modelos y reglas de negocio.
-- Funciones principales:
-  - `AuthRoutes`: login, registro, recuperación/restablecimiento de contraseña.
-  - `ControlAccesosRoutes`: validación vehicular, registro de movimientos y autorización de visitantes.
-  - `ReportesRoutes`: visualización e importación/exportación de reportes (incluye Excel).
-  - `ConsultasRoutes`: consulta y gestión de vehículos por placa.
-  - `MainRoutes`: navegación principal (inicio, dashboard, mi cuenta).
+**10) ControlHardware (modelo de control y auditoría hardware)**
+- Responsabilidad: administrar estados manuales de dispositivos y eventos técnicos.
+- Funciones principales: list_states, update_states, register_event, list_recent_events.
+- Ubicación en código: python/webapp/app/models/control_hardware.py.
+- Pantallazo sugerido: clase ControlHardware + métodos register_event y list_recent_events.
+
+**11) LocalSyncService (servicio RF18 de sincronización local)**
+- Responsabilidad: sincronizar eventos web a BD local y manejar reintentos.
+- Funciones principales: sync_event, retry_pending, enqueue_pending.
+- Ubicación en código: python/webapp/app/utils/local_sync.py.
+- Pantallazo sugerido: clase LocalSyncService + método sync_event.
+
+**12) DB (infraestructura de conexión)**
+- Responsabilidad: centralizar creación de conexiones a BD principal/local.
+- Funciones principales: get_connection y get_local_connection.
+- Ubicación en código: python/webapp/app/db.py.
+- Pantallazo sugerido: funciones get_connection y get_local_connection.
+
+**13) AuthZ (autorización por rol)**
+- Responsabilidad: normalizar rol y restringir acceso por decoradores.
+- Funciones principales: normalize_role, roles_required, admin_required, community_required, parking_ops_required.
+- Ubicación en código: python/webapp/app/utils/authz.py.
+- Pantallazo sugerido: bloque de decoradores de autorización completo.
+
+**14) AuthRoutes (blueprint de autenticación)**
+- Responsabilidad: login, registro y recuperación de contraseña.
+- Ubicación en código: python/webapp/app/auth/routes.py.
+- Pantallazo sugerido: declaración de auth_bp y endpoint login.
+
+**15) MainRoutes (blueprint principal)**
+- Responsabilidad: navegación principal del sistema (inicio y dashboard).
+- Ubicación en código: python/webapp/app/main/routes.py.
+- Pantallazo sugerido: declaración de main_bp y endpoint dashboard.
+
+**16) UsersRoutes (blueprint de usuarios)**
+- Responsabilidad: gestión administrativa de usuarios.
+- Ubicación en código: python/webapp/app/users/routes.py.
+- Pantallazo sugerido: declaración de users_bp y endpoint index/listado.
+
+**17) ConductoresRoutes (blueprint de conductores)**
+- Responsabilidad: CRUD de conductores para operación de parqueadero.
+- Ubicación en código: python/webapp/app/conductores/routes.py.
+- Pantallazo sugerido: declaración de conductores_bp y endpoint crear.
+
+**18) VehiculosRoutes (blueprint de vehículos)**
+- Responsabilidad: CRUD de vehículos y validaciones asociadas.
+- Ubicación en código: python/webapp/app/vehiculos/routes.py.
+- Pantallazo sugerido: declaración de vehiculos_bp y endpoint guardar/crear.
+
+**19) VisitantesRoutes (blueprint de visitantes)**
+- Responsabilidad: gestión de solicitudes/registro de visitantes.
+- Ubicación en código: python/webapp/app/visitantes/routes.py.
+- Pantallazo sugerido: declaración de visitantes_bp y endpoint crear.
+
+**20) EspaciosRoutes (blueprint de espacios)**
+- Responsabilidad: gestión de cupos y estado de parqueaderos.
+- Ubicación en código: python/webapp/app/espacios/routes.py.
+- Pantallazo sugerido: declaración de espacios_bp y endpoint index.
+
+**21) NovedadesRoutes (blueprint de novedades)**
+- Responsabilidad: consulta operativa de novedades.
+- Ubicación en código: python/webapp/app/novedades/routes.py.
+- Pantallazo sugerido: declaración de novedades_bp y endpoint index.
+
+**22) ReportesRoutes (blueprint de reportes)**
+- Responsabilidad: visualización, impresión y exportación de reportes.
+- Ubicación en código: python/webapp/app/reportes/routes.py.
+- Pantallazo sugerido: declaración de reportes_bp y endpoint descargar_excel.
+
+**23) ConsultasRoutes (blueprint de consultas)**
+- Responsabilidad: consulta y gestión de registros por placa/id.
+- Ubicación en código: python/webapp/app/consultas/routes.py.
+- Pantallazo sugerido: declaración de consultas_bp y endpoint index.
+
+**24) ControlAccesosRoutes (blueprint de control de acceso)**
+- Responsabilidad: flujo operativo de autorización/rechazo en ingreso/salida.
+- Ubicación en código: python/webapp/app/control_accesos/routes.py.
+- Pantallazo sugerido: declaración de control_accesos_bp y endpoints autorizar/rechazar.
+
+**25) HorariosRoutes (blueprint de configuración horaria)**
+- Responsabilidad: configurar horario operativo y festivos.
+- Ubicación en código: python/webapp/app/horarios/routes.py.
+- Pantallazo sugerido: declaración de horarios_bp y endpoint guardar.
+
+**26) AreasRoutes (blueprint de áreas destino)**
+- Responsabilidad: administrar áreas destino de visitantes.
+- Ubicación en código: python/webapp/app/areas/routes.py.
+- Pantallazo sugerido: declaración de areas_bp y endpoint crear/actualizar.
+
+**27) ControlHardwareRoutes (blueprint de hardware)**
+- Responsabilidad: control manual de dispositivos, API de comandos e ingestión/procesamiento de eventos.
+- Ubicación en código: python/webapp/app/control_hardware/routes.py.
+- Pantallazo sugerido: declaración de control_hardware_bp y endpoint api_evento o procesar_archivos.
 
 ---
 

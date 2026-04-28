@@ -1,15 +1,20 @@
-@startuml
-actor Funcionario
+﻿@startuml CU17_registrar_visitante_anticipado
+actor "Usuario autorizado\n(Admin/Estudiante/Docente/Funcionario)" as Usuario
 participant "UI Web" as UI
 participant "VisitantesRoutes" as V
 participant "VisitanteModel" as M
 database "PostgreSQL" as DB
 
-Funcionario -> UI : Diligenciar visitante
+Usuario -> UI : Diligenciar visitante anticipado
 UI -> V : POST registrar visitante
-V -> M : create_item()
-M -> DB : INSERT registro_visitantes
-DB --> M : ok/error
-M --> V : resultado
-V --> UI : confirmacion
+V -> V : validar rol (vigilante no permitido)
+alt Rol permitido
+	V -> M : create_item()
+	M -> DB : INSERT registro_visitantes
+	DB --> M : ok/error
+	M --> V : resultado
+	V --> UI : confirmacion
+else Rol Vigilante/Seguridad
+	V --> UI : operacion no permitida
+end
 @enduml

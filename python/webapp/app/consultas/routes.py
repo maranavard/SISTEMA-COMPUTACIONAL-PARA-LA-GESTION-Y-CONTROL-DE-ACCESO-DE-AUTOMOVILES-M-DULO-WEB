@@ -1,13 +1,18 @@
 """Rutas del módulo Consulta por Placa."""
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
-from flask_login import login_required
+from flask_login import current_user, login_required
 
 from app.models.vehiculo import Vehiculo
-from app.utils.authz import community_required
+from app.utils.authz import community_required, normalize_role
 
 
 consultas_bp = Blueprint("consultas", __name__, url_prefix="/consultas")
+
+
+def _is_guard_role() -> bool:
+    rol = normalize_role(getattr(current_user, "rol", ""))
+    return rol in {"vigilante", "vigilancia", "seguridad_udec"}
 
 
 @consultas_bp.get("/")
@@ -20,7 +25,7 @@ def index():
     if placa_filtro:
         items = [item for item in items if (item.get("placa") or "").upper().find(placa_filtro) >= 0]
 
-    return render_template("consultas/index.html", items=items, placa_filtro=placa_filtro)
+    return render_template("consultas/index.html", items=items, placa_filtro=placa_filtro, is_guard_role=_is_guard_role())
 
 
 @consultas_bp.get("/<int:item_id>")
@@ -39,6 +44,10 @@ def visualizar(item_id: int):
 @login_required
 @community_required
 def editar(item_id: int):
+    if _is_guard_role():
+        flash("El perfil vigilante solo puede consultar información básica por placa.", "error")
+        return redirect(url_for("consultas.index"))
+
     item = Vehiculo.get_by_id(item_id)
     if not item:
         flash("No se encontró el vehículo para editar.", "error")
@@ -52,6 +61,10 @@ def editar(item_id: int):
 @login_required
 @community_required
 def guardar_edicion(item_id: int):
+    if _is_guard_role():
+        flash("El perfil vigilante no puede editar información vehicular.", "error")
+        return redirect(url_for("consultas.index"))
+
     placa = Vehiculo.normalize_plate(request.form.get("placa", ""))
     tipo_vehiculo_id = (request.form.get("tipo_vehiculo_id", "") or "").strip()
 
@@ -82,6 +95,10 @@ def guardar_edicion(item_id: int):
 @login_required
 @community_required
 def borrar(item_id: int):
+    if _is_guard_role():
+        flash("El perfil vigilante no puede eliminar información vehicular.", "error")
+        return redirect(url_for("consultas.index"))
+
     try:
         Vehiculo.delete_item(item_id)
         flash("Vehículo eliminado correctamente.", "success")

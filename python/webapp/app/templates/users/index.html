@@ -22,10 +22,10 @@
       <input name="password" type="password" placeholder="Contraseña" required />
       <label class="form-field-label" for="user-role">Rol</label>
       <select id="user-role" name="role" required>
-        <option value="admin_sistema">{{ 'admin_sistema' | role_label }}</option>
-        <option value="seguridad_udec">{{ 'seguridad_udec' | role_label }}</option>
+        <option value="estudiante_udec" selected>{{ 'estudiante_udec' | role_label }}</option>
+        <option value="docente_udec">{{ 'docente_udec' | role_label }}</option>
         <option value="funcionario_area">{{ 'funcionario_area' | role_label }}</option>
-        <option value="conductor_udec" selected>{{ 'conductor_udec' | role_label }}</option>
+        <option value="vigilante">{{ 'vigilante' | role_label }}</option>
       </select>
       <input type="hidden" name="estado" value="activo" />
       <button type="submit" class="users-register-btn">Registrar</button>

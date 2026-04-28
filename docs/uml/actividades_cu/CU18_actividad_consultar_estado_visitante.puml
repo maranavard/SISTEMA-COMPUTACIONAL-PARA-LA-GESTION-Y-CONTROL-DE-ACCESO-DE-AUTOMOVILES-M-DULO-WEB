@@ -1,7 +1,8 @@
-@startuml
+﻿@startuml CU18_actividad_consultar_estado_visitante
 title CU18 Consultar estado de visitante
 start
-:Buscar solicitud por documento;
+:Abrir modulo operativo de autorizaciones;
+:Filtrar solicitudes;
 if (Solicitud existe) then (Si)
   :Mostrar estado de autorizacion;
 else (No)
@@ -9,3 +10,4 @@ else (No)
 endif
 stop
 @enduml
+

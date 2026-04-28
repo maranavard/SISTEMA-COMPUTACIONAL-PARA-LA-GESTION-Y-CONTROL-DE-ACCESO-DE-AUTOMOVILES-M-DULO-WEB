@@ -1,4 +1,4 @@
-@startuml
+﻿@startuml CU07_cerrar_sesion
 actor Usuario
 participant "UI Web" as UI
 participant "AuthRoutes" as A

@@ -11,6 +11,7 @@ from flask_login import LoginManager
 
 from .config import Config
 from .models.user import User
+from .utils.authz import normalize_role
 
 login_manager = LoginManager()
 login_manager.login_view = "auth.login"
@@ -35,7 +36,7 @@ def create_app() -> Flask:
 
     @app.template_filter("role_label")
     def role_label(value):
-        role = (str(value or "").strip().lower())
+        role = normalize_role(value)
         if not role:
             return ""
 
@@ -44,9 +45,15 @@ def create_app() -> Flask:
             "admin": "Administrador",
             "administrador": "Administrador",
             "seguridad_udec": "Seguridad UDEC",
+            "vigilante": "Vigilante / Seguridad",
+            "vigilancia": "Vigilante / Seguridad",
             "funcionario_area": "Funcionario de área",
+            "funcionario": "Funcionario de área",
             "conductor_udec": "Conductor UDEC",
             "estudiante_udec": "Estudiante UDEC",
+            "profesor_udec": "Docente UDEC",
+            "docente_udec": "Docente UDEC",
+            "maestro_udec": "Docente UDEC",
             "visitante_udec": "Visitante UDEC",
         }
 
@@ -69,6 +76,7 @@ def create_app() -> Flask:
     from .control_accesos.routes import control_accesos_bp
     from .horarios.routes import horarios_bp
     from .areas.routes import areas_bp
+    from .control_hardware.routes import control_hardware_bp
 
     # Registro de módulos de rutas.
     app.register_blueprint(auth_bp)
@@ -84,5 +92,6 @@ def create_app() -> Flask:
     app.register_blueprint(control_accesos_bp)
     app.register_blueprint(horarios_bp)
     app.register_blueprint(areas_bp)
+    app.register_blueprint(control_hardware_bp)
 
     return app

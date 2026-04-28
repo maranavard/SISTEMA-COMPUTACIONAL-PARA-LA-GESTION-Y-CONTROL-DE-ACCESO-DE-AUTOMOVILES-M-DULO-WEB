@@ -1,0 +1,15 @@
+﻿@startuml CU20_actividad_gestionar_areas_destino
+title CU20 Gestionar areas destino
+start
+:Abrir modulo Areas;
+:Seleccionar crear o actualizar area;
+:Diligenciar nombre de area;
+if (Datos validos y sin duplicado) then (Si)
+  :Guardar cambios;
+  :Confirmar actualizacion del catalogo;
+else (No)
+  :Mostrar error de validacion/duplicado;
+endif
+stop
+@enduml
+

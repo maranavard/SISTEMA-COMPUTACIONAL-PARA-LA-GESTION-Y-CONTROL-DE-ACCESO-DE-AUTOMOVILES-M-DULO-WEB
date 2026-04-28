@@ -1,0 +1,14 @@
+﻿@startuml CU22_actividad_control_manual_hardware
+title CU22 Control manual de hardware
+start
+:Abrir modulo Control de Hardware;
+:Activar/desactivar talanquera y semaforos;
+if (Cambio valido) then (Si)
+  :Guardar estado manual de dispositivos;
+  :Mostrar confirmacion;
+else (No)
+  :Mostrar error de actualizacion;
+endif
+stop
+@enduml
+

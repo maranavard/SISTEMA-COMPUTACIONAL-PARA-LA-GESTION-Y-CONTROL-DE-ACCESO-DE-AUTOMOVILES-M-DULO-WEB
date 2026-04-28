@@ -1,0 +1,14 @@
+﻿@startuml CU25_actividad_auditar_eventos_hardware
+title CU25 Auditar eventos hardware
+start
+:Abrir modulo Control de Hardware;
+:Ingresar a vista de auditoria;
+:Consultar eventos recientes;
+if (Hay eventos) then (Si)
+  :Mostrar trazabilidad de eventos;
+else (No)
+  :Mostrar lista vacia;
+endif
+stop
+@enduml
+

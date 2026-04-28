@@ -5,10 +5,15 @@ from flask_login import current_user, login_required
 
 from app.models.area_destino import AreaDestino
 from app.models.visitante import Visitante
-from app.utils.authz import community_required
+from app.utils.authz import community_required, normalize_role
 
 
 visitantes_bp = Blueprint("visitantes", __name__, url_prefix="/visitantes")
+
+
+def _is_guard_role() -> bool:
+    rol = normalize_role(getattr(current_user, "rol", ""))
+    return rol in {"vigilante", "vigilancia", "seguridad_udec"}
 
 
 @visitantes_bp.get("/")
@@ -16,13 +21,17 @@ visitantes_bp = Blueprint("visitantes", __name__, url_prefix="/visitantes")
 @community_required
 def list_items():
     areas_destino = AreaDestino.list_names()
-    return render_template("visitantes/index.html", areas_destino=areas_destino)
+    return render_template("visitantes/index.html", areas_destino=areas_destino, is_guard_role=_is_guard_role())
 
 
 @visitantes_bp.post("/crear")
 @login_required
 @community_required
 def create_item():
+    if _is_guard_role():
+        flash("El perfil vigilante no puede registrar visitantes anticipados desde este módulo.", "error")
+        return redirect(url_for("visitantes.list_items"))
+
     area_destino = request.form.get("area_destino", "").strip()
     if not AreaDestino.exists_active(area_destino):
         flash("Debes seleccionar un area destino valida.", "error")
@@ -33,6 +42,7 @@ def create_item():
         "apellidos": request.form.get("apellidos", "").strip(),
         "numero_identificacion": request.form.get("numero_identificacion", "").strip(),
         "area_destino": area_destino,
+        "funcionario_recibe": request.form.get("funcionario_recibe", "").strip(),
         "motivo_visita": request.form.get("motivo_visita", "").strip(),
         "placa": request.form.get("placa", "").strip().upper(),
         "fecha_hora_registro": request.form.get("fecha_hora_registro", "").strip(),
@@ -64,6 +74,7 @@ def update_item(item_id: int):
         "apellidos": request.form.get("apellidos", "").strip(),
         "numero_identificacion": request.form.get("numero_identificacion", "").strip(),
         "area_destino": area_destino,
+        "funcionario_recibe": request.form.get("funcionario_recibe", "").strip(),
         "motivo_visita": request.form.get("motivo_visita", "").strip(),
         "placa": request.form.get("placa", "").strip().upper(),
         "fecha_hora_prevista": request.form.get("fecha_hora_prevista", "").strip(),

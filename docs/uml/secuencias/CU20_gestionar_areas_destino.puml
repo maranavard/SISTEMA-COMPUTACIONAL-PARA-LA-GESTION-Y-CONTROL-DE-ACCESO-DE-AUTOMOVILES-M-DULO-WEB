@@ -1,0 +1,15 @@
+﻿@startuml CU20_gestionar_areas_destino
+actor Administrador
+participant "UI Web" as UI
+participant "AreasRoutes" as A
+participant "AreaDestinoModel" as M
+database "PostgreSQL" as DB
+
+Administrador -> UI : Crear/editar area destino
+UI -> A : POST /areas/crear o /areas/{id}/actualizar
+A -> M : create_area()/update_area()
+M -> DB : INSERT/UPDATE areas_destino
+DB --> M : ok/error
+M --> A : resultado
+A --> UI : confirmacion o error
+@enduml

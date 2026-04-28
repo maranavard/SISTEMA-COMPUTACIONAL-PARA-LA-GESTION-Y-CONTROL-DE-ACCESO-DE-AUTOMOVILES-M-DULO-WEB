@@ -1,0 +1,15 @@
+﻿@startuml CU21_actividad_configurar_horarios_festivos
+title CU21 Configurar horarios y festivos
+start
+:Abrir modulo Horarios;
+:Definir hora inicio/fin y dias activos;
+:Actualizar lista de festivos;
+if (Configuracion valida) then (Si)
+  :Guardar configuracion operativa;
+  :Confirmar cambios;
+else (No)
+  :Mostrar error de configuracion;
+endif
+stop
+@enduml
+

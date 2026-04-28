@@ -1,0 +1,19 @@
+﻿@startuml CU23_recibir_eventos_hardware_api
+actor "Integracion tecnica hardware" as HW
+participant "ControlHardware API" as API
+participant "ControlHardwareRoutes" as H
+participant "ControlHardwareModel" as M
+database "PostgreSQL" as DB
+
+HW -> API : POST /control-hardware/api/evento\nX-Hardware-Token + JSON
+API -> H : validar token y payload
+alt token/payload valido
+  H -> M : register_event(...)
+  M -> DB : INSERT control_hardware_events
+  DB --> M : accepted/duplicado
+  M --> H : resultado
+  H --> API : 202 Accepted o 409 Duplicado
+else token/payload invalido
+  H --> API : 401/422 error
+end
+@enduml

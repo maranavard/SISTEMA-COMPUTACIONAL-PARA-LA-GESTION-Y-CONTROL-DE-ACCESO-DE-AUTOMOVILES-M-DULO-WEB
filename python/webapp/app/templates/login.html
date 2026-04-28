@@ -14,14 +14,40 @@
 
     <form method="post" action="{{ url_for('auth.login_post') }}" class="form login-form">
       <input id="username" name="username" type="text" placeholder="Nombre de usuario" required />
-      <input id="password" name="password" type="password" placeholder="Contraseña" required />
+      <div class="password-field-wrap">
+        <input id="password" name="password" type="password" placeholder="Contraseña" required />
+        <button
+          type="button"
+          id="toggle-password"
+          class="password-toggle-btn is-hidden"
+          aria-label="Mostrar u ocultar contraseña"
+          aria-pressed="false"
+        >👁</button>
+      </div>
 
       <button type="submit" class="btn-primary">Acceder</button>
-      <button type="submit" class="btn-secondary" name="admin_mode" value="1">Acceder como administrador</button>
+      <p class="auth-form-hint">El sistema identifica tu rol automaticamente al iniciar sesion (vigilante, estudiante, funcionario, etc.).</p>
 
       <a class="forgot-link" href="{{ url_for('auth.forgot_password') }}">Olvido su contrasena?</a>
       <a class="forgot-link" href="{{ url_for('auth.register') }}">No tienes cuenta? Registrarme</a>
     </form>
   </div>
 </section>
+
+<script>
+  (function () {
+    const passwordInput = document.getElementById('password');
+    const toggleBtn = document.getElementById('toggle-password');
+    if (!passwordInput || !toggleBtn) {
+      return;
+    }
+
+    toggleBtn.addEventListener('click', function () {
+      const showing = passwordInput.type === 'text';
+      passwordInput.type = showing ? 'password' : 'text';
+      toggleBtn.setAttribute('aria-pressed', showing ? 'false' : 'true');
+      toggleBtn.classList.toggle('is-hidden', showing);
+    });
+  })();
+</script>
 {% endblock %}

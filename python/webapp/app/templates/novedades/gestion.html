@@ -15,6 +15,9 @@
   <section class="card novedades-gestion-card">
     <h2>Gestión de Novedades</h2>
     <p>Visualización y consulta de novedades registradas por usuarios y personal de vigilancia.</p>
+    {% if guard_today_only %}
+    <p class="auth-form-hint">Perfil vigilante: solo se muestran novedades del día actual.</p>
+    {% endif %}
 
     <form method="get" action="{{ url_for('novedades.gestion') }}" class="users-form" style="margin-bottom: 1rem;">
       <input name="placa" type="text" placeholder="Filtrar por placa" value="{{ (filtros.placa if filtros else '') or '' }}" />

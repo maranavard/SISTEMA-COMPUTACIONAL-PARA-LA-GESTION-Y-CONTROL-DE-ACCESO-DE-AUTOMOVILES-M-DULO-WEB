@@ -1,14 +1,20 @@
-@startuml
+﻿@startuml CU08_actividad_validar_acceso_vehicular
 title CU08 Validar acceso vehicular
 start
 :Ingresar placa;
 :Seleccionar entrada o salida;
-:Validar documentacion;
-if (Acceso permitido) then (Si)
-  :Registrar movimiento;
-  :Notificar validacion;
+if (Movimiento = entrada) then (Si)
+  :Validar documentacion;
+  if (Documentacion valida) then (Si)
+    :Registrar ingreso y asignar cupo;
+    :Notificar validacion;
+  else (No)
+    :Denegar acceso y mostrar motivo;
+  endif
 else (No)
-  :Denegar acceso y mostrar motivo;
+  :Registrar salida;
+  :Notificar validacion;
 endif
 stop
 @enduml
+

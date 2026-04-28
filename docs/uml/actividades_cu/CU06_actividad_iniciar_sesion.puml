@@ -1,4 +1,4 @@
-@startuml
+﻿@startuml CU06_actividad_iniciar_sesion
 title CU06 Iniciar sesion
 start
 :Ingresar credenciales;
@@ -10,3 +10,4 @@ else (No)
 endif
 stop
 @enduml
+

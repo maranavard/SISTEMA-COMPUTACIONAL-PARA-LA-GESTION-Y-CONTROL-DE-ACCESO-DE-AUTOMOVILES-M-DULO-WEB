@@ -1,14 +1,21 @@
-@startuml
-actor Vigilante
+﻿@startuml CU09_gestionar_espacios
+actor "Administrador o Vigilante" as Actor
 participant "UI Web" as UI
 participant "EspaciosRoutes" as E
 participant "EspacioModel" as M
 database "PostgreSQL" as DB
 
-Vigilante -> UI : Cambiar estado de cupo
-UI -> E : POST actualizacion espacio
-E -> M : update_item()/upsert_by_numero()
-M -> DB : UPDATE/INSERT espacio
+Actor -> UI : Gestionar disponibilidad de cupos
+UI -> E : GET /espacios
+E -> M : list_items()
+M -> DB : SELECT espacios
+DB --> M : lista actual
+M --> E : estado actual
+E --> UI : panel espacios
+
+UI -> E : POST /espacios/registrar
+E -> M : upsert_by_numero()
+M -> DB : INSERT/UPDATE espacio
 DB --> M : ok/error
 M --> E : resultado
 E --> UI : confirmacion o error

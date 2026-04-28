@@ -1,0 +1,15 @@
+﻿@startuml CU22_control_manual_hardware
+actor "Administrador o Vigilante" as Actor
+participant "UI Web" as UI
+participant "ControlHardwareRoutes" as H
+participant "ControlHardwareModel" as M
+database "PostgreSQL" as DB
+
+Actor -> UI : Cambiar estado manual de dispositivos
+UI -> H : POST /control-hardware/guardar
+H -> M : update_states(mapa_estado)
+M -> DB : UPDATE control_hardware_state
+DB --> M : ok/error
+M --> H : resultado
+H --> UI : confirmacion de actualizacion
+@enduml
