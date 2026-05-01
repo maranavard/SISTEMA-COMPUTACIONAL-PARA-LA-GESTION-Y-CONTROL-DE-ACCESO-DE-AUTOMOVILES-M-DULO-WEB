@@ -193,7 +193,7 @@ class User(UserMixin):
         nombre_col = cls._pick_existing(columns, "nombre", "nombres")
         apellido_col = cls._pick_existing(columns, "apellido", "apellidos")
         email_col = cls._pick_existing(columns, "email", "correo", "correo_institucional")
-        id_doc_col = cls._pick_existing(columns, "numero_identificacion", "identificacion", "documento")
+        id_doc_col = cls._pick_existing(columns, "numero_identificacion", "identificacion", "documento", "cedula")
 
         select_fields.append(f"u.{nombre_col} AS nombre" if nombre_col else "NULL::text AS nombre")
         select_fields.append(f"u.{apellido_col} AS apellido" if apellido_col else "NULL::text AS apellido")
@@ -253,7 +253,7 @@ class User(UserMixin):
         nombre_col = cls._pick_existing(columns, "nombre", "nombres")
         apellido_col = cls._pick_existing(columns, "apellido", "apellidos")
         email_col = cls._pick_existing(columns, "email", "correo", "correo_institucional")
-        id_doc_col = cls._pick_existing(columns, "numero_identificacion", "identificacion", "documento")
+        id_doc_col = cls._pick_existing(columns, "numero_identificacion", "identificacion", "documento", "cedula")
 
         if "role" in columns.keys():
             insert_columns.append("role")
@@ -301,7 +301,7 @@ class User(UserMixin):
         nombre_col = cls._pick_existing(columns, "nombre", "nombres")
         apellido_col = cls._pick_existing(columns, "apellido", "apellidos")
         email_col = cls._pick_existing(columns, "email", "correo", "correo_institucional")
-        id_doc_col = cls._pick_existing(columns, "numero_identificacion", "identificacion", "documento")
+        id_doc_col = cls._pick_existing(columns, "numero_identificacion", "identificacion", "documento", "cedula")
         assignments = []
         values = []
 

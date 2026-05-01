@@ -38,6 +38,37 @@
       <label class="form-field-label" for="edit-estado">Estado</label>
       <input id="edit-estado" name="estado" type="text" value="{{ item.estado or '' }}" />
 
+      <h3 style="margin-top: 1rem;">Usuario asociado</h3>
+      <label class="form-field-label" for="edit-user-id">Usuario (ID, nombre, correo o cédula)</label>
+      <input id="edit-user-id" name="user_id" type="text" value="{{ usuario_asociado.id if usuario_asociado else (item.user_id or '') }}" />
+
+      <label class="form-field-label" for="edit-user-nombre">Nombre</label>
+      <input id="edit-user-nombre" name="user_nombre" type="text" value="{{ usuario_asociado.nombre if usuario_asociado else '' }}" />
+
+      <label class="form-field-label" for="edit-user-apellido">Apellido</label>
+      <input id="edit-user-apellido" name="user_apellido" type="text" value="{{ usuario_asociado.apellido if usuario_asociado else '' }}" />
+
+      <label class="form-field-label" for="edit-user-email">Correo</label>
+      <input id="edit-user-email" name="user_email" type="email" value="{{ usuario_asociado.email if usuario_asociado else '' }}" />
+
+      <label class="form-field-label" for="edit-user-doc">Cédula</label>
+      <input id="edit-user-doc" name="user_numero_identificacion" type="text" value="{{ usuario_asociado.numero_identificacion if usuario_asociado else '' }}" />
+
+      <label class="form-field-label" for="edit-user-role">Rol</label>
+      <select id="edit-user-role" name="user_role">
+        <option value="">Seleccione rol</option>
+        {% for role in editable_roles %}
+        <option value="{{ role }}" {% if usuario_asociado and usuario_asociado.rol == role %}selected{% endif %}>{{ role | role_label }}</option>
+        {% endfor %}
+      </select>
+
+      <label class="form-field-label" for="edit-user-estado">Estado de usuario</label>
+      <select id="edit-user-estado" name="user_estado">
+        <option value="">Seleccione estado</option>
+        <option value="activo" {% if usuario_asociado and (usuario_asociado.estado or '') == 'activo' %}selected{% endif %}>Activo</option>
+        <option value="inactivo" {% if usuario_asociado and (usuario_asociado.estado or '') == 'inactivo' %}selected{% endif %}>Inactivo</option>
+      </select>
+
       <button type="submit" class="consultas-submit-btn">Guardar cambios</button>
     </form>
   </section>

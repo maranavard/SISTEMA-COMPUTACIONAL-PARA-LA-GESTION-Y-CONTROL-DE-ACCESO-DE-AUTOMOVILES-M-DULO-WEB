@@ -15,8 +15,10 @@
     <h2>Consulta y Gestión Vehicular</h2>
 
     <form method="get" action="{{ url_for('consultas.index') }}" class="consultas-search-form">
-      <input name="placa" type="text" placeholder="Buscar Placa" value="{{ placa_filtro or '' }}" />
-      <button type="submit">Buscar Placa</button>
+      <input name="placa" type="text" placeholder="Buscar por placa" value="{{ placa_filtro or '' }}" />
+      <input name="usuario" type="text" placeholder="Buscar por usuario o nombre" value="{{ usuario_filtro or '' }}" />
+      <input name="cedula" type="text" placeholder="Buscar por cédula" value="{{ cedula_filtro or '' }}" />
+      <button type="submit">Consultar</button>
     </form>
 
     <div class="table-wrap">
@@ -24,6 +26,12 @@
         <thead>
           <tr>
             <th>Placa</th>
+            <th>Usuario</th>
+            <th>Cédula</th>
+            <th>Estado</th>
+            <th>Rol</th>
+            <th>Correo</th>
+            <th>Validación</th>
             <th>Marca</th>
             <th>Tipo</th>
             <th>Color</th>
@@ -34,6 +42,19 @@
           {% for item in items %}
           <tr>
             <td>{{ item.placa or '' }}</td>
+            <td>{{ item.usuario_nombre_completo or item.usuario_username or 'Sin usuario' }}</td>
+            <td>{{ item.usuario_identificacion or '' }}</td>
+            <td>{{ item.usuario_estado or '' }}</td>
+            <td>{{ (item.usuario_rol or '') | role_label }}</td>
+            <td>{{ item.usuario_email or '' }}</td>
+            <td>
+              {% if item.perfil_validado_ok %}
+              <span class="doc-status-badge doc-status-success">OK</span>
+              {% else %}
+              <span class="doc-status-badge doc-status-error">Revisar</span>
+              {% endif %}
+              <div><small>{{ item.perfil_validado_msg }}</small></div>
+            </td>
             <td>{{ item.marca or '' }}</td>
             <td>{{ item.tipo_vehiculo_nombre or '' }}</td>
             <td>{{ item.color or '' }}</td>
@@ -51,7 +72,7 @@
           </tr>
           {% else %}
           <tr>
-            <td colspan="5">No se encontraron vehículos para la búsqueda realizada.</td>
+            <td colspan="11">No se encontraron vehículos para la búsqueda realizada.</td>
           </tr>
           {% endfor %}
         </tbody>

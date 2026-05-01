@@ -1,0 +1,1446 @@
+{
+  "tables": [
+    "asignaciones_log",
+    "autorizaciones_visitante",
+    "conductores",
+    "config_areas_destino",
+    "config_festivos_universidad",
+    "config_horario_universidad",
+    "control_hardware_estado",
+    "control_hardware_eventos",
+    "documentos_vehiculo",
+    "espacio",
+    "novedad",
+    "novedades_audit",
+    "predicciones",
+    "roles",
+    "sync_eventos_web",
+    "sync_pendientes",
+    "tipo_doc",
+    "tipo_documento",
+    "tipo_vehiculo",
+    "usuarios",
+    "vehiculos",
+    "visitantes"
+  ],
+  "schema": {
+    "asignaciones_log": {
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "integer",
+          "char_len": null,
+          "num_precision": 32,
+          "num_scale": 0,
+          "nullable": "NO"
+        },
+        {
+          "name": "fecha",
+          "data_type": "timestamp without time zone",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        },
+        {
+          "name": "id_usuario",
+          "data_type": "integer",
+          "char_len": null,
+          "num_precision": 32,
+          "num_scale": 0,
+          "nullable": "YES"
+        },
+        {
+          "name": "id_vehiculo",
+          "data_type": "integer",
+          "char_len": null,
+          "num_precision": 32,
+          "num_scale": 0,
+          "nullable": "YES"
+        },
+        {
+          "name": "id_espacio",
+          "data_type": "integer",
+          "char_len": null,
+          "num_precision": 32,
+          "num_scale": 0,
+          "nullable": "YES"
+        },
+        {
+          "name": "metodo",
+          "data_type": "character varying",
+          "char_len": 20,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        },
+        {
+          "name": "motivo",
+          "data_type": "text",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        },
+        {
+          "name": "estado",
+          "data_type": "character varying",
+          "char_len": 20,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": []
+    },
+    "autorizaciones_visitante": {
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "integer",
+          "char_len": null,
+          "num_precision": 32,
+          "num_scale": 0,
+          "nullable": "NO"
+        },
+        {
+          "name": "visitante_id",
+          "data_type": "integer",
+          "char_len": null,
+          "num_precision": 32,
+          "num_scale": 0,
+          "nullable": "YES"
+        },
+        {
+          "name": "usuario_id",
+          "data_type": "integer",
+          "char_len": null,
+          "num_precision": 32,
+          "num_scale": 0,
+          "nullable": "YES"
+        },
+        {
+          "name": "estado",
+          "data_type": "character varying",
+          "char_len": 20,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        },
+        {
+          "name": "observacion",
+          "data_type": "text",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        },
+        {
+          "name": "fecha",
+          "data_type": "timestamp without time zone",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [
+        {
+          "column": "usuario_id",
+          "ref_table": "usuarios",
+          "ref_column": "id"
+        },
+        {
+          "column": "visitante_id",
+          "ref_table": "visitantes",
+          "ref_column": "id"
+        }
+      ]
+    },
+    "conductores": {
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "integer",
+          "char_len": null,
+          "num_precision": 32,
+          "num_scale": 0,
+          "nullable": "NO"
+        },
+        {
+          "name": "user_id",
+          "data_type": "integer",
+          "char_len": null,
+          "num_precision": 32,
+          "num_scale": 0,
+          "nullable": "YES"
+        },
+        {
+          "name": "nombre",
+          "data_type": "character varying",
+          "char_len": 100,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        },
+        {
+          "name": "apellido",
+          "data_type": "character varying",
+          "char_len": 100,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        },
+        {
+          "name": "cedula",
+          "data_type": "character varying",
+          "char_len": 30,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        },
+        {
+          "name": "email",
+          "data_type": "character varying",
+          "char_len": 100,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        },
+        {
+          "name": "telefono",
+          "data_type": "character varying",
+          "char_len": 20,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        },
+        {
+          "name": "dependencia",
+          "data_type": "character varying",
+          "char_len": 100,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        },
+        {
+          "name": "tipo",
+          "data_type": "character varying",
+          "char_len": 30,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        },
+        {
+          "name": "fecha_vencimiento_pase",
+          "data_type": "date",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        },
+        {
+          "name": "fecha_registro",
+          "data_type": "timestamp without time zone",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        },
+        {
+          "name": "estado",
+          "data_type": "character varying",
+          "char_len": 30,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        },
+        {
+          "name": "numero_pase",
+          "data_type": "character varying",
+          "char_len": 50,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        },
+        {
+          "name": "categoría pase",
+          "data_type": "integer",
+          "char_len": null,
+          "num_precision": 32,
+          "num_scale": 0,
+          "nullable": "YES"
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [
+        {
+          "column": "user_id",
+          "ref_table": "usuarios",
+          "ref_column": "id"
+        }
+      ]
+    },
+    "config_areas_destino": {
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "integer",
+          "char_len": null,
+          "num_precision": 32,
+          "num_scale": 0,
+          "nullable": "NO"
+        },
+        {
+          "name": "nombre",
+          "data_type": "character varying",
+          "char_len": 80,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        },
+        {
+          "name": "activo",
+          "data_type": "boolean",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp without time zone",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": []
+    },
+    "config_festivos_universidad": {
+      "columns": [
+        {
+          "name": "fecha",
+          "data_type": "date",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        },
+        {
+          "name": "descripcion",
+          "data_type": "character varying",
+          "char_len": 120,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        }
+      ],
+      "pk": [
+        "fecha"
+      ],
+      "fks": []
+    },
+    "config_horario_universidad": {
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "smallint",
+          "char_len": null,
+          "num_precision": 16,
+          "num_scale": 0,
+          "nullable": "NO"
+        },
+        {
+          "name": "hora_inicio",
+          "data_type": "time without time zone",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        },
+        {
+          "name": "hora_fin",
+          "data_type": "time without time zone",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        },
+        {
+          "name": "dias_activos",
+          "data_type": "character varying",
+          "char_len": 40,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": []
+    },
+    "control_hardware_estado": {
+      "columns": [
+        {
+          "name": "clave",
+          "data_type": "character varying",
+          "char_len": 80,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        },
+        {
+          "name": "nombre",
+          "data_type": "character varying",
+          "char_len": 120,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        },
+        {
+          "name": "descripcion",
+          "data_type": "character varying",
+          "char_len": 240,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        },
+        {
+          "name": "encendido",
+          "data_type": "boolean",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        },
+        {
+          "name": "updated_by",
+          "data_type": "integer",
+          "char_len": null,
+          "num_precision": 32,
+          "num_scale": 0,
+          "nullable": "YES"
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        }
+      ],
+      "pk": [
+        "clave"
+      ],
+      "fks": []
+    },
+    "control_hardware_eventos": {
+      "columns": [
+        {
+          "name": "event_id",
+          "data_type": "character varying",
+          "char_len": 80,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        },
+        {
+          "name": "event_type",
+          "data_type": "character varying",
+          "char_len": 60,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        },
+        {
+          "name": "source_device",
+          "data_type": "character varying",
+          "char_len": 120,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        },
+        {
+          "name": "occurred_at",
+          "data_type": "timestamp without time zone",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        },
+        {
+          "name": "schema_version",
+          "data_type": "character varying",
+          "char_len": 20,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        },
+        {
+          "name": "payload",
+          "data_type": "jsonb",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        },
+        {
+          "name": "trace",
+          "data_type": "jsonb",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        },
+        {
+          "name": "received_at",
+          "data_type": "timestamp without time zone",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        },
+        {
+          "name": "status",
+          "data_type": "character varying",
+          "char_len": 20,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        }
+      ],
+      "pk": [
+        "event_id"
+      ],
+      "fks": []
+    },
+    "documentos_vehiculo": {
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "integer",
+          "char_len": null,
+          "num_precision": 32,
+          "num_scale": 0,
+          "nullable": "NO"
+        },
+        {
+          "name": "vehiculo_id",
+          "data_type": "integer",
+          "char_len": null,
+          "num_precision": 32,
+          "num_scale": 0,
+          "nullable": "NO"
+        },
+        {
+          "name": "tipo_documento_id",
+          "data_type": "integer",
+          "char_len": null,
+          "num_precision": 32,
+          "num_scale": 0,
+          "nullable": "NO"
+        },
+        {
+          "name": "archivo_url",
+          "data_type": "text",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        },
+        {
+          "name": "fecha_registro",
+          "data_type": "date",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        },
+        {
+          "name": "fecha_vencimiento",
+          "data_type": "date",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        },
+        {
+          "name": "estado",
+          "data_type": "character varying",
+          "char_len": 20,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp without time zone",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [
+        {
+          "column": "tipo_documento_id",
+          "ref_table": "tipo_documento",
+          "ref_column": "id"
+        }
+      ]
+    },
+    "espacio": {
+      "columns": [
+        {
+          "name": "id_espacio",
+          "data_type": "integer",
+          "char_len": null,
+          "num_precision": 32,
+          "num_scale": 0,
+          "nullable": "NO"
+        },
+        {
+          "name": "numero",
+          "data_type": "character varying",
+          "char_len": 10,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        },
+        {
+          "name": "ubicacion",
+          "data_type": "character varying",
+          "char_len": 100,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        },
+        {
+          "name": "estado",
+          "data_type": "character varying",
+          "char_len": 20,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        },
+        {
+          "name": "tipo_vehiculo_id",
+          "data_type": "integer",
+          "char_len": null,
+          "num_precision": 32,
+          "num_scale": 0,
+          "nullable": "YES"
+        },
+        {
+          "name": "fecha_actualizacion",
+          "data_type": "timestamp without time zone",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        }
+      ],
+      "pk": [
+        "id_espacio"
+      ],
+      "fks": []
+    },
+    "novedad": {
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "integer",
+          "char_len": null,
+          "num_precision": 32,
+          "num_scale": 0,
+          "nullable": "NO"
+        },
+        {
+          "name": "tipo_novedad",
+          "data_type": "character varying",
+          "char_len": 50,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        },
+        {
+          "name": "id_vehiculo",
+          "data_type": "integer",
+          "char_len": null,
+          "num_precision": 32,
+          "num_scale": 0,
+          "nullable": "YES"
+        },
+        {
+          "name": "fecha_hora",
+          "data_type": "timestamp without time zone",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        },
+        {
+          "name": "observaciones",
+          "data_type": "text",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        },
+        {
+          "name": "id_usuario",
+          "data_type": "integer",
+          "char_len": null,
+          "num_precision": 32,
+          "num_scale": 0,
+          "nullable": "YES"
+        },
+        {
+          "name": "id_espacio",
+          "data_type": "integer",
+          "char_len": null,
+          "num_precision": 32,
+          "num_scale": 0,
+          "nullable": "YES"
+        },
+        {
+          "name": "estado",
+          "data_type": "text",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [
+        {
+          "column": "id_espacio",
+          "ref_table": "espacio",
+          "ref_column": "id_espacio"
+        },
+        {
+          "column": "id_espacio",
+          "ref_table": "espacio",
+          "ref_column": "id_espacio"
+        },
+        {
+          "column": "id_usuario",
+          "ref_table": "usuarios",
+          "ref_column": "id"
+        },
+        {
+          "column": "id_vehiculo",
+          "ref_table": "vehiculos",
+          "ref_column": "id"
+        }
+      ]
+    },
+    "novedades_audit": {
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "integer",
+          "char_len": null,
+          "num_precision": 32,
+          "num_scale": 0,
+          "nullable": "NO"
+        },
+        {
+          "name": "nov_id",
+          "data_type": "integer",
+          "char_len": null,
+          "num_precision": 32,
+          "num_scale": 0,
+          "nullable": "YES"
+        },
+        {
+          "name": "operacion",
+          "data_type": "character varying",
+          "char_len": 10,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        },
+        {
+          "name": "old_estado",
+          "data_type": "character varying",
+          "char_len": 50,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        },
+        {
+          "name": "new_estado",
+          "data_type": "character varying",
+          "char_len": 50,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        },
+        {
+          "name": "fecha",
+          "data_type": "timestamp with time zone",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        },
+        {
+          "name": "usuario_id",
+          "data_type": "integer",
+          "char_len": null,
+          "num_precision": 32,
+          "num_scale": 0,
+          "nullable": "YES"
+        },
+        {
+          "name": "observacion",
+          "data_type": "text",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": []
+    },
+    "predicciones": {
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "integer",
+          "char_len": null,
+          "num_precision": 32,
+          "num_scale": 0,
+          "nullable": "NO"
+        },
+        {
+          "name": "fecha_generacion",
+          "data_type": "timestamp without time zone",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        },
+        {
+          "name": "horizonte_minutos",
+          "data_type": "integer",
+          "char_len": null,
+          "num_precision": 32,
+          "num_scale": 0,
+          "nullable": "NO"
+        },
+        {
+          "name": "paso",
+          "data_type": "integer",
+          "char_len": null,
+          "num_precision": 32,
+          "num_scale": 0,
+          "nullable": "NO"
+        },
+        {
+          "name": "timestamp_prediccion",
+          "data_type": "timestamp without time zone",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        },
+        {
+          "name": "espacios_libres_pred",
+          "data_type": "integer",
+          "char_len": null,
+          "num_precision": 32,
+          "num_scale": 0,
+          "nullable": "NO"
+        },
+        {
+          "name": "modelo_version",
+          "data_type": "character varying",
+          "char_len": 50,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": []
+    },
+    "roles": {
+      "columns": [
+        {
+          "name": "idrol",
+          "data_type": "integer",
+          "char_len": null,
+          "num_precision": 32,
+          "num_scale": 0,
+          "nullable": "NO"
+        },
+        {
+          "name": "name",
+          "data_type": "character varying",
+          "char_len": 50,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        }
+      ],
+      "pk": [
+        "idrol"
+      ],
+      "fks": []
+    },
+    "sync_eventos_web": {
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "char_len": null,
+          "num_precision": 64,
+          "num_scale": 0,
+          "nullable": "NO"
+        },
+        {
+          "name": "entidad",
+          "data_type": "character varying",
+          "char_len": 80,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        },
+        {
+          "name": "operacion",
+          "data_type": "character varying",
+          "char_len": 40,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        },
+        {
+          "name": "payload",
+          "data_type": "jsonb",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp without time zone",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": []
+    },
+    "sync_pendientes": {
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "char_len": null,
+          "num_precision": 64,
+          "num_scale": 0,
+          "nullable": "NO"
+        },
+        {
+          "name": "entidad",
+          "data_type": "character varying",
+          "char_len": 80,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        },
+        {
+          "name": "operacion",
+          "data_type": "character varying",
+          "char_len": 40,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        },
+        {
+          "name": "payload",
+          "data_type": "jsonb",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        },
+        {
+          "name": "intentos",
+          "data_type": "integer",
+          "char_len": null,
+          "num_precision": 32,
+          "num_scale": 0,
+          "nullable": "NO"
+        },
+        {
+          "name": "estado",
+          "data_type": "character varying",
+          "char_len": 20,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        },
+        {
+          "name": "ultimo_error",
+          "data_type": "text",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp without time zone",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp without time zone",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": []
+    },
+    "tipo_doc": {
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "integer",
+          "char_len": null,
+          "num_precision": 32,
+          "num_scale": 0,
+          "nullable": "NO"
+        },
+        {
+          "name": "nombre",
+          "data_type": "character varying",
+          "char_len": 50,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        },
+        {
+          "name": "descripcion",
+          "data_type": "text",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": []
+    },
+    "tipo_documento": {
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "integer",
+          "char_len": null,
+          "num_precision": 32,
+          "num_scale": 0,
+          "nullable": "NO"
+        },
+        {
+          "name": "codigo",
+          "data_type": "character varying",
+          "char_len": 30,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        },
+        {
+          "name": "nombre",
+          "data_type": "character varying",
+          "char_len": 100,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        },
+        {
+          "name": "descripcion",
+          "data_type": "text",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        },
+        {
+          "name": "entidad_objetivo",
+          "data_type": "character varying",
+          "char_len": 30,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        },
+        {
+          "name": "activo",
+          "data_type": "boolean",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp without time zone",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": []
+    },
+    "tipo_vehiculo": {
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "integer",
+          "char_len": null,
+          "num_precision": 32,
+          "num_scale": 0,
+          "nullable": "NO"
+        },
+        {
+          "name": "nombre",
+          "data_type": "character varying",
+          "char_len": 50,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": []
+    },
+    "usuarios": {
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "integer",
+          "char_len": null,
+          "num_precision": 32,
+          "num_scale": 0,
+          "nullable": "NO"
+        },
+        {
+          "name": "username",
+          "data_type": "character varying",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        },
+        {
+          "name": "email",
+          "data_type": "character varying",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        },
+        {
+          "name": "password",
+          "data_type": "character varying",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        },
+        {
+          "name": "role",
+          "data_type": "ARRAY",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        },
+        {
+          "name": "estado",
+          "data_type": "character varying",
+          "char_len": 20,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        },
+        {
+          "name": "idrol",
+          "data_type": "integer",
+          "char_len": null,
+          "num_precision": 32,
+          "num_scale": 0,
+          "nullable": "YES"
+        },
+        {
+          "name": "nombre",
+          "data_type": "character varying",
+          "char_len": 100,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        },
+        {
+          "name": "apellido",
+          "data_type": "character varying",
+          "char_len": 100,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [
+        {
+          "column": "idrol",
+          "ref_table": "roles",
+          "ref_column": "idrol"
+        }
+      ]
+    },
+    "vehiculos": {
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "integer",
+          "char_len": null,
+          "num_precision": 32,
+          "num_scale": 0,
+          "nullable": "NO"
+        },
+        {
+          "name": "placa",
+          "data_type": "character varying",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "NO"
+        },
+        {
+          "name": "marca",
+          "data_type": "character varying",
+          "char_len": 50,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        },
+        {
+          "name": "conductor_id",
+          "data_type": "integer",
+          "char_len": null,
+          "num_precision": 32,
+          "num_scale": 0,
+          "nullable": "YES"
+        },
+        {
+          "name": "tipo_vehiculo_id",
+          "data_type": "integer",
+          "char_len": null,
+          "num_precision": 32,
+          "num_scale": 0,
+          "nullable": "YES"
+        },
+        {
+          "name": "color",
+          "data_type": "character varying",
+          "char_len": 20,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [
+        {
+          "column": "conductor_id",
+          "ref_table": "conductores",
+          "ref_column": "id"
+        },
+        {
+          "column": "tipo_vehiculo_id",
+          "ref_table": "tipo_vehiculo",
+          "ref_column": "id"
+        }
+      ]
+    },
+    "visitantes": {
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "integer",
+          "char_len": null,
+          "num_precision": 32,
+          "num_scale": 0,
+          "nullable": "NO"
+        },
+        {
+          "name": "id_conductor",
+          "data_type": "integer",
+          "char_len": null,
+          "num_precision": 32,
+          "num_scale": 0,
+          "nullable": "YES"
+        },
+        {
+          "name": "id_usuario_registra",
+          "data_type": "integer",
+          "char_len": null,
+          "num_precision": 32,
+          "num_scale": 0,
+          "nullable": "YES"
+        },
+        {
+          "name": "fecha_registro",
+          "data_type": "timestamp without time zone",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        },
+        {
+          "name": "id_vehiculo",
+          "data_type": "integer",
+          "char_len": null,
+          "num_precision": 32,
+          "num_scale": 0,
+          "nullable": "YES"
+        },
+        {
+          "name": "concepto",
+          "data_type": "character varying",
+          "char_len": 255,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        },
+        {
+          "name": "motivo",
+          "data_type": "text",
+          "char_len": null,
+          "num_precision": null,
+          "num_scale": null,
+          "nullable": "YES"
+        },
+        {
+          "name": "id_autorizado_por",
+          "data_type": "integer",
+          "char_len": null,
+          "num_precision": 32,
+          "num_scale": 0,
+          "nullable": "YES"
+        }
+      ],
+      "pk": [
+        "id"
+      ],
+      "fks": [
+        {
+          "column": "id_autorizado_por",
+          "ref_table": "usuarios",
+          "ref_column": "id"
+        },
+        {
+          "column": "id_conductor",
+          "ref_table": "conductores",
+          "ref_column": "id"
+        },
+        {
+          "column": "id_usuario_registra",
+          "ref_table": "usuarios",
+          "ref_column": "id"
+        },
+        {
+          "column": "id_vehiculo",
+          "ref_table": "vehiculos",
+          "ref_column": "id"
+        }
+      ]
+    }
+  }
+}

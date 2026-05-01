@@ -11,12 +11,34 @@ from app.utils.field_validators import is_valid_cedula, is_valid_email, normaliz
 users_bp = Blueprint("users", __name__, url_prefix="/usuarios")
 
 
+def _normalize_lookup_text(value: str) -> str:
+    return " ".join((value or "").strip().lower().split())
+
+
 @users_bp.get("/")
 @login_required
 @admin_required
 def list_users():
+    nombre_filtro = (request.args.get("nombre", "") or "").strip()
     users = User.list_users()
-    return render_template("users/index.html", users=users)
+
+    if nombre_filtro:
+        needle = _normalize_lookup_text(nombre_filtro)
+        filtered_users = []
+        for user in users:
+            nombre = _normalize_lookup_text(str(user.get("nombre") or ""))
+            apellido = _normalize_lookup_text(str(user.get("apellido") or ""))
+            nombre_completo = _normalize_lookup_text(f"{nombre} {apellido}")
+            username = _normalize_lookup_text(str(user.get("username") or ""))
+            email = _normalize_lookup_text(str(user.get("email") or ""))
+            identificacion = _normalize_lookup_text(str(user.get("numero_identificacion") or ""))
+
+            if any(needle in value for value in (nombre, apellido, nombre_completo, username, email, identificacion)):
+                filtered_users.append(user)
+
+        users = filtered_users
+
+    return render_template("users/index.html", users=users, nombre_filtro=nombre_filtro)
 
 
 @users_bp.post("/crear")

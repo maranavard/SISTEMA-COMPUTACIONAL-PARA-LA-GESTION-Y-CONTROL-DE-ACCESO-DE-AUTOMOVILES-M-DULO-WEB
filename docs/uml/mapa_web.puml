@@ -1,0 +1,88 @@
+@startuml mapa_web
+left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam defaultTextAlignment center
+skinparam linetype ortho
+
+title Mapa Web - Sistema de Control de Acceso Vehicular
+
+rectangle "Inicio" as inicio {
+  [/] as root
+}
+
+rectangle "Autenticacion" as auth {
+  [/auth/login] as login
+  [/auth/register] as register
+  [/auth/forgot-password] as forgot
+  [/auth/reset-password/{token}] as reset
+}
+
+rectangle "Panel" as panel {
+  [/dashboard] as dashboard
+  [/mi-cuenta] as cuenta
+}
+
+rectangle "Modulos funcionales" as mod {
+  [/usuarios] as usuarios
+  [/conductores] as conductores
+  [/vehiculos] as vehiculos
+  [/visitantes] as visitantes
+  [/espacios] as espacios
+  [/novedades/gestion] as novedades
+  [/control-accesos] as accesos
+  [/reportes] as reportes
+  [/consultas] as consultas
+  [/horarios] as horarios
+  [/areas] as areas
+  [/control-hardware] as hardware
+}
+
+rectangle "API Hardware (token)" as api {
+  [/control-hardware/api/estado] as api_estado
+  [/control-hardware/api/comando] as api_comando
+  [/control-hardware/api/evento] as api_evento
+}
+
+root --> login
+login --> dashboard : autenticacion OK
+root --> login
+login --> register
+login --> forgot
+forgot --> reset
+
+dashboard --> cuenta
+dashboard --> usuarios
+dashboard --> conductores
+dashboard --> vehiculos
+dashboard --> visitantes
+dashboard --> espacios
+dashboard --> novedades
+dashboard --> accesos
+dashboard --> reportes
+dashboard --> consultas
+dashboard --> horarios
+dashboard --> areas
+dashboard --> hardware
+
+hardware --> api_estado
+hardware --> api_comando
+hardware --> api_evento
+
+note right of usuarios
+  Admin
+end note
+
+note right of horarios
+  Admin
+end note
+
+note right of areas
+  Admin
+end note
+
+note right of api
+  Requiere X-Hardware-Token
+end note
+
+@enduml

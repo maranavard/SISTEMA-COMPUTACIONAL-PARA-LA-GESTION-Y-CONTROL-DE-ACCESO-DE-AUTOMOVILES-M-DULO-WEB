@@ -1,8 +1,7 @@
 """Punto de entrada del servidor Flask.
 
 Este archivo solo arranca la aplicación creada en app/__init__.py.
-Si en el futuro quieres usar gunicorn/uwsgi en despliegue, normalmente
-apuntará al objeto `app` definido aquí.
+
 """
 
 from app import create_app

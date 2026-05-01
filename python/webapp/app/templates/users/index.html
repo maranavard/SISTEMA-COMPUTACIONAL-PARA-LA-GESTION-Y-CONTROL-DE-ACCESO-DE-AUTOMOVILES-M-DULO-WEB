@@ -31,5 +31,50 @@
       <button type="submit" class="users-register-btn">Registrar</button>
     </form>
   </div>
+
+  <div class="users-register-card">
+    <h2>Consulta de usuarios</h2>
+    <form method="get" action="{{ url_for('users.list_users') }}" class="users-register-form">
+      <input name="nombre" type="text" placeholder="Buscar por nombre, apellido, usuario o cédula" value="{{ nombre_filtro or '' }}" />
+      <button type="submit" class="users-register-btn">Consultar</button>
+    </form>
+
+    <div class="table-wrap" style="margin-top: 1rem;">
+      <table class="users-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Nombre</th>
+            <th>Apellido</th>
+            <th>Usuario</th>
+            <th>Correo</th>
+            <th>Identificación</th>
+            <th>Rol</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if users %}
+            {% for user in users %}
+            <tr>
+              <td>{{ user.id }}</td>
+              <td>{{ user.nombre or '' }}</td>
+              <td>{{ user.apellido or '' }}</td>
+              <td>{{ user.username or '' }}</td>
+              <td>{{ user.email or '' }}</td>
+              <td>{{ user.numero_identificacion or '' }}</td>
+              <td>{{ (user.rol or '') | role_label }}</td>
+              <td>{{ user.estado or '' }}</td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="8">No se encontraron usuarios con ese criterio de búsqueda.</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
 </section>
 {% endblock %}
