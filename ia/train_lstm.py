@@ -1,5 +1,5 @@
 # train_lstm.py
-import os
+from pathlib import Path
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
@@ -15,11 +15,12 @@ except Exception:
     TF_AVAILABLE = False
 
 # parámetros
-CSV_PATH = "ocupacion_5min.csv"
-MODEL_PATH = "lstm_model_v1.h5"
-SCALER_X_PATH = "scaler_x_v1.pkl"
-SCALER_PATH = "scaler_y_v1.pkl"
-FALLBACK_MODEL_PATH = "lstm_model_fallback.pkl"
+IA_DIR = Path(__file__).resolve().parent
+CSV_PATH = IA_DIR / "ocupacion_5min.csv"
+MODEL_PATH = IA_DIR / "lstm_model_v1.h5"
+SCALER_X_PATH = IA_DIR / "scaler_x_v1.pkl"
+SCALER_PATH = IA_DIR / "scaler_y_v1.pkl"
+FALLBACK_MODEL_PATH = IA_DIR / "lstm_model_fallback.pkl"
 
 # serie: cada paso = 5 minutos
 STEP_MINUTES = 5

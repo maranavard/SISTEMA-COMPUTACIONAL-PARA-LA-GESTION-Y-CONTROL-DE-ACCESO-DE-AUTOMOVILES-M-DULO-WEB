@@ -8,21 +8,30 @@ from pathlib import Path
 
 
 def _python_root() -> Path:
-    # .../python/webapp/app/utils/lstm_predict.py -> .../python
+    # Compatibilidad: se mantiene para componentes que aún usen rutas antiguas.
     return Path(__file__).resolve().parents[3]
 
 
+def _repo_root() -> Path:
+    # .../python/webapp/app/utils/lstm_predict.py -> .../<repo>
+    return Path(__file__).resolve().parents[4]
+
+
+def _ia_root() -> Path:
+    return _repo_root() / "ia"
+
+
 def train_lstm_pipeline(timeout_seconds: int = 240) -> dict:
-    root = _python_root()
-    etl_path = root / "etl.py"
-    train_path = root / "train_lstm.py"
+    ia_root = _ia_root()
+    etl_path = ia_root / "etl.py"
+    train_path = ia_root / "train_lstm.py"
 
     if not etl_path.exists() or not train_path.exists():
         raise FileNotFoundError("No se encontró etl.py o train_lstm.py en el proyecto.")
 
     etl_result = subprocess.run(
         [sys.executable, str(etl_path)],
-        cwd=str(root),
+        cwd=str(ia_root),
         capture_output=True,
         text=True,
         timeout=timeout_seconds,
@@ -33,7 +42,7 @@ def train_lstm_pipeline(timeout_seconds: int = 240) -> dict:
 
     train_result = subprocess.run(
         [sys.executable, str(train_path)],
-        cwd=str(root),
+        cwd=str(ia_root),
         capture_output=True,
         text=True,
         timeout=timeout_seconds,
@@ -58,12 +67,12 @@ def predict_next_40_minutes() -> dict:
             "Faltan dependencias para predicción LSTM (joblib, numpy, pandas)."
         ) from exc
 
-    root = _python_root()
-    csv_path = root / "ocupacion_5min.csv"
-    model_path = root / "lstm_model_v1.h5"
-    fallback_model_path = root / "lstm_model_fallback.pkl"
-    scaler_x_path = root / "scaler_x_v1.pkl"
-    scaler_path = root / "scaler_y_v1.pkl"
+    ia_root = _ia_root()
+    csv_path = ia_root / "ocupacion_5min.csv"
+    model_path = ia_root / "lstm_model_v1.h5"
+    fallback_model_path = ia_root / "lstm_model_fallback.pkl"
+    scaler_x_path = ia_root / "scaler_x_v1.pkl"
+    scaler_path = ia_root / "scaler_y_v1.pkl"
 
     if not csv_path.exists():
         raise FileNotFoundError("No existe ocupacion_5min.csv. Ejecuta ETL primero.")

@@ -2,13 +2,15 @@ from __future__ import annotations
 
 import math
 from datetime import datetime
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 from sqlalchemy import create_engine
 
 DB_URL = "postgresql+psycopg2://postgres:12345@localhost:5432/sistema_control"
-CSV_OUT = "ocupacion_5min.csv"
+IA_DIR = Path(__file__).resolve().parent
+CSV_OUT = IA_DIR / "ocupacion_5min.csv"
 FREQ = "5min"
 
 # Cantidad mínima de muestras para entrenar LSTM con estabilidad para demo.
@@ -175,7 +177,7 @@ def main() -> None:
     df["dia_semana"] = df["timestamp"].dt.dayofweek
 
     df.to_csv(CSV_OUT, index=False)
-    print(f"[ETL] Archivo generado: {CSV_OUT}")
+    print(f"[ETL] Archivo generado: {CSV_OUT.name}")
     print(f"[ETL] Rango: {df['timestamp'].min()} -> {df['timestamp'].max()}")
     print(f"[ETL] Muestras: {len(df)}")
 
