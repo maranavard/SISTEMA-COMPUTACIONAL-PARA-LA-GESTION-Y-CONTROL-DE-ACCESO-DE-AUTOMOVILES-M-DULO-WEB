@@ -109,15 +109,33 @@ def _passes_access_filters(
     usuario_filter: str,
     vigilante_filter: str,
 ) -> bool:
-    placa_ok = not placa_filter or placa_filter in _normalize_text(placa_text)
-    fecha_ok = not fecha_filter or fecha_filter == _normalize_text(fecha_text)
-    usuario_ok = (
-        not usuario_filter
-        or usuario_filter in _normalize_text(usuario_display)
-        or usuario_filter in _normalize_text(user_id)
-    )
-    vigilante_ok = not vigilante_filter or vigilante_filter in _normalize_text(vigilante_display)
-    return placa_ok and fecha_ok and usuario_ok and vigilante_ok
+    if not _matches_contains_filter(filter_text=placa_filter, candidate=placa_text):
+        return False
+    if not _matches_equals_filter(filter_text=fecha_filter, candidate=fecha_text):
+        return False
+    if not _matches_usuario_filter(usuario_filter=usuario_filter, usuario_display=usuario_display, user_id=user_id):
+        return False
+    if not _matches_contains_filter(filter_text=vigilante_filter, candidate=vigilante_display):
+        return False
+    return True
+
+
+def _matches_contains_filter(filter_text: str, candidate) -> bool:
+    if not filter_text:
+        return True
+    return filter_text in _normalize_text(candidate)
+
+
+def _matches_equals_filter(filter_text: str, candidate) -> bool:
+    if not filter_text:
+        return True
+    return filter_text == _normalize_text(candidate)
+
+
+def _matches_usuario_filter(usuario_filter: str, usuario_display: str, user_id) -> bool:
+    if not usuario_filter:
+        return True
+    return usuario_filter in _normalize_text(usuario_display) or usuario_filter in _normalize_text(user_id)
 
 
 def _build_access_report_row(
