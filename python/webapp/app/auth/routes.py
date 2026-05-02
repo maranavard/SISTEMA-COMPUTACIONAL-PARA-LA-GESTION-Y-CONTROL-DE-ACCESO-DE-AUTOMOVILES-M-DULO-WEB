@@ -99,6 +99,47 @@ def _send_password_reset_email(to_email: str, reset_link: str) -> bool:
     return True
 
 
+def _validate_register_input(username: str, email: str, password: str, confirm_password: str, numero_identificacion: str) -> str:
+    if not username or not email or not password:
+        return "Usuario, correo y contraseña son obligatorios."
+    if not is_valid_email(email):
+        return "Formato de correo inválido. Usa un correo válido (ej: usuario@dominio.com)."
+    if numero_identificacion and not is_valid_cedula(numero_identificacion):
+        return "Formato de cédula inválido. Debe contener solo números (6 a 12 dígitos)."
+    if len(password) < 6:
+        return "La contraseña debe tener al menos 6 caracteres."
+    if password != confirm_password:
+        return "La confirmación de contraseña no coincide."
+    return ""
+
+
+def _validate_self_register_role(selected_role: str) -> str:
+    allowed_self_roles = {"estudiante_udec", "docente_udec", "funcionario_area", "vigilante"}
+    if selected_role not in allowed_self_roles:
+        return "El rol seleccionado no es valido para auto-registro."
+    return ""
+
+
+def _validate_register_uniqueness(username: str, email: str) -> str:
+    try:
+        existing_user = User.get_by_username(username)
+    except Exception as exc:
+        return f"No se pudo validar el usuario: {exc}"
+
+    if existing_user:
+        return "El nombre de usuario ya está en uso."
+
+    try:
+        existing_email = User.get_by_email(email)
+    except Exception:
+        existing_email = None
+
+    if existing_email:
+        return "El correo ya está registrado."
+
+    return ""
+
+
 @auth_bp.get("/login")
 def login():
     # Si ya inició sesión, no mostrar login de nuevo.
@@ -151,48 +192,25 @@ def register_post():
     numero_identificacion = normalize_cedula(request.form.get("numero_identificacion", ""))
     selected_role = normalize_role(request.form.get("role", "estudiante_udec"))
 
-    if not username or not email or not password:
-        flash("Usuario, correo y contraseña son obligatorios.", "error")
+    input_error = _validate_register_input(
+        username=username,
+        email=email,
+        password=password,
+        confirm_password=confirm_password,
+        numero_identificacion=numero_identificacion,
+    )
+    if input_error:
+        flash(input_error, "error")
         return redirect(url_for(REGISTER_ROUTE))
 
-    if not is_valid_email(email):
-        flash("Formato de correo inválido. Usa un correo válido (ej: usuario@dominio.com).", "error")
+    role_error = _validate_self_register_role(selected_role)
+    if role_error:
+        flash(role_error, "error")
         return redirect(url_for(REGISTER_ROUTE))
 
-    if numero_identificacion and not is_valid_cedula(numero_identificacion):
-        flash("Formato de cédula inválido. Debe contener solo números (6 a 12 dígitos).", "error")
-        return redirect(url_for(REGISTER_ROUTE))
-
-    if len(password) < 6:
-        flash("La contraseña debe tener al menos 6 caracteres.", "error")
-        return redirect(url_for(REGISTER_ROUTE))
-
-    if password != confirm_password:
-        flash("La confirmación de contraseña no coincide.", "error")
-        return redirect(url_for(REGISTER_ROUTE))
-
-    allowed_self_roles = {"estudiante_udec", "docente_udec", "funcionario_area", "vigilante"}
-    if selected_role not in allowed_self_roles:
-        flash("El rol seleccionado no es valido para auto-registro.", "error")
-        return redirect(url_for(REGISTER_ROUTE))
-
-    try:
-        existing_user = User.get_by_username(username)
-    except Exception as exc:
-        flash(f"No se pudo validar el usuario: {exc}", "error")
-        return redirect(url_for(REGISTER_ROUTE))
-
-    if existing_user:
-        flash("El nombre de usuario ya está en uso.", "error")
-        return redirect(url_for(REGISTER_ROUTE))
-
-    try:
-        existing_email = User.get_by_email(email)
-    except Exception:
-        existing_email = None
-
-    if existing_email:
-        flash("El correo ya está registrado.", "error")
+    uniqueness_error = _validate_register_uniqueness(username=username, email=email)
+    if uniqueness_error:
+        flash(uniqueness_error, "error")
         return redirect(url_for(REGISTER_ROUTE))
 
     try:

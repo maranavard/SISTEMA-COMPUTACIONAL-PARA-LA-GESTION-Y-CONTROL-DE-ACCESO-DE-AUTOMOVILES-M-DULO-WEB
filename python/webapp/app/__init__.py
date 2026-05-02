@@ -16,6 +16,7 @@ from .utils.authz import normalize_role
 login_manager = LoginManager()
 login_manager.login_view = "auth.login"
 login_manager.login_message = "Inicia sesion para continuar."
+DOCENTE_LABEL = "Docente UDEC"
 
 
 @login_manager.user_loader
@@ -51,9 +52,9 @@ def create_app() -> Flask:
             "funcionario": "Funcionario de área",
             "conductor_udec": "Conductor UDEC",
             "estudiante_udec": "Estudiante UDEC",
-            "profesor_udec": "Docente UDEC",
-            "docente_udec": "Docente UDEC",
-            "maestro_udec": "Docente UDEC",
+            "profesor_udec": DOCENTE_LABEL,
+            "docente_udec": DOCENTE_LABEL,
+            "maestro_udec": DOCENTE_LABEL,
             "visitante_udec": "Visitante UDEC",
         }
 

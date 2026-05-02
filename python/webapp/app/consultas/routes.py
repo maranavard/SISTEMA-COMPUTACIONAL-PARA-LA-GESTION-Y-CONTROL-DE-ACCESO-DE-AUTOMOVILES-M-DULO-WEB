@@ -364,6 +364,37 @@ def _resolve_associated_user(item: dict, user_lookup: dict[int, dict], item_id: 
         return None
 
 
+def _update_associated_user_if_needed(resolved_user_id: str, user_fields_started: bool, user_payload: dict, item_id: int) -> str:
+    if not (resolved_user_id and user_fields_started):
+        return ""
+
+    _ensure_user_identification_column()
+
+    existing_user = _get_user_by_id(int(resolved_user_id))
+    if not existing_user:
+        return "No se encontró el usuario asociado para completar los datos faltantes."
+
+    merged_user_payload = _merge_user_payload_with_existing(user_payload=user_payload, existing_user=existing_user)
+    merged_user_error = _validate_user_payload(
+        user_payload=merged_user_payload,
+        email_message="El correo final del usuario es inválido. Corrígelo para guardar.",
+        cedula_message="La cédula final del usuario es inválida. Corrígela para guardar.",
+    )
+    if merged_user_error:
+        return merged_user_error
+
+    User.update_user(
+        user_id=int(resolved_user_id),
+        role=merged_user_payload["role"],
+        estado=merged_user_payload["estado"],
+        nombre=merged_user_payload["nombre"],
+        apellido=merged_user_payload["apellido"],
+        email=merged_user_payload["email"],
+        numero_identificacion=merged_user_payload["numero_identificacion"],
+    )
+    return ""
+
+
 @consultas_bp.get("/")
 @login_required
 @community_required
@@ -482,34 +513,15 @@ def guardar_edicion(item_id: int):
         if resolved_user_id:
             _save_vehicle_user_map(vehiculo_id=item_id, user_id=int(resolved_user_id))
 
-        if resolved_user_id and user_fields_started:
-            _ensure_user_identification_column()
-
-            existing_user = _get_user_by_id(int(resolved_user_id))
-            if not existing_user:
-                flash("No se encontró el usuario asociado para completar los datos faltantes.", "error")
-                return redirect(url_for(EDIT_ROUTE, item_id=item_id))
-
-            merged_user_payload = _merge_user_payload_with_existing(user_payload=user_payload, existing_user=existing_user)
-
-            merged_user_error = _validate_user_payload(
-                user_payload=merged_user_payload,
-                email_message="El correo final del usuario es inválido. Corrígelo para guardar.",
-                cedula_message="La cédula final del usuario es inválida. Corrígela para guardar.",
-            )
-            if merged_user_error:
-                flash(merged_user_error, "error")
-                return redirect(url_for(EDIT_ROUTE, item_id=item_id))
-
-            User.update_user(
-                user_id=int(resolved_user_id),
-                role=merged_user_payload["role"],
-                estado=merged_user_payload["estado"],
-                nombre=merged_user_payload["nombre"],
-                apellido=merged_user_payload["apellido"],
-                email=merged_user_payload["email"],
-                numero_identificacion=merged_user_payload["numero_identificacion"],
-            )
+        user_update_error = _update_associated_user_if_needed(
+            resolved_user_id=resolved_user_id,
+            user_fields_started=user_fields_started,
+            user_payload=user_payload,
+            item_id=item_id,
+        )
+        if user_update_error:
+            flash(user_update_error, "error")
+            return redirect(url_for(EDIT_ROUTE, item_id=item_id))
 
         flash("Vehículo y datos de usuario actualizados correctamente.", "success")
     except ValueError as exc:

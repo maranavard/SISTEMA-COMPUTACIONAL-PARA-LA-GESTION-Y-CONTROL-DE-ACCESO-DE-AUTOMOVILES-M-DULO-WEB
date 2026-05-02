@@ -16,6 +16,22 @@ AUTORIZACION_ROUTE = "control_accesos.autorizacion"
 HISTORIAL_ROUTE = "control_accesos.historial"
 DETALLE_TEMPLATE = "control_accesos/detalle.html"
 RECORD_NOT_FOUND_MSG = "No se encontró el registro solicitado."
+ALLOWED_ACCESS_ROLES = {"admin_sistema", "admin", "administrador", "seguridad_udec", "vigilante", "vigilancia"}
+
+
+def _extract_primary_role(rol_raw: str) -> str:
+    rol = (rol_raw or "").strip().lower()
+    if rol.startswith("{") and rol.endswith("}"):
+        parts = [item.strip().strip('"') for item in rol[1:-1].split(",") if item.strip()]
+        return parts[0] if parts else ""
+    if rol.startswith("[") and rol.endswith("]"):
+        parts = [item.strip().strip('"') for item in rol[1:-1].split(",") if item.strip()]
+        return parts[0] if parts else ""
+    return rol
+
+
+def _is_access_role_allowed(rol_raw: str) -> bool:
+    return _extract_primary_role(rol_raw) in ALLOWED_ACCESS_ROLES
 
 
 def control_access_required(view_func):
@@ -26,18 +42,7 @@ def control_access_required(view_func):
         if not current_user.is_authenticated:
             abort(401)
 
-        rol_raw = (getattr(current_user, "rol", "") or "").strip().lower()
-        rol = rol_raw
-
-        if rol.startswith("{") and rol.endswith("}"):
-            parts = [item.strip().strip('"') for item in rol[1:-1].split(",") if item.strip()]
-            rol = parts[0] if parts else ""
-        elif rol.startswith("[") and rol.endswith("]"):
-            parts = [item.strip().strip('"') for item in rol[1:-1].split(",") if item.strip()]
-            rol = parts[0] if parts else ""
-
-        allowed = {"admin_sistema", "admin", "administrador", "seguridad_udec", "vigilante", "vigilancia"}
-        if rol not in allowed:
+        if not _is_access_role_allowed(getattr(current_user, "rol", "")):
             abort(403)
 
         return view_func(*args, **kwargs)
