@@ -115,6 +115,13 @@ class User(UserMixin):
                 return candidate
         return None
 
+    @staticmethod
+    def _append_assignment(assignments: list, values: list, column_name: str | None, value) -> None:
+        if not column_name:
+            return
+        assignments.append(sql.SQL("{} = {} ").format(sql.Identifier(column_name), sql.Placeholder()))
+        values.append(value)
+
     @classmethod
     def _base_select_query(cls, where_clause: str) -> tuple[str, set[str]]:
         """Arma query base para obtener usuario autenticable según esquema disponible."""
@@ -305,24 +312,16 @@ class User(UserMixin):
         assignments = []
         values = []
 
-        if "role" in columns.keys():
+        if "role" in columns:
             assignments.append(sql.SQL("role = {} ").format(sql.Placeholder()))
             values.append([role] if role_is_array else role)
-        if "estado" in columns.keys():
+        if "estado" in columns:
             assignments.append(sql.SQL("estado = {} ").format(sql.Placeholder()))
             values.append(estado)
-        if nombre_col:
-            assignments.append(sql.SQL("{} = {} ").format(sql.Identifier(nombre_col), sql.Placeholder()))
-            values.append(nombre)
-        if apellido_col:
-            assignments.append(sql.SQL("{} = {} ").format(sql.Identifier(apellido_col), sql.Placeholder()))
-            values.append(apellido)
-        if email_col:
-            assignments.append(sql.SQL("{} = {} ").format(sql.Identifier(email_col), sql.Placeholder()))
-            values.append(email)
-        if id_doc_col:
-            assignments.append(sql.SQL("{} = {} ").format(sql.Identifier(id_doc_col), sql.Placeholder()))
-            values.append(numero_identificacion)
+        cls._append_assignment(assignments, values, nombre_col, nombre)
+        cls._append_assignment(assignments, values, apellido_col, apellido)
+        cls._append_assignment(assignments, values, email_col, email)
+        cls._append_assignment(assignments, values, id_doc_col, numero_identificacion)
 
         if not assignments:
             return

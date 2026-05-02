@@ -16,6 +16,15 @@ from app.utils.local_sync import LocalSyncService
 
 class Vehiculo:
     @staticmethod
+    def _doc_status(ok: bool, level: str, message: str, block_automatic_assignment: bool) -> dict:
+        return {
+            "ok": ok,
+            "level": level,
+            "message": message,
+            "block_automatic_assignment": block_automatic_assignment,
+        }
+
+    @staticmethod
     def normalize_plate(placa: str) -> str:
         raw = (placa or "").strip().upper()
         # Acepta entradas con espacios/guiones y las normaliza a formato compacto.
@@ -189,6 +198,144 @@ class Vehiculo:
             with conn.cursor() as cur:
                 cur.execute(query, (table_name,))
                 return {row[0] for row in cur.fetchall()}
+
+    @classmethod
+    def _get_vehicle_row_for_docs(cls, table_name: str, table_cols: set[str], plate: str):
+        conductor_fk_col = "conductor_id" if "conductor_id" in table_cols else None
+        user_fk_col = "user_id" if "user_id" in table_cols else None
+
+        query_vehicle = f"""
+            SELECT
+                v.id,
+                v.placa,
+                {f'v.{conductor_fk_col}' if conductor_fk_col else 'NULL::int'} AS conductor_id,
+                {f'v.{user_fk_col}' if user_fk_col else 'NULL::int'} AS user_id
+            FROM public.{table_name} v
+            WHERE upper(v.placa) = upper(%s)
+            LIMIT 1
+        """
+
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query_vehicle, (plate,))
+                return cur.fetchone()
+
+    @classmethod
+    def _resolve_conductor_table_and_columns(cls) -> tuple[str, set[str]]:
+        query_table = """
+            SELECT table_name
+            FROM information_schema.tables
+            WHERE table_schema = 'public'
+              AND table_name IN ('conductores', 'conductors')
+            ORDER BY CASE table_name WHEN 'conductores' THEN 0 ELSE 1 END
+            LIMIT 1
+        """
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query_table)
+                row_table = cur.fetchone()
+                conductor_table = row_table[0] if row_table else "conductores"
+        return conductor_table, cls._get_columns(conductor_table)
+
+    @classmethod
+    def _get_conductor_row_for_docs(cls, conductor_table: str, conductor_cols: set[str], conductor_id: int):
+        fecha_col = "fecha_vencimiento_pase" if "fecha_vencimiento_pase" in conductor_cols else None
+        numero_pase_col = "numero_pase" if "numero_pase" in conductor_cols else None
+        estado_col = "estado" if "estado" in conductor_cols else None
+        nombre_col = "nombre" if "nombre" in conductor_cols else None
+        apellido_col = "apellido" if "apellido" in conductor_cols else None
+
+        if fecha_col is None:
+            return None, "No existe fecha de vencimiento de pase en la tabla de conductores."
+
+        query_conductor = f"""
+            SELECT
+                c.id,
+                {f'c.{nombre_col}' if nombre_col else 'NULL::text'} AS nombre,
+                {f'c.{apellido_col}' if apellido_col else 'NULL::text'} AS apellido,
+                {f'c.{numero_pase_col}' if numero_pase_col else 'NULL::text'} AS numero_pase,
+                c.{fecha_col} AS fecha_vencimiento_pase,
+                {f'c.{estado_col}' if estado_col else "'activo'::text"} AS estado
+            FROM public.{conductor_table} c
+            WHERE c.id = %s
+            LIMIT 1
+        """
+
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query_conductor, (conductor_id,))
+                conductor_row = cur.fetchone()
+
+        return conductor_row, ""
+
+    @classmethod
+    def _evaluate_conductor_doc_status(
+        cls,
+        plate: str,
+        conductor_row,
+        vehicle_warning_text: str,
+        warning_days: int,
+    ) -> dict:
+        if not conductor_row:
+            return cls._doc_status(False, "error", f"No se encontró conductor asociado al vehículo {plate}.", True)
+
+        numero_pase = conductor_row[3]
+        fecha_vence = conductor_row[4]
+        estado_conductor = (conductor_row[5] or "").strip().lower()
+
+        if not numero_pase:
+            return cls._doc_status(
+                False,
+                "error",
+                f"El conductor del vehículo {plate} no tiene número de pase registrado.",
+                True,
+            )
+
+        if fecha_vence is None:
+            return cls._doc_status(
+                False,
+                "error",
+                f"El conductor del vehículo {plate} no tiene fecha de vencimiento del pase.",
+                True,
+            )
+
+        if hasattr(fecha_vence, "date"):
+            fecha_vence = fecha_vence.date()
+        if not isinstance(fecha_vence, date):
+            return cls._doc_status(
+                False,
+                "error",
+                f"No se pudo interpretar la fecha de vencimiento del pase para {plate}.",
+                True,
+            )
+
+        days_to_expire = (fecha_vence - date.today()).days
+        if estado_conductor == "inactivo":
+            return cls._doc_status(
+                False,
+                "error",
+                f"Conductor inactivo para la placa {plate}. Se requiere validación manual.",
+                True,
+            )
+
+        if days_to_expire < 0:
+            return cls._doc_status(
+                False,
+                "error",
+                f"Documento vencido para {plate} ({abs(days_to_expire)} días). Acceso sujeto a validación manual.",
+                True,
+            )
+
+        if days_to_expire <= warning_days:
+            warning_parts = [f"Alerta documental: pase de {plate} vence en {days_to_expire} días."]
+            if vehicle_warning_text:
+                warning_parts.append(vehicle_warning_text)
+            return cls._doc_status(True, "warning", " ".join(warning_parts), False)
+
+        if vehicle_warning_text:
+            return cls._doc_status(True, "warning", vehicle_warning_text, False)
+
+        return cls._doc_status(True, "success", f"Documentación vigente para {plate} (conductor y vehículo).", False)
 
     @classmethod
     def list_items(cls) -> list[dict]:
@@ -471,61 +618,34 @@ class Vehiculo:
     def get_document_status_by_placa(cls, placa: str, warning_days: int = 30) -> dict:
         plate = (placa or "").strip().upper()
         if not plate:
-            return {
-                "ok": False,
-                "level": "error",
-                "message": "Debes indicar una placa para validar documentación.",
-                "block_automatic_assignment": True,
-            }
+            return cls._doc_status(False, "error", "Debes indicar una placa para validar documentación.", True)
 
         veh_table = cls._get_table_name()
         veh_cols = cls._get_columns(veh_table)
         if "placa" not in veh_cols:
-            return {
-                "ok": False,
-                "level": "error",
-                "message": "La tabla de vehículos no contiene columna placa para validar documentación.",
-                "block_automatic_assignment": True,
-            }
+            return cls._doc_status(
+                False,
+                "error",
+                "La tabla de vehículos no contiene columna placa para validar documentación.",
+                True,
+            )
 
-        conductor_fk_col = "conductor_id" if "conductor_id" in veh_cols else None
-        user_fk_col = "user_id" if "user_id" in veh_cols else None
-
-        query_vehicle = f"""
-            SELECT
-                v.id,
-                v.placa,
-                {f'v.{conductor_fk_col}' if conductor_fk_col else 'NULL::int'} AS conductor_id,
-                {f'v.{user_fk_col}' if user_fk_col else 'NULL::int'} AS user_id
-            FROM public.{veh_table} v
-            WHERE upper(v.placa) = upper(%s)
-            LIMIT 1
-        """
-
-        with get_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(query_vehicle, (plate,))
-                vehicle_row = cur.fetchone()
+        vehicle_row = cls._get_vehicle_row_for_docs(table_name=veh_table, table_cols=veh_cols, plate=plate)
 
         if not vehicle_row:
-            return {
-                "ok": False,
-                "level": "error",
-                "message": f"La placa {plate} no está registrada en el sistema.",
-                "block_automatic_assignment": True,
-            }
+            return cls._doc_status(False, "error", f"La placa {plate} no está registrada en el sistema.", True)
 
         vehicle_doc_status = DocumentoVehiculo.get_status_summary(
             vehiculo_id=int(vehicle_row[0]),
             warning_days=warning_days,
         )
         if not vehicle_doc_status.get("ok"):
-            return {
-                "ok": False,
-                "level": "error",
-                "message": f"{vehicle_doc_status.get('message') or 'Documentación vehicular inválida.'}",
-                "block_automatic_assignment": True,
-            }
+            return cls._doc_status(
+                False,
+                "error",
+                f"{vehicle_doc_status.get('message') or 'Documentación vehicular inválida.'}",
+                True,
+            )
 
         vehicle_warning_text = ""
         if (vehicle_doc_status.get("level") or "").strip().lower() == "warning":
@@ -533,148 +653,25 @@ class Vehiculo:
 
         conductor_id = vehicle_row[2]
         if conductor_id is None:
-            return {
-                "ok": False,
-                "level": "error",
-                "message": f"El vehículo {plate} no tiene conductor asociado. Validación documental manual requerida.",
-                "block_automatic_assignment": True,
-            }
+            return cls._doc_status(
+                False,
+                "error",
+                f"El vehículo {plate} no tiene conductor asociado. Validación documental manual requerida.",
+                True,
+            )
 
-        # Compatibilidad de tabla de conductores.
-        query_table = """
-            SELECT table_name
-            FROM information_schema.tables
-            WHERE table_schema = 'public'
-              AND table_name IN ('conductores', 'conductors')
-            ORDER BY CASE table_name WHEN 'conductores' THEN 0 ELSE 1 END
-            LIMIT 1
-        """
-        with get_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(query_table)
-                row_table = cur.fetchone()
-                conductor_table = row_table[0] if row_table else "conductores"
+        conductor_table, conductor_cols = cls._resolve_conductor_table_and_columns()
+        conductor_row, schema_error = cls._get_conductor_row_for_docs(
+            conductor_table=conductor_table,
+            conductor_cols=conductor_cols,
+            conductor_id=conductor_id,
+        )
+        if schema_error:
+            return cls._doc_status(False, "error", schema_error, True)
 
-                cur.execute(
-                    """
-                    SELECT column_name
-                    FROM information_schema.columns
-                    WHERE table_schema = 'public'
-                      AND table_name = %s
-                    """,
-                    (conductor_table,),
-                )
-                conductor_cols = {r[0] for r in cur.fetchall()}
-
-        fecha_col = "fecha_vencimiento_pase" if "fecha_vencimiento_pase" in conductor_cols else None
-        numero_pase_col = "numero_pase" if "numero_pase" in conductor_cols else None
-        estado_col = "estado" if "estado" in conductor_cols else None
-        nombre_col = "nombre" if "nombre" in conductor_cols else None
-        apellido_col = "apellido" if "apellido" in conductor_cols else None
-
-        if fecha_col is None:
-            return {
-                "ok": False,
-                "level": "error",
-                "message": "No existe fecha de vencimiento de pase en la tabla de conductores.",
-                "block_automatic_assignment": True,
-            }
-
-        query_conductor = f"""
-            SELECT
-                c.id,
-                {f'c.{nombre_col}' if nombre_col else 'NULL::text'} AS nombre,
-                {f'c.{apellido_col}' if apellido_col else 'NULL::text'} AS apellido,
-                {f'c.{numero_pase_col}' if numero_pase_col else 'NULL::text'} AS numero_pase,
-                c.{fecha_col} AS fecha_vencimiento_pase,
-                {f'c.{estado_col}' if estado_col else "'activo'::text"} AS estado
-            FROM public.{conductor_table} c
-            WHERE c.id = %s
-            LIMIT 1
-        """
-
-        with get_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(query_conductor, (conductor_id,))
-                conductor_row = cur.fetchone()
-
-        if not conductor_row:
-            return {
-                "ok": False,
-                "level": "error",
-                "message": f"No se encontró conductor asociado al vehículo {plate}.",
-                "block_automatic_assignment": True,
-            }
-
-        numero_pase = conductor_row[3]
-        fecha_vence = conductor_row[4]
-        estado_conductor = (conductor_row[5] or "").strip().lower()
-
-        if not numero_pase:
-            return {
-                "ok": False,
-                "level": "error",
-                "message": f"El conductor del vehículo {plate} no tiene número de pase registrado.",
-                "block_automatic_assignment": True,
-            }
-
-        if fecha_vence is None:
-            return {
-                "ok": False,
-                "level": "error",
-                "message": f"El conductor del vehículo {plate} no tiene fecha de vencimiento del pase.",
-                "block_automatic_assignment": True,
-            }
-
-        if hasattr(fecha_vence, "date"):
-            fecha_vence = fecha_vence.date()
-        if not isinstance(fecha_vence, date):
-            return {
-                "ok": False,
-                "level": "error",
-                "message": f"No se pudo interpretar la fecha de vencimiento del pase para {plate}.",
-                "block_automatic_assignment": True,
-            }
-
-        days_to_expire = (fecha_vence - date.today()).days
-        if estado_conductor == "inactivo":
-            return {
-                "ok": False,
-                "level": "error",
-                "message": f"Conductor inactivo para la placa {plate}. Se requiere validación manual.",
-                "block_automatic_assignment": True,
-            }
-
-        if days_to_expire < 0:
-            return {
-                "ok": False,
-                "level": "error",
-                "message": f"Documento vencido para {plate} ({abs(days_to_expire)} días). Acceso sujeto a validación manual.",
-                "block_automatic_assignment": True,
-            }
-
-        if days_to_expire <= warning_days:
-            warning_parts = [f"Alerta documental: pase de {plate} vence en {days_to_expire} días."]
-            if vehicle_warning_text:
-                warning_parts.append(vehicle_warning_text)
-            return {
-                "ok": True,
-                "level": "warning",
-                "message": " ".join(warning_parts),
-                "block_automatic_assignment": False,
-            }
-
-        if vehicle_warning_text:
-            return {
-                "ok": True,
-                "level": "warning",
-                "message": vehicle_warning_text,
-                "block_automatic_assignment": False,
-            }
-
-        return {
-            "ok": True,
-            "level": "success",
-            "message": f"Documentación vigente para {plate} (conductor y vehículo).",
-            "block_automatic_assignment": False,
-        }
+        return cls._evaluate_conductor_doc_status(
+            plate=plate,
+            conductor_row=conductor_row,
+            vehicle_warning_text=vehicle_warning_text,
+            warning_days=warning_days,
+        )
