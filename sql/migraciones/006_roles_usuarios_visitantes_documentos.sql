@@ -3,6 +3,17 @@
 
 BEGIN;
 
+CREATE OR REPLACE FUNCTION pg_temp.constraint_exists(p_name text)
+RETURNS boolean
+LANGUAGE sql
+AS $$
+    SELECT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = p_name
+    );
+$$;
+
 CREATE TABLE IF NOT EXISTS public.roles (
     id SERIAL PRIMARY KEY,
     codigo VARCHAR(30) UNIQUE NOT NULL,
@@ -38,11 +49,7 @@ CREATE TABLE IF NOT EXISTS public.usuarios (
 
 DO $$
 BEGIN
-    IF NOT EXISTS (
-        SELECT 1
-        FROM pg_constraint
-        WHERE conname = 'chk_usuarios_estado'
-    ) THEN
+    IF NOT pg_temp.constraint_exists('chk_usuarios_estado') THEN
         ALTER TABLE public.usuarios
         ADD CONSTRAINT chk_usuarios_estado
         CHECK (estado IN ('activo', 'inactivo', 'bloqueado'));
@@ -65,21 +72,13 @@ CREATE TABLE IF NOT EXISTS public.conductores (
 
 DO $$
 BEGIN
-    IF NOT EXISTS (
-        SELECT 1
-        FROM pg_constraint
-        WHERE conname = 'chk_conductores_tipo'
-    ) THEN
+    IF NOT pg_temp.constraint_exists('chk_conductores_tipo') THEN
         ALTER TABLE public.conductores
         ADD CONSTRAINT chk_conductores_tipo
         CHECK (tipo_conductor IN ('estudiante', 'docente', 'visitante', 'funcionario', 'otro'));
     END IF;
 
-    IF NOT EXISTS (
-        SELECT 1
-        FROM pg_constraint
-        WHERE conname = 'chk_conductores_estado'
-    ) THEN
+    IF NOT pg_temp.constraint_exists('chk_conductores_estado') THEN
         ALTER TABLE public.conductores
         ADD CONSTRAINT chk_conductores_estado
         CHECK (estado IN ('activo', 'inactivo'));
@@ -104,11 +103,7 @@ CREATE TABLE IF NOT EXISTS public.visitantes (
 
 DO $$
 BEGIN
-    IF NOT EXISTS (
-        SELECT 1
-        FROM pg_constraint
-        WHERE conname = 'chk_visitantes_estado'
-    ) THEN
+    IF NOT pg_temp.constraint_exists('chk_visitantes_estado') THEN
         ALTER TABLE public.visitantes
         ADD CONSTRAINT chk_visitantes_estado
         CHECK (estado IN ('pendiente', 'autorizado', 'rechazado', 'ingresado', 'finalizado'));
@@ -129,11 +124,7 @@ CREATE TABLE IF NOT EXISTS public.autorizaciones_visitante (
 
 DO $$
 BEGIN
-    IF NOT EXISTS (
-        SELECT 1
-        FROM pg_constraint
-        WHERE conname = 'chk_autorizaciones_estado'
-    ) THEN
+    IF NOT pg_temp.constraint_exists('chk_autorizaciones_estado') THEN
         ALTER TABLE public.autorizaciones_visitante
         ADD CONSTRAINT chk_autorizaciones_estado
         CHECK (estado IN ('autorizado', 'rechazado'));
@@ -175,11 +166,7 @@ CREATE TABLE IF NOT EXISTS public.documentos_vehiculo (
 
 DO $$
 BEGIN
-    IF NOT EXISTS (
-        SELECT 1
-        FROM pg_constraint
-        WHERE conname = 'chk_doc_vehiculo_estado'
-    ) THEN
+    IF NOT pg_temp.constraint_exists('chk_doc_vehiculo_estado') THEN
         ALTER TABLE public.documentos_vehiculo
         ADD CONSTRAINT chk_doc_vehiculo_estado
         CHECK (estado IN ('vigente', 'vencido', 'por_vencer', 'invalido'));
@@ -203,21 +190,13 @@ CREATE TABLE IF NOT EXISTS public.sync_pendientes (
 
 DO $$
 BEGIN
-    IF NOT EXISTS (
-        SELECT 1
-        FROM pg_constraint
-        WHERE conname = 'chk_sync_operacion'
-    ) THEN
+    IF NOT pg_temp.constraint_exists('chk_sync_operacion') THEN
         ALTER TABLE public.sync_pendientes
         ADD CONSTRAINT chk_sync_operacion
         CHECK (tipo_operacion IN ('INSERT', 'UPDATE', 'DELETE'));
     END IF;
 
-    IF NOT EXISTS (
-        SELECT 1
-        FROM pg_constraint
-        WHERE conname = 'chk_sync_estado'
-    ) THEN
+    IF NOT pg_temp.constraint_exists('chk_sync_estado') THEN
         ALTER TABLE public.sync_pendientes
         ADD CONSTRAINT chk_sync_estado
         CHECK (estado IN ('pendiente', 'enviado', 'error'));

@@ -5,7 +5,14 @@
 -- 0) Crear parámetros automáticos de prueba
 SET client_min_messages TO WARNING;
 DROP TABLE IF EXISTS tmp_regresion_params;
+DROP TABLE IF EXISTS tmp_regresion_const;
 RESET client_min_messages;
+
+CREATE TEMP TABLE tmp_regresion_const AS
+SELECT
+	'ingreso'::text AS tipo_ingreso,
+	'salida'::text AS tipo_salida,
+	'libre'::text AS estado_libre;
 
 CREATE TEMP TABLE tmp_regresion_params AS
 SELECT
@@ -22,8 +29,8 @@ CROSS JOIN LATERAL (
 ) u
 WHERE EXISTS (
 	SELECT 1
-	FROM public.espacio e
-	WHERE e.estado = 'libre'
+	FROM public.espacio e, tmp_regresion_const c
+	WHERE e.estado = c.estado_libre
 	  AND (e.tipo_vehiculo_id = v.tipo_vehiculo_id OR e.tipo_vehiculo_id IS NULL)
 )
 ORDER BY v.id DESC
@@ -36,7 +43,7 @@ SELECT * FROM tmp_regresion_params;
 SELECT
 	(SELECT COUNT(*) FROM public.usuarios) AS total_usuarios,
 	(SELECT COUNT(*) FROM public.vehiculos) AS total_vehiculos,
-	(SELECT COUNT(*) FROM public.espacio WHERE estado = 'libre') AS espacios_libres_total;
+	(SELECT COUNT(*) FROM public.espacio e, tmp_regresion_const c WHERE e.estado = c.estado_libre) AS espacios_libres_total;
 
 -- 1) Ingreso automático por placa
 SELECT *
@@ -48,15 +55,17 @@ SELECT n.id, n.tipo_novedad, n.id_vehiculo, n.id_espacio, n.estado, n.fecha_hora
 FROM public.novedad n
 JOIN public.vehiculos v ON v.id = n.id_vehiculo
 JOIN tmp_regresion_params p ON p.placa = v.placa
-WHERE lower(n.tipo_novedad) = 'ingreso'
+JOIN tmp_regresion_const c ON TRUE
+WHERE lower(n.tipo_novedad) = c.tipo_ingreso
 ORDER BY n.id DESC
 LIMIT 1;
 
 -- 3) Registrar salida del mismo vehículo (sin enviar id_espacio)
 INSERT INTO public.novedad (tipo_novedad, id_vehiculo, fecha_hora, id_usuario, observaciones)
-SELECT 'salida', v.id, now(), p.user_id, 'Salida de prueba'
+SELECT c.tipo_salida, v.id, now(), p.user_id, 'Salida de prueba'
 FROM public.vehiculos v
 JOIN tmp_regresion_params p ON p.placa = v.placa
+JOIN tmp_regresion_const c ON TRUE
 LIMIT 1;
 
 -- 4) Revisar última salida para esa misma placa
@@ -64,7 +73,8 @@ SELECT n.id, n.tipo_novedad, n.id_vehiculo, n.id_espacio, n.estado, n.fecha_hora
 FROM public.novedad n
 JOIN public.vehiculos v ON v.id = n.id_vehiculo
 JOIN tmp_regresion_params p ON p.placa = v.placa
-WHERE lower(n.tipo_novedad) = 'salida'
+JOIN tmp_regresion_const c ON TRUE
+WHERE lower(n.tipo_novedad) = c.tipo_salida
 ORDER BY n.id DESC
 LIMIT 1;
 
@@ -74,7 +84,8 @@ WITH ultima_salida AS (
 	FROM public.novedad n
 	JOIN public.vehiculos v ON v.id = n.id_vehiculo
 	JOIN tmp_regresion_params p ON p.placa = v.placa
-	WHERE lower(n.tipo_novedad) = 'salida'
+	JOIN tmp_regresion_const c ON TRUE
+	WHERE lower(n.tipo_novedad) = c.tipo_salida
 	ORDER BY n.id DESC
 	LIMIT 1
 )
@@ -91,7 +102,8 @@ WITH params AS (
 	FROM public.novedad n
 	JOIN public.vehiculos v ON v.id = n.id_vehiculo
 	JOIN params p ON p.placa = v.placa
-	WHERE lower(n.tipo_novedad) = 'ingreso'
+	JOIN tmp_regresion_const c ON TRUE
+	WHERE lower(n.tipo_novedad) = c.tipo_ingreso
 	ORDER BY n.id DESC
 	LIMIT 1
 ), ultima_salida AS (
@@ -99,7 +111,8 @@ WITH params AS (
 	FROM public.novedad n
 	JOIN public.vehiculos v ON v.id = n.id_vehiculo
 	JOIN params p ON p.placa = v.placa
-	WHERE lower(n.tipo_novedad) = 'salida'
+	JOIN tmp_regresion_const c ON TRUE
+	WHERE lower(n.tipo_novedad) = c.tipo_salida
 	ORDER BY n.id DESC
 	LIMIT 1
 ), espacio_final AS (
@@ -124,6 +137,7 @@ SELECT
 	END AS resultado_regresion;
 
 DROP TABLE IF EXISTS tmp_regresion_params;
+DROP TABLE IF EXISTS tmp_regresion_const;
 
 -- 7) Confirmación final visible (debe aparecer como último resultado)
 SELECT 'SCRIPT_EJECUTADO_COMPLETO' AS estado_script;
