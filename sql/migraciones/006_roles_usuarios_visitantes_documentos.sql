@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS public.usuarios (
     email VARCHAR(120) UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     rol_id INTEGER NOT NULL REFERENCES public.roles(id),
-    estado VARCHAR(20) NOT NULL DEFAULT 'activo',
+    estado VARCHAR(20) NOT NULL DEFAULT lower('ACTIVO'),
     nombres VARCHAR(120) NOT NULL,
     apellidos VARCHAR(120) NOT NULL,
     numero_identificacion VARCHAR(30) UNIQUE,
@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS public.conductores (
     categoria_pase VARCHAR(20),
     fecha_registro_pase DATE,
     fecha_vencimiento_pase DATE,
-    estado VARCHAR(20) NOT NULL DEFAULT 'activo',
+    estado VARCHAR(20) NOT NULL DEFAULT lower('ACTIVO'),
     created_at TIMESTAMP NOT NULL DEFAULT now(),
     updated_at TIMESTAMP NOT NULL DEFAULT now()
 );
@@ -95,7 +95,7 @@ CREATE TABLE IF NOT EXISTS public.visitantes (
     placa VARCHAR(20),
     fecha_hora_registro TIMESTAMP NOT NULL DEFAULT now(),
     fecha_hora_prevista TIMESTAMP NOT NULL,
-    estado VARCHAR(20) NOT NULL DEFAULT 'pendiente',
+    estado VARCHAR(20) NOT NULL DEFAULT lower('PENDIENTE'),
     registrado_por_usuario_id INTEGER NOT NULL REFERENCES public.usuarios(id),
     created_at TIMESTAMP NOT NULL DEFAULT now(),
     updated_at TIMESTAMP NOT NULL DEFAULT now()
@@ -138,17 +138,22 @@ CREATE TABLE IF NOT EXISTS public.tipo_documento (
     codigo VARCHAR(30) UNIQUE NOT NULL,
     nombre VARCHAR(100) NOT NULL,
     descripcion TEXT,
-    entidad_objetivo VARCHAR(30) NOT NULL DEFAULT 'vehiculo',
+    entidad_objetivo VARCHAR(30) NOT NULL DEFAULT lower('VEHICULO'),
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP NOT NULL DEFAULT now()
 );
 
+WITH cte_entidad AS (
+    SELECT
+        lower('VEHICULO') AS entidad_vehiculo,
+        lower('CONDUCTOR') AS entidad_conductor
+)
 INSERT INTO public.tipo_documento (codigo, nombre, entidad_objetivo)
 VALUES
-    ('soat', 'SOAT', 'vehiculo'),
-    ('tecnomecanica', 'Técnico-mecánica', 'vehiculo'),
-    ('tarjeta_propiedad', 'Tarjeta de propiedad', 'vehiculo'),
-    ('licencia_conduccion', 'Licencia de conducción', 'conductor')
+    ('soat', 'SOAT', (SELECT entidad_vehiculo FROM cte_entidad)),
+    ('tecnomecanica', 'Técnico-mecánica', (SELECT entidad_vehiculo FROM cte_entidad)),
+    ('tarjeta_propiedad', 'Tarjeta de propiedad', (SELECT entidad_vehiculo FROM cte_entidad)),
+    ('licencia_conduccion', 'Licencia de conducción', (SELECT entidad_conductor FROM cte_entidad))
 ON CONFLICT (codigo) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS public.documentos_vehiculo (
@@ -181,7 +186,7 @@ CREATE TABLE IF NOT EXISTS public.sync_pendientes (
     registro_id BIGINT,
     tipo_operacion VARCHAR(10) NOT NULL,
     payload JSONB NOT NULL,
-    estado VARCHAR(20) NOT NULL DEFAULT 'pendiente',
+    estado VARCHAR(20) NOT NULL DEFAULT lower('PENDIENTE'),
     intentos INTEGER NOT NULL DEFAULT 0,
     ultimo_error TEXT,
     created_at TIMESTAMP NOT NULL DEFAULT now(),

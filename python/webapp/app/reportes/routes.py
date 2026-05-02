@@ -122,6 +122,75 @@ def _passes_access_filters(
     return True
 
 
+def _build_access_report_row(
+    row: dict,
+    users: dict[int, dict],
+    only_today: bool,
+    today_text: str,
+    placa_filter: str,
+    fecha_filter: str,
+    usuario_filter: str,
+    vigilante_filter: str,
+) -> dict | None:
+    tipo = (row.get("tipo_novedad") or "").strip().lower()
+    user_id = row.get("id_usuario")
+    user_context = _extract_user_context(row=row, users=users)
+    fecha_hora = row.get("fecha_hora")
+    fecha_text = _format_date_only(fecha_hora)
+
+    if only_today and fecha_text != today_text:
+        return None
+
+    placa_text = str(row.get("placa") or "")
+    if not _passes_access_filters(
+        placa_text=placa_text,
+        fecha_text=fecha_text,
+        user_id=user_id,
+        usuario_display=user_context["usuario_display"],
+        vigilante_display=user_context["vigilante_display"],
+        placa_filter=placa_filter,
+        fecha_filter=fecha_filter,
+        usuario_filter=usuario_filter,
+        vigilante_filter=vigilante_filter,
+    ):
+        return None
+
+    return {
+        "id_novedad": row.get("id"),
+        "tipo_movimiento": tipo or "novedad",
+        "placa": placa_text,
+        "fecha_hora": fecha_hora or "",
+        "estado": row.get("estado") or "",
+        "observaciones": row.get("observaciones") or "",
+        "usuario_nombre": user_context["usuario_nombre"],
+        "usuario_apellido": user_context["usuario_apellido"],
+        "vigilante_nombre": user_context["vigilante_nombre"],
+        "vigilante_apellido": user_context["vigilante_apellido"],
+    }
+
+
+def _build_vehicle_report_row(row: dict, placa_filter: str, fecha_filter: str) -> dict | None:
+    placa_text = str(row.get("placa") or "")
+    fecha_registro = row.get("fecha_registro") or ""
+    fecha_registro_text = _format_date_only(fecha_registro)
+
+    if placa_filter and placa_filter not in _normalize_text(placa_text):
+        return None
+    if fecha_filter and fecha_filter != _normalize_text(fecha_registro_text):
+        return None
+
+    return {
+        "id_vehiculo": row.get("id"),
+        "placa": placa_text,
+        "tipo_vehiculo": row.get("tipo_vehiculo_nombre") or "",
+        "marca": row.get("marca") or "",
+        "modelo": row.get("modelo") or "",
+        "color": row.get("color") or "",
+        "estado": row.get("estado") or "",
+        "fecha_registro": fecha_registro,
+    }
+
+
 def _user_lookup() -> dict[int, dict]:
     users = User.list_users()
     lookup: dict[int, dict] = {}
@@ -163,44 +232,18 @@ def _load_accesos_salidas(filters: dict | None = None) -> list[dict]:
     today_text = date.today().strftime("%Y-%m-%d") if only_today else ""
 
     for row in rows:
-        tipo = (row.get("tipo_novedad") or "").strip().lower()
-        user_id = row.get("id_usuario")
-        user_context = _extract_user_context(row=row, users=users)
-
-        fecha_hora = row.get("fecha_hora")
-        fecha_text = _format_date_only(fecha_hora)
-
-        if only_today and fecha_text != today_text:
-            continue
-
-        placa_text = str(row.get("placa") or "")
-        if not _passes_access_filters(
-            placa_text=placa_text,
-            fecha_text=fecha_text,
-            user_id=user_id,
-            usuario_display=user_context["usuario_display"],
-            vigilante_display=user_context["vigilante_display"],
+        report_row = _build_access_report_row(
+            row=row,
+            users=users,
+            only_today=only_today,
+            today_text=today_text,
             placa_filter=placa_filter,
             fecha_filter=fecha_filter,
             usuario_filter=usuario_filter,
             vigilante_filter=vigilante_filter,
-        ):
-            continue
-
-        report_rows.append(
-            {
-                "id_novedad": row.get("id"),
-                "tipo_movimiento": tipo or "novedad",
-                "placa": placa_text,
-                "fecha_hora": fecha_hora or "",
-                "estado": row.get("estado") or "",
-                "observaciones": row.get("observaciones") or "",
-                "usuario_nombre": user_context["usuario_nombre"],
-                "usuario_apellido": user_context["usuario_apellido"],
-                "vigilante_nombre": user_context["vigilante_nombre"],
-                "vigilante_apellido": user_context["vigilante_apellido"],
-            }
         )
+        if report_row:
+            report_rows.append(report_row)
 
     return report_rows
 
@@ -214,31 +257,9 @@ def _load_vehiculos(filters: dict | None = None) -> list[dict]:
     fecha_filter = _normalize_text(filters.get("fecha"))
 
     for row in rows:
-        placa_text = str(row.get("placa") or "")
-        fecha_registro = row.get("fecha_registro") or ""
-
-        if hasattr(fecha_registro, "strftime"):
-            fecha_registro_text = fecha_registro.strftime("%Y-%m-%d")
-        else:
-            fecha_registro_text = str(fecha_registro)[:10]
-
-        if placa_filter and placa_filter not in _normalize_text(placa_text):
-            continue
-        if fecha_filter and fecha_filter != _normalize_text(fecha_registro_text):
-            continue
-
-        report_rows.append(
-            {
-                "id_vehiculo": row.get("id"),
-                "placa": placa_text,
-                "tipo_vehiculo": row.get("tipo_vehiculo_nombre") or "",
-                "marca": row.get("marca") or "",
-                "modelo": row.get("modelo") or "",
-                "color": row.get("color") or "",
-                "estado": row.get("estado") or "",
-                "fecha_registro": fecha_registro,
-            }
-        )
+        report_row = _build_vehicle_report_row(row=row, placa_filter=placa_filter, fecha_filter=fecha_filter)
+        if report_row:
+            report_rows.append(report_row)
 
     return report_rows
 

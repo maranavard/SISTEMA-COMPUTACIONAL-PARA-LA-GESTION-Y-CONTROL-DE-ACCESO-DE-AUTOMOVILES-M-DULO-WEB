@@ -15,6 +15,20 @@ AS $$
   );
 $$;
 
+CREATE OR REPLACE FUNCTION pg_temp.has_usuarios_column_type(p_column text, p_data_type text)
+RETURNS boolean
+LANGUAGE sql
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'usuarios'
+      AND column_name = p_column
+      AND data_type = p_data_type
+  );
+$$;
+
 CREATE OR REPLACE FUNCTION pg_temp.has_public_table(p_table text)
 RETURNS boolean
 LANGUAGE sql
@@ -90,14 +104,8 @@ BEGIN
   IF v_total = 0 THEN
     SELECT pg_temp.has_usuarios_column('role') INTO v_has_role;
 
-    SELECT EXISTS (
-      SELECT 1
-      FROM information_schema.columns
-      WHERE table_schema='public'
-        AND table_name='usuarios'
-        AND column_name='role'
-        AND data_type = 'ARRAY'
-    ) INTO v_role_is_array;
+    SELECT pg_temp.has_usuarios_column_type('role', 'ARRAY')
+    INTO v_role_is_array;
 
     SELECT pg_temp.has_usuarios_column('estado') INTO v_has_estado;
     SELECT pg_temp.has_usuarios_column('nombre') INTO v_has_nombre;

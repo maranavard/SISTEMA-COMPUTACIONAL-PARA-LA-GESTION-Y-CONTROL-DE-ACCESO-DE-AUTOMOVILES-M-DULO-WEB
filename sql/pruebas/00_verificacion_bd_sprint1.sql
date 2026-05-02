@@ -1,12 +1,21 @@
 -- 00_verificacion_bd_sprint1.sql
 -- Ejecutar en la BD: sistema_control
 
+DROP TABLE IF EXISTS tmp_verif_const;
+CREATE TEMP TABLE tmp_verif_const AS
+SELECT
+  'public'::text AS schema_name,
+  'novedad'::text AS novedad_table,
+  'salida'::text AS tipo_salida,
+  'pendiente'::text AS estado_pendiente;
+
 -- 1) Verificar tablas críticas del MVP
 SELECT table_name
-FROM information_schema.tables
-WHERE table_schema = 'public'
+FROM information_schema.tables t
+JOIN tmp_verif_const c ON c.schema_name = t.table_schema
+WHERE table_schema = c.schema_name
   AND table_name IN (
-    'roles','usuarios','conductors','conductores','vehiculos','espacio','novedad',
+    'roles','usuarios','conductors','conductores','vehiculos','espacio',c.novedad_table,
     'registro_visitantes','visitantes','documentos','tipo_doc','tipo_documento',
     'novedades_audit','asignaciones_log'
   )
@@ -14,8 +23,9 @@ ORDER BY table_name;
 
 -- 2) Revisar estructura de usuarios/roles
 SELECT column_name, data_type
-FROM information_schema.columns
-WHERE table_schema = 'public'
+FROM information_schema.columns ic
+JOIN tmp_verif_const c ON c.schema_name = ic.table_schema
+WHERE table_schema = c.schema_name
   AND table_name IN ('usuarios','roles')
 ORDER BY table_name, ordinal_position;
 
@@ -24,7 +34,8 @@ SELECT conname AS constraint_name, pg_get_constraintdef(c.oid) AS definition
 FROM pg_constraint c
 JOIN pg_class t ON c.conrelid = t.oid
 JOIN pg_namespace n ON n.oid = t.relnamespace
-WHERE n.nspname = 'public'
+JOIN tmp_verif_const k ON TRUE
+WHERE n.nspname = k.schema_name
   AND t.relname = 'vehiculos'
   AND pg_get_constraintdef(c.oid) ILIKE '%placa%';
 
@@ -43,9 +54,10 @@ ORDER BY tv.nombre, e.estado;
 
 -- 6) Trigger activo en novedad
 SELECT trigger_name, event_manipulation, event_object_table, action_statement
-FROM information_schema.triggers
-WHERE event_object_schema = 'public'
-  AND event_object_table = 'novedad';
+FROM information_schema.triggers t
+JOIN tmp_verif_const c ON TRUE
+WHERE event_object_schema = c.schema_name
+  AND event_object_table = c.novedad_table;
 
 -- 7) Últimos movimientos de novedad
 SELECT id, tipo_novedad, id_vehiculo, id_espacio, estado, fecha_hora
@@ -76,8 +88,9 @@ FROM pg_trigger t
 JOIN pg_class c ON c.oid = t.tgrelid
 JOIN pg_namespace n ON n.oid = c.relnamespace
 JOIN pg_proc p ON p.oid = t.tgfoid
-WHERE n.nspname = 'public'
-  AND c.relname = 'novedad'
+JOIN tmp_verif_const k ON TRUE
+WHERE n.nspname = k.schema_name
+  AND c.relname = k.novedad_table
   AND NOT t.tgisinternal
 ORDER BY t.tgname;
 
@@ -86,5 +99,8 @@ SELECT p.proname AS function_name,
        pg_get_functiondef(p.oid) AS function_definition
 FROM pg_proc p
 JOIN pg_namespace n ON n.oid = p.pronamespace
-WHERE n.nspname = 'public'
+JOIN tmp_verif_const k ON TRUE
+WHERE n.nspname = k.schema_name
   AND p.proname IN ('fn_asignar_liberar_espacio', 'fn_novedad_space_manage', 'assign_space_and_register_ingreso');
+
+DROP TABLE IF EXISTS tmp_verif_const;

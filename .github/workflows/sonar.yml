@@ -22,7 +22,7 @@ jobs:
             -Dsonar.sourceEncoding=UTF-8
             -Dsonar.sources=python
             -Dsonar.tests=tests
-            -Dsonar.exclusions=sql/sistema_control_backup.sql
+            -Dsonar.exclusions=sql/sistema_control_backup.sql,**/sistema_control_backup.sql
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           
