@@ -37,7 +37,8 @@ ORDER BY v.id DESC
 LIMIT 1;
 
 -- Si no hay datos base, este SELECT quedará vacío y debes crear al menos 1 usuario y 1 vehículo.
-SELECT * FROM tmp_regresion_params;
+SELECT placa, user_id, vehiculo_id, tipo_vehiculo_id
+FROM tmp_regresion_params;
 
 -- Diagnóstico rápido cuando no hay fila en tmp_regresion_params
 SELECT
@@ -46,9 +47,15 @@ SELECT
 	(SELECT COUNT(*) FROM public.espacio e, tmp_regresion_const c WHERE e.estado = c.estado_libre) AS espacios_libres_total;
 
 -- 1) Ingreso automático por placa
-SELECT *
+SELECT
+	p.placa,
+	p.user_id,
+	p.vehiculo_id,
+	p.tipo_vehiculo_id,
+	a.assigned_space_id,
+	a.assigned_space_num
 FROM tmp_regresion_params p,
-LATERAL public.assign_space_and_register_ingreso(p.placa, p.user_id);
+LATERAL public.assign_space_and_register_ingreso(p.placa, p.user_id) AS a;
 
 -- 2) Revisar último ingreso para esa misma placa
 SELECT n.id, n.tipo_novedad, n.id_vehiculo, n.id_espacio, n.estado, n.fecha_hora
@@ -96,7 +103,9 @@ WHERE n.id = (SELECT id FROM ultima_salida);
 
 -- 6) Resumen final de la regresión
 WITH params AS (
-	SELECT * FROM tmp_regresion_params LIMIT 1
+	SELECT placa, user_id, vehiculo_id, tipo_vehiculo_id
+	FROM tmp_regresion_params
+	LIMIT 1
 ), ultimo_ingreso AS (
 	SELECT n.id, n.id_espacio, n.estado
 	FROM public.novedad n

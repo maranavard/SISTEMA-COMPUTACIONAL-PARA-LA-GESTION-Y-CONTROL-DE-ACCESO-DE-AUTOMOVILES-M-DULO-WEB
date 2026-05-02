@@ -76,11 +76,19 @@ class User(UserMixin):
         return cls._get_table_columns("roles")
 
     @staticmethod
+    def _resolve_join_column(columns: dict[str, str], primary: str, fallback: str) -> str | None:
+        if primary in columns:
+            return primary
+        if fallback in columns:
+            return fallback
+        return None
+
+    @staticmethod
     def _role_select_expr(user_columns: dict[str, str], role_columns: dict[str, str]) -> tuple[str, str]:
         """Define expresión SQL de rol y JOIN requerido para roles."""
         has_role = "role" in user_columns
-        user_fk_col = "rol_id" if "rol_id" in user_columns else ("idrol" if "idrol" in user_columns else None)
-        role_pk_col = "id" if "id" in role_columns else ("idrol" if "idrol" in role_columns else None)
+        user_fk_col = User._resolve_join_column(user_columns, "rol_id", "idrol")
+        role_pk_col = User._resolve_join_column(role_columns, "id", "idrol")
 
         role_name_col = None
         for candidate in ("codigo", "name", "nombre", "rol"):

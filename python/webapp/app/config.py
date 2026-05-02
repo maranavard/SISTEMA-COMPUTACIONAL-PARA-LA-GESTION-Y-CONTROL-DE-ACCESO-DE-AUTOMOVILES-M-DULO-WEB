@@ -12,14 +12,14 @@ load_dotenv()
 
 class Config:
     # Clave para sesión, mensajes flash y protección de cookies.
-    SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret")
+    SECRET_KEY = os.getenv("SECRET_KEY") or "dev-local-key"
 
     # Parámetros de conexión PostgreSQL.
     DB_HOST = os.getenv("DB_HOST", "localhost")
     DB_PORT = int(os.getenv("DB_PORT", "5432"))
     DB_NAME = os.getenv("DB_NAME", "sistema_control")
     DB_USER = os.getenv("DB_USER", "postgres")
-    DB_PASSWORD = os.getenv("DB_PASSWORD", "postgres")
+    DB_PASSWORD = os.getenv("DB_PASSWORD", "")
 
     # BD secundaria/local para continuidad operativa y respaldo (RF18).
     LOCAL_DB_ENABLED = os.getenv("LOCAL_DB_ENABLED", "1") in {"1", "true", "True"}
@@ -27,7 +27,7 @@ class Config:
     LOCAL_DB_PORT = int(os.getenv("LOCAL_DB_PORT", str(DB_PORT)))
     LOCAL_DB_NAME = os.getenv("LOCAL_DB_NAME", "sistema_control_local")
     LOCAL_DB_USER = os.getenv("LOCAL_DB_USER", DB_USER)
-    LOCAL_DB_PASSWORD = os.getenv("LOCAL_DB_PASSWORD", DB_PASSWORD)
+    LOCAL_DB_PASSWORD = os.getenv("LOCAL_DB_PASSWORD") or DB_PASSWORD
 
     SYNC_MAX_RETRIES = int(os.getenv("SYNC_MAX_RETRIES", "10"))
 
@@ -35,7 +35,7 @@ class Config:
     MAIL_HOST = os.getenv("MAIL_HOST", "")
     MAIL_PORT = int(os.getenv("MAIL_PORT", "587"))
     MAIL_USER = os.getenv("MAIL_USER", "")
-    MAIL_PASSWORD = os.getenv("MAIL_PASSWORD", "")
+    MAIL_PASSWORD = os.getenv("MAIL_PASSWORD") or ""
     MAIL_FROM = os.getenv("MAIL_FROM", MAIL_USER)
     MAIL_USE_TLS = os.getenv("MAIL_USE_TLS", "1") in {"1", "true", "True"}
     MAIL_SUPPRESS_SEND = os.getenv("MAIL_SUPPRESS_SEND", "0") in {"1", "true", "True"}
@@ -45,7 +45,7 @@ class Config:
     PASSWORD_RESET_MAX_AGE_SECONDS = int(os.getenv("PASSWORD_RESET_MAX_AGE_SECONDS", "3600"))
 
     # Token para integración JSON con módulo de hardware local.
-    HARDWARE_CONTROL_TOKEN = os.getenv("HARDWARE_CONTROL_TOKEN", "dev-hardware-token")
+    HARDWARE_CONTROL_TOKEN = os.getenv("HARDWARE_CONTROL_TOKEN") or ""
 
     # Canal de archivos compartidos para eventos hardware (IEEE 3.1.3/3.1.4).
     HARDWARE_SHARED_INBOX = os.getenv("HARDWARE_SHARED_INBOX", "hardware_shared/inbox")

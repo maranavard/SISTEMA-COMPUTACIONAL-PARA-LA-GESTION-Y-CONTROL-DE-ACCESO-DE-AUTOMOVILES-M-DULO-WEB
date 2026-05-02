@@ -105,7 +105,7 @@ class Espacio:
         if fallback:
             return fallback, True
 
-        first = sorted(allowed)[0]
+        first = min(allowed)
         return first, True
 
     @classmethod

@@ -448,7 +448,7 @@ button:hover {
 }
 
 .panel-strip {
-  background: #59b300;
+  background: #2f6f00;
   color: #fff;
   padding: 1.2rem 1.3rem;
   display: grid;
@@ -570,9 +570,9 @@ button:hover {
   width: fit-content;
   padding: 0.35rem 0.9rem;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #f8fafc;
+  background: rgba(0, 0, 0, 0.24);
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  color: #ffffff;
   font-size: 0.9rem;
 }
   font-weight: 500;
@@ -723,9 +723,9 @@ button:hover {
 }
 
 .hardware-state-off {
-  color: #6b7280;
-  background: #f3f4f6;
-  border-color: #e5e7eb;
+  color: #374151;
+  background: #e5e7eb;
+  border-color: #cbd5e1;
 }
 
 @media (max-width: 640px) {

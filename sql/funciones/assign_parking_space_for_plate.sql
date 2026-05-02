@@ -10,7 +10,7 @@ CREATE OR REPLACE FUNCTION public.assign_parking_space_for_plate(
     VOLATILE PARALLEL UNSAFE
 AS $BODY$
 DECLARE
-  v_vehicle_type VARCHAR(20);
+  v_vehicle_type CHARACTER VARYING(20);
   v_space_id INT;
 BEGIN
   -- obtener tipo de vehiculo desde plates (por defecto 'car' si no hay dato)

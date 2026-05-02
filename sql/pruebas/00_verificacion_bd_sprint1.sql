@@ -82,15 +82,13 @@ LIMIT 30;
 -- 10) Triggers reales activos en public.novedad (fuente técnica)
 SELECT
   t.tgname AS trigger_name,
-  p.proname AS function_name,
+  (SELECT p.proname FROM pg_proc p WHERE p.oid = t.tgfoid) AS function_name,
   pg_get_triggerdef(t.oid) AS trigger_def
 FROM pg_trigger t
 JOIN pg_class c ON c.oid = t.tgrelid
 JOIN pg_namespace n ON n.oid = c.relnamespace
-JOIN pg_proc p ON p.oid = t.tgfoid
-JOIN tmp_verif_const k ON TRUE
-WHERE n.nspname = k.schema_name
-  AND c.relname = k.novedad_table
+WHERE n.nspname = 'public'
+  AND c.relname = 'novedad'
   AND NOT t.tgisinternal
 ORDER BY t.tgname;
 
@@ -99,8 +97,7 @@ SELECT p.proname AS function_name,
        pg_get_functiondef(p.oid) AS function_definition
 FROM pg_proc p
 JOIN pg_namespace n ON n.oid = p.pronamespace
-JOIN tmp_verif_const k ON TRUE
-WHERE n.nspname = k.schema_name
+WHERE n.nspname = 'public'
   AND p.proname IN ('fn_asignar_liberar_espacio', 'fn_novedad_space_manage', 'assign_space_and_register_ingreso');
 
 DROP TABLE IF EXISTS tmp_verif_const;

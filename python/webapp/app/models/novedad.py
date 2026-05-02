@@ -228,7 +228,7 @@ class Novedad:
         if not disponibles:
             return {"assigned_space_id": None, "assigned_space_num": None}
 
-        slot = sorted(disponibles, key=lambda item: int(item.get("numero") or 0))[0]
+        slot = min(disponibles, key=lambda item: int(item.get("numero") or 0))
         slot_numero = str(slot.get("numero"))
 
         Espacio.upsert_by_numero(

@@ -2,7 +2,7 @@
 
 from functools import wraps
 
-from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
+from flask import Blueprint, Response, abort, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from app.models.novedad import Novedad
@@ -84,7 +84,7 @@ def _flash_vehicular_error(exc: Exception) -> None:
         flash(f"No se pudo validar el acceso vehicular: {exc}", "error")
 
 
-def _process_ingreso_vehicular(placa: str) -> str:
+def _process_ingreso_vehicular(placa: str) -> Response | str:
     doc_status = Vehiculo.get_document_status_by_placa(placa=placa, warning_days=30)
     level = (doc_status.get("level") or "").strip().lower()
     message = (doc_status.get("message") or "").strip()

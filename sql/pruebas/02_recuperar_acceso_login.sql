@@ -23,6 +23,20 @@ AS $$
   SELECT 'TU_USUARIO'::text;
 $$;
 
+CREATE OR REPLACE FUNCTION pg_temp.temp_admin_username()
+RETURNS text
+LANGUAGE sql
+AS $$
+  SELECT 'admin_tmp'::text;
+$$;
+
+CREATE OR REPLACE FUNCTION pg_temp.temp_admin_password()
+RETURNS text
+LANGUAGE sql
+AS $$
+  SELECT 'Admin123*'::text;
+$$;
+
 CREATE OR REPLACE FUNCTION pg_temp.estado_activo()
 RETURNS text
 LANGUAGE sql
@@ -112,7 +126,7 @@ ORDER BY u.id;
 --
 -- Como el backend actual soporta texto plano o hash, esto funciona de inmediato.
 UPDATE public.usuarios
-SET password = 'Admin123*'
+SET password = pg_temp.temp_admin_password()
 WHERE username = pg_temp.target_username();
 
 -- Activar usuario si existe columna estado
@@ -177,37 +191,41 @@ BEGIN
     END IF;
 
     -- Inserción base mínima
-    EXECUTE 'INSERT INTO public.usuarios (username, password) VALUES (''admin_tmp'', ''Admin123*'')';
+    EXECUTE format(
+      'INSERT INTO public.usuarios (username, password) VALUES (%L, %L)',
+      pg_temp.temp_admin_username(),
+      pg_temp.temp_admin_password()
+    );
 
     IF v_has_role THEN
       IF v_role_is_array THEN
-        EXECUTE 'UPDATE public.usuarios SET role = ARRAY[''admin_sistema''] WHERE username = ''admin_tmp''';
+        EXECUTE format('UPDATE public.usuarios SET role = ARRAY[%L] WHERE username = %L', 'admin_sistema', pg_temp.temp_admin_username());
       ELSE
-        EXECUTE 'UPDATE public.usuarios SET role = ''admin_sistema'' WHERE username = ''admin_tmp''';
+        EXECUTE format('UPDATE public.usuarios SET role = %L WHERE username = %L', 'admin_sistema', pg_temp.temp_admin_username());
       END IF;
     END IF;
 
     IF v_has_estado THEN
-      EXECUTE 'UPDATE public.usuarios SET estado = ''activo'' WHERE username = ''admin_tmp''';
+      EXECUTE format('UPDATE public.usuarios SET estado = %L WHERE username = %L', 'activo', pg_temp.temp_admin_username());
     END IF;
 
     IF v_has_nombre THEN
-      EXECUTE 'UPDATE public.usuarios SET nombre = ''Admin'' WHERE username = ''admin_tmp''';
+      EXECUTE format('UPDATE public.usuarios SET nombre = %L WHERE username = %L', 'Admin', pg_temp.temp_admin_username());
     END IF;
 
     IF v_has_apellido THEN
-      EXECUTE 'UPDATE public.usuarios SET apellido = ''Temporal'' WHERE username = ''admin_tmp''';
+      EXECUTE format('UPDATE public.usuarios SET apellido = %L WHERE username = %L', 'Temporal', pg_temp.temp_admin_username());
     END IF;
 
     IF v_has_email THEN
-      EXECUTE 'UPDATE public.usuarios SET email = ''admin_tmp@udec.local'' WHERE username = ''admin_tmp''';
+      EXECUTE format('UPDATE public.usuarios SET email = %L WHERE username = %L', 'admin_tmp@udec.local', pg_temp.temp_admin_username());
     END IF;
 
     IF v_has_rol_id AND v_admin_role_id IS NOT NULL THEN
       IF pg_temp.has_usuarios_column('rol_id') THEN
-        EXECUTE format('UPDATE public.usuarios SET rol_id = %s WHERE username = ''admin_tmp''', v_admin_role_id);
+        EXECUTE format('UPDATE public.usuarios SET rol_id = %s WHERE username = %L', v_admin_role_id, pg_temp.temp_admin_username());
       ELSIF pg_temp.has_usuarios_column('idrol') THEN
-        EXECUTE format('UPDATE public.usuarios SET idrol = %s WHERE username = ''admin_tmp''', v_admin_role_id);
+        EXECUTE format('UPDATE public.usuarios SET idrol = %s WHERE username = %L', v_admin_role_id, pg_temp.temp_admin_username());
       END IF;
     END IF;
   END IF;

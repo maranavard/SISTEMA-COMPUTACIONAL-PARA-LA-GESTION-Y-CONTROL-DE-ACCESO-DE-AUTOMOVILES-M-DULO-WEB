@@ -21,6 +21,13 @@ class Vehiculo:
     NULL_TIPO_NOMBRE_EXPR = "NULL::text AS tipo_vehiculo_nombre"
 
     @staticmethod
+    def _first_existing(cols: set[str], *candidates: str) -> str | None:
+        for candidate in candidates:
+            if candidate in cols:
+                return candidate
+        return None
+
+    @staticmethod
     def _doc_status(ok: bool, level: str, message: str, block_automatic_assignment: bool) -> dict:
         return {
             "ok": ok,
@@ -122,8 +129,8 @@ class Vehiculo:
             (table_name,),
         )
         cols = {r[0] for r in cur.fetchall()}
-        id_col = "id" if "id" in cols else ("id_tipo_vehiculo" if "id_tipo_vehiculo" in cols else None)
-        nombre_col = next((candidate for candidate in ("nombre", "tipo", "descripcion", "codigo") if candidate in cols), None)
+        id_col = Vehiculo._first_existing(cols, "id", "id_tipo_vehiculo")
+        nombre_col = Vehiculo._first_existing(cols, "nombre", "tipo", "descripcion", "codigo")
         return id_col, nombre_col
 
     @classmethod

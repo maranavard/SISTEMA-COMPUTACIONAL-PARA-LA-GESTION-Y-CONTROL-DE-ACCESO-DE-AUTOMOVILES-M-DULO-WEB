@@ -18,13 +18,13 @@
     {% endif %}
 
     {% if assignment_notice %}
-    <div class="espacios-mini-screen" id="espacios-mini-screen" role="status" aria-live="polite">
+    <output class="espacios-mini-screen" id="espacios-mini-screen" aria-live="polite">
       <button type="button" class="espacios-mini-close" id="espacios-mini-close" aria-label="Cerrar aviso">×</button>
       <p class="espacios-mini-title">ESPACIO ASIGNADO</p>
       <p class="espacios-mini-space">{{ assignment_notice.space }}</p>
       <p class="espacios-mini-plate">Placa: <strong>{{ assignment_notice.plate }}</strong></p>
       <p class="espacios-mini-hint">Ubique el vehículo en el cupo indicado.</p>
-    </div>
+    </output>
     {% endif %}
 
     <div class="espacios-summary">

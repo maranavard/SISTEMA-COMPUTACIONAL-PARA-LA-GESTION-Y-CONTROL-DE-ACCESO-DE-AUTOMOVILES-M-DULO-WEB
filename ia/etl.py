@@ -130,7 +130,13 @@ def _events_to_occupancy(df_events: pd.DataFrame, capacity: int = 50) -> pd.Data
     )
 
     idx = pd.date_range(grouped["bucket"].min(), grouped["bucket"].max(), freq=FREQ)
-    serie = pd.DataFrame({"timestamp": idx}).merge(grouped, left_on="timestamp", right_on="bucket", how="left")
+    serie = pd.DataFrame({"timestamp": idx}).merge(
+        grouped,
+        left_on="timestamp",
+        right_on="bucket",
+        how="left",
+        validate="one_to_one",
+    )
     serie = serie.drop(columns=["bucket"])
     serie[["ingresos", "salidas"]] = serie[["ingresos", "salidas"]].fillna(0)
     serie["registrado_ratio"] = serie["registrado_ratio"].fillna(method="ffill").fillna(0.9)

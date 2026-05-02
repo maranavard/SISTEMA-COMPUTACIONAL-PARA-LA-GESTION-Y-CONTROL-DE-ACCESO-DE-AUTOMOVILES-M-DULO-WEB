@@ -184,7 +184,7 @@ def _resolve_user_from_item(item: dict, users_lookup: dict[int, dict]) -> dict |
         return None
 
 
-def _build_user_status(nombre: str, apellido: str, email: str, identificacion: str, estado: str, rol: str) -> tuple[bool, bool, bool, bool, str]:
+def _build_user_status(email: str, identificacion: str, estado: str, rol: str) -> tuple[bool, bool, bool, bool, str]:
     activo_ok = _normalize_lookup_text(estado) == "activo"
     rol_ok = _is_student_role(rol)
     email_ok = bool(email) and is_valid_email(email)
@@ -279,8 +279,6 @@ def _enrich_item_with_user(item: dict, users_lookup: dict[int, dict]) -> dict:
     username = str(user.get("username") or "").strip()
 
     activo_ok, rol_ok, email_ok, cedula_ok, status_message = _build_user_status(
-        nombre=nombre,
-        apellido=apellido,
         email=email,
         identificacion=identificacion,
         estado=estado,
@@ -364,7 +362,7 @@ def _resolve_associated_user(item: dict, user_lookup: dict[int, dict], item_id: 
         return None
 
 
-def _update_associated_user_if_needed(resolved_user_id: str, user_fields_started: bool, user_payload: dict, item_id: int) -> str:
+def _update_associated_user_if_needed(resolved_user_id: str, user_fields_started: bool, user_payload: dict) -> str:
     if not (resolved_user_id and user_fields_started):
         return ""
 
@@ -517,7 +515,6 @@ def guardar_edicion(item_id: int):
             resolved_user_id=resolved_user_id,
             user_fields_started=user_fields_started,
             user_payload=user_payload,
-            item_id=item_id,
         )
         if user_update_error:
             flash(user_update_error, "error")
