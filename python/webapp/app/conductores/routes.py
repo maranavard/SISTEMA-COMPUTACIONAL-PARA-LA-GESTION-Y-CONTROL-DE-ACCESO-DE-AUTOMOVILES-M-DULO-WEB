@@ -14,6 +14,8 @@ conductores_bp = Blueprint("conductores", __name__, url_prefix="/conductores")
 
 WARNING_DAYS = 30
 SENSITIVE_ALLOWED_ROLES = {"admin_sistema", "admin", "administrador"}
+LIST_ITEMS_ROUTE = "conductores.list_items"
+DATETIME_LOCAL_FORMAT = "%Y-%m-%dT%H:%M"
 
 
 def _can_manage_sensitive() -> bool:
@@ -34,7 +36,7 @@ def _parse_date(raw_value):
     if not text:
         return None
 
-    for fmt in ("%Y-%m-%d", "%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M"):
+    for fmt in ("%Y-%m-%d", "%Y-%m-%d %H:%M:%S", DATETIME_LOCAL_FORMAT, "%Y-%m-%d %H:%M"):
         try:
             return datetime.strptime(text, fmt).date()
         except ValueError:
@@ -53,15 +55,15 @@ def _to_datetime_local_input(raw_value) -> str:
     if raw_value in (None, ""):
         return ""
     if hasattr(raw_value, "strftime"):
-        return raw_value.strftime("%Y-%m-%dT%H:%M")
+        return raw_value.strftime(DATETIME_LOCAL_FORMAT)
 
     text = str(raw_value).strip()
     if not text:
         return ""
 
-    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M"):
+    for fmt in ("%Y-%m-%d %H:%M:%S", DATETIME_LOCAL_FORMAT, "%Y-%m-%d %H:%M"):
         try:
-            return datetime.strptime(text, fmt).strftime("%Y-%m-%dT%H:%M")
+            return datetime.strptime(text, fmt).strftime(DATETIME_LOCAL_FORMAT)
         except ValueError:
             continue
     return text[:16].replace(" ", "T")
@@ -175,24 +177,24 @@ def list_items():
 def create_item():
     if not _can_manage_sensitive():
         flash("No tienes permisos para registrar o editar perfiles de conductor.", "error")
-        return redirect(url_for("conductores.list_items"))
+        return redirect(url_for(LIST_ITEMS_ROUTE))
 
     cedula = normalize_cedula(request.form.get("cedula", ""))
     email = normalize_email(request.form.get("email", ""))
 
     if not is_valid_cedula(cedula):
         flash("Formato de cédula inválido. Debe contener solo números (6 a 12 dígitos).", "error")
-        return redirect(url_for("conductores.list_items"))
+        return redirect(url_for(LIST_ITEMS_ROUTE))
 
     if not is_valid_email(email):
         flash("Formato de correo inválido. Usa un correo válido (ej: usuario@dominio.com).", "error")
-        return redirect(url_for("conductores.list_items"))
+        return redirect(url_for(LIST_ITEMS_ROUTE))
 
     fecha_vencimiento_pase = request.form.get("fecha_vencimiento_pase", "").strip()
     fecha_ok, fecha_error = _validate_fecha_vencimiento_pase(fecha_vencimiento_pase)
     if not fecha_ok:
         flash(fecha_error, "error")
-        return redirect(url_for("conductores.list_items"))
+        return redirect(url_for(LIST_ITEMS_ROUTE))
 
     payload = {
         "nombre": request.form.get("nombre", "").strip(),
@@ -216,7 +218,7 @@ def create_item():
     except Exception as exc:
         flash(f"No se pudo crear conductor: {exc}", "error")
 
-    return redirect(url_for("conductores.list_items"))
+    return redirect(url_for(LIST_ITEMS_ROUTE))
 
 
 @conductores_bp.post("/<int:item_id>/actualizar")
@@ -225,24 +227,24 @@ def create_item():
 def update_item(item_id: int):
     if not _can_manage_sensitive():
         flash("No tienes permisos para actualizar información documental de otros usuarios.", "error")
-        return redirect(url_for("conductores.list_items"))
+        return redirect(url_for(LIST_ITEMS_ROUTE))
 
     cedula = normalize_cedula(request.form.get("cedula", ""))
     email = normalize_email(request.form.get("email", ""))
 
     if not is_valid_cedula(cedula):
         flash("Formato de cédula inválido. Debe contener solo números (6 a 12 dígitos).", "error")
-        return redirect(url_for("conductores.list_items"))
+        return redirect(url_for(LIST_ITEMS_ROUTE))
 
     if not is_valid_email(email):
         flash("Formato de correo inválido. Usa un correo válido (ej: usuario@dominio.com).", "error")
-        return redirect(url_for("conductores.list_items"))
+        return redirect(url_for(LIST_ITEMS_ROUTE))
 
     fecha_vencimiento_pase = request.form.get("fecha_vencimiento_pase", "").strip()
     fecha_ok, fecha_error = _validate_fecha_vencimiento_pase(fecha_vencimiento_pase)
     if not fecha_ok:
         flash(fecha_error, "error")
-        return redirect(url_for("conductores.list_items"))
+        return redirect(url_for(LIST_ITEMS_ROUTE))
 
     payload = {
         "nombre": request.form.get("nombre", "").strip(),
@@ -266,4 +268,4 @@ def update_item(item_id: int):
     except Exception as exc:
         flash(f"No se pudo actualizar conductor: {exc}", "error")
 
-    return redirect(url_for("conductores.list_items"))
+    return redirect(url_for(LIST_ITEMS_ROUTE))

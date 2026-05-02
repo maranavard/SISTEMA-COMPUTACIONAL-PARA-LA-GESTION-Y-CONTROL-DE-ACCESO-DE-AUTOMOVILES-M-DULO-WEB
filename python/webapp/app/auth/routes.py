@@ -3,6 +3,12 @@
 Incluye login (GET/POST) y cierre de sesión.
 """
 
+LOGIN_ROUTE = "auth.login"
+DASHBOARD_ROUTE = "main.dashboard"
+REGISTER_ROUTE = "auth.register"
+FORGOT_PASSWORD_ROUTE = "auth.forgot_password"
+RESET_PASSWORD_ROUTE = "auth.reset_password"
+
 import smtplib
 from email.message import EmailMessage
 
@@ -97,7 +103,7 @@ def _send_password_reset_email(to_email: str, reset_link: str) -> bool:
 def login():
     # Si ya inició sesión, no mostrar login de nuevo.
     if current_user.is_authenticated:
-        return redirect(url_for("main.dashboard"))
+        return redirect(url_for(DASHBOARD_ROUTE))
     return render_template("login.html")
 
 
@@ -112,29 +118,29 @@ def login_post():
         user = User.get_by_username(username)
     except Exception as exc:
         flash(f"Error de conexion a BD: {exc}", "error")
-        return redirect(url_for("auth.login"))
+        return redirect(url_for(LOGIN_ROUTE))
 
     if not user or not user.verify_password(password):
         flash("Credenciales invalidas.", "error")
-        return redirect(url_for("auth.login"))
+        return redirect(url_for(LOGIN_ROUTE))
 
     # Crea sesión activa.
     login_user(user)
     flash(f"Inicio de sesion exitoso. Rol detectado: {_role_label(getattr(user, 'rol', ''))}.", "success")
-    return redirect(url_for("main.dashboard"))
+    return redirect(url_for(DASHBOARD_ROUTE))
 
 
 @auth_bp.get("/register")
 def register():
     if current_user.is_authenticated:
-        return redirect(url_for("main.dashboard"))
+        return redirect(url_for(DASHBOARD_ROUTE))
     return render_template("auth/register.html")
 
 
 @auth_bp.post("/register")
 def register_post():
     if current_user.is_authenticated:
-        return redirect(url_for("main.dashboard"))
+        return redirect(url_for(DASHBOARD_ROUTE))
 
     username = (request.form.get("username", "") or "").strip()
     email = normalize_email(request.form.get("email", ""))
@@ -147,38 +153,38 @@ def register_post():
 
     if not username or not email or not password:
         flash("Usuario, correo y contraseña son obligatorios.", "error")
-        return redirect(url_for("auth.register"))
+        return redirect(url_for(REGISTER_ROUTE))
 
     if not is_valid_email(email):
         flash("Formato de correo inválido. Usa un correo válido (ej: usuario@dominio.com).", "error")
-        return redirect(url_for("auth.register"))
+        return redirect(url_for(REGISTER_ROUTE))
 
     if numero_identificacion and not is_valid_cedula(numero_identificacion):
         flash("Formato de cédula inválido. Debe contener solo números (6 a 12 dígitos).", "error")
-        return redirect(url_for("auth.register"))
+        return redirect(url_for(REGISTER_ROUTE))
 
     if len(password) < 6:
         flash("La contraseña debe tener al menos 6 caracteres.", "error")
-        return redirect(url_for("auth.register"))
+        return redirect(url_for(REGISTER_ROUTE))
 
     if password != confirm_password:
         flash("La confirmación de contraseña no coincide.", "error")
-        return redirect(url_for("auth.register"))
+        return redirect(url_for(REGISTER_ROUTE))
 
     allowed_self_roles = {"estudiante_udec", "docente_udec", "funcionario_area", "vigilante"}
     if selected_role not in allowed_self_roles:
         flash("El rol seleccionado no es valido para auto-registro.", "error")
-        return redirect(url_for("auth.register"))
+        return redirect(url_for(REGISTER_ROUTE))
 
     try:
         existing_user = User.get_by_username(username)
     except Exception as exc:
         flash(f"No se pudo validar el usuario: {exc}", "error")
-        return redirect(url_for("auth.register"))
+        return redirect(url_for(REGISTER_ROUTE))
 
     if existing_user:
         flash("El nombre de usuario ya está en uso.", "error")
-        return redirect(url_for("auth.register"))
+        return redirect(url_for(REGISTER_ROUTE))
 
     try:
         existing_email = User.get_by_email(email)
@@ -187,7 +193,7 @@ def register_post():
 
     if existing_email:
         flash("El correo ya está registrado.", "error")
-        return redirect(url_for("auth.register"))
+        return redirect(url_for(REGISTER_ROUTE))
 
     try:
         User.create_user(
@@ -202,10 +208,10 @@ def register_post():
         )
     except Exception as exc:
         flash(f"No se pudo crear la cuenta: {exc}", "error")
-        return redirect(url_for("auth.register"))
+        return redirect(url_for(REGISTER_ROUTE))
 
     flash(f"Cuenta creada correctamente con rol {_role_label(selected_role)}. Ya puedes iniciar sesion.", "success")
-    return redirect(url_for("auth.login"))
+    return redirect(url_for(LOGIN_ROUTE))
 
 
 @auth_bp.get("/logout")
@@ -213,13 +219,13 @@ def logout():
     # Cierra sesión actual.
     logout_user()
     flash("Sesion cerrada.", "success")
-    return redirect(url_for("auth.login"))
+    return redirect(url_for(LOGIN_ROUTE))
 
 
 @auth_bp.get("/forgot-password")
 def forgot_password():
     if current_user.is_authenticated:
-        return redirect(url_for("main.dashboard"))
+        return redirect(url_for(DASHBOARD_ROUTE))
     return render_template("auth/forgot_password.html")
 
 
@@ -228,11 +234,11 @@ def forgot_password_post():
     email = normalize_email(request.form.get("email", ""))
     if not email:
         flash("Debes ingresar el correo registrado.", "error")
-        return redirect(url_for("auth.forgot_password"))
+        return redirect(url_for(FORGOT_PASSWORD_ROUTE))
 
     if not is_valid_email(email):
         flash("Formato de correo inválido. Usa un correo válido (ej: usuario@dominio.com).", "error")
-        return redirect(url_for("auth.forgot_password"))
+        return redirect(url_for(FORGOT_PASSWORD_ROUTE))
 
     user = User.get_by_email(email)
     # Mensaje genérico por seguridad para no revelar usuarios existentes.
@@ -240,33 +246,33 @@ def forgot_password_post():
 
     if not user:
         flash(generic_message, "success")
-        return redirect(url_for("auth.login"))
+        return redirect(url_for(LOGIN_ROUTE))
 
     token = _generate_reset_token(email)
-    reset_link = url_for("auth.reset_password", token=token, _external=True)
+    reset_link = url_for(RESET_PASSWORD_ROUTE, token=token, _external=True)
 
     try:
         was_sent = _send_password_reset_email(to_email=email, reset_link=reset_link)
     except Exception as exc:
         flash(f"No se pudo enviar el correo de recuperación: {exc}", "error")
-        return redirect(url_for("auth.forgot_password"))
+        return redirect(url_for(FORGOT_PASSWORD_ROUTE))
 
     if not was_sent:
         flash(f"[PRUEBA] Enlace de recuperación: {reset_link}", "warning")
 
     flash(generic_message, "success")
-    return redirect(url_for("auth.login"))
+    return redirect(url_for(LOGIN_ROUTE))
 
 
 @auth_bp.get("/reset-password/<token>")
 def reset_password(token: str):
     if current_user.is_authenticated:
-        return redirect(url_for("main.dashboard"))
+        return redirect(url_for(DASHBOARD_ROUTE))
 
     email = _verify_reset_token(token)
     if not email:
         flash("El enlace de recuperación es inválido o expiró.", "error")
-        return redirect(url_for("auth.forgot_password"))
+        return redirect(url_for(FORGOT_PASSWORD_ROUTE))
 
     return render_template("auth/reset_password.html", token=token)
 
@@ -274,34 +280,34 @@ def reset_password(token: str):
 @auth_bp.post("/reset-password/<token>")
 def reset_password_post(token: str):
     if current_user.is_authenticated:
-        return redirect(url_for("main.dashboard"))
+        return redirect(url_for(DASHBOARD_ROUTE))
 
     email = _verify_reset_token(token)
     if not email:
         flash("El enlace de recuperación es inválido o expiró.", "error")
-        return redirect(url_for("auth.forgot_password"))
+        return redirect(url_for(FORGOT_PASSWORD_ROUTE))
 
     password = (request.form.get("password", "") or "").strip()
     confirm_password = (request.form.get("confirm_password", "") or "").strip()
 
     if len(password) < 6:
         flash("La nueva contraseña debe tener al menos 6 caracteres.", "error")
-        return redirect(url_for("auth.reset_password", token=token))
+        return redirect(url_for(RESET_PASSWORD_ROUTE, token=token))
 
     if password != confirm_password:
         flash("La confirmación de contraseña no coincide.", "error")
-        return redirect(url_for("auth.reset_password", token=token))
+        return redirect(url_for(RESET_PASSWORD_ROUTE, token=token))
 
     user = User.get_by_email(email)
     if not user:
         flash("No se encontró el usuario asociado al enlace de recuperación.", "error")
-        return redirect(url_for("auth.forgot_password"))
+        return redirect(url_for(FORGOT_PASSWORD_ROUTE))
 
     try:
         User.update_password(user_id=int(user.id), raw_password=password)
     except Exception as exc:
         flash(f"No se pudo actualizar la contraseña: {exc}", "error")
-        return redirect(url_for("auth.reset_password", token=token))
+        return redirect(url_for(RESET_PASSWORD_ROUTE, token=token))
 
     flash("Contraseña actualizada correctamente. Ahora puedes iniciar sesión.", "success")
-    return redirect(url_for("auth.login"))
+    return redirect(url_for(LOGIN_ROUTE))
