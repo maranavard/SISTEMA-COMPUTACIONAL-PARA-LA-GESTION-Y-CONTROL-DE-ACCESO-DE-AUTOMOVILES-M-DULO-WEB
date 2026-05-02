@@ -191,29 +191,36 @@ def _build_vehicle_report_row(row: dict, placa_filter: str, fecha_filter: str) -
     }
 
 
+def _build_lookup_item(item: dict) -> tuple[int, dict] | None:
+    user_id = _safe_int(item.get("id"))
+    if user_id is None:
+        return None
+
+    nombre = str(item.get("nombre") or "").strip()
+    apellido = str(item.get("apellido") or "").strip()
+    username = str(item.get("username") or "").strip()
+    role = str(item.get("rol") or "").strip().lower()
+
+    display = (f"{nombre} {apellido}".strip() or username or f"Usuario {user_id}")
+    nombre_display = nombre or username or f"Usuario {user_id}"
+    return user_id, {
+        "display": display,
+        "nombre": nombre_display,
+        "apellido": apellido,
+        "username": username,
+        "role": role,
+    }
+
+
 def _user_lookup() -> dict[int, dict]:
     users = User.list_users()
     lookup: dict[int, dict] = {}
     for item in users:
-        try:
-            user_id = int(item.get("id"))
-        except Exception:
+        mapped = _build_lookup_item(item)
+        if not mapped:
             continue
-
-        nombre = str(item.get("nombre") or "").strip()
-        apellido = str(item.get("apellido") or "").strip()
-        username = str(item.get("username") or "").strip()
-        role = str(item.get("rol") or "").strip().lower()
-
-        display = (f"{nombre} {apellido}".strip() or username or f"Usuario {user_id}")
-        nombre_display = nombre or username or f"Usuario {user_id}"
-        lookup[user_id] = {
-            "display": display,
-            "nombre": nombre_display,
-            "apellido": apellido,
-            "username": username,
-            "role": role,
-        }
+        user_id, payload = mapped
+        lookup[user_id] = payload
 
     return lookup
 

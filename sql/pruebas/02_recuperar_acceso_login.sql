@@ -2,6 +2,34 @@
 -- Objetivo: recuperar acceso al login del módulo web.
 -- Ejecutar en PostgreSQL (BD: sistema_control) desde pgAdmin Query Tool.
 
+CREATE OR REPLACE FUNCTION pg_temp.schema_name()
+RETURNS text
+LANGUAGE sql
+AS $$
+  SELECT 'public'::text;
+$$;
+
+CREATE OR REPLACE FUNCTION pg_temp.usuarios_table()
+RETURNS text
+LANGUAGE sql
+AS $$
+  SELECT 'usuarios'::text;
+$$;
+
+CREATE OR REPLACE FUNCTION pg_temp.target_username()
+RETURNS text
+LANGUAGE sql
+AS $$
+  SELECT 'TU_USUARIO'::text;
+$$;
+
+CREATE OR REPLACE FUNCTION pg_temp.estado_activo()
+RETURNS text
+LANGUAGE sql
+AS $$
+  SELECT 'activo'::text;
+$$;
+
 CREATE OR REPLACE FUNCTION pg_temp.has_usuarios_column(p_column text)
 RETURNS boolean
 LANGUAGE sql
@@ -9,8 +37,8 @@ AS $$
   SELECT EXISTS (
     SELECT 1
     FROM information_schema.columns
-    WHERE table_schema = 'public'
-      AND table_name = 'usuarios'
+    WHERE table_schema = pg_temp.schema_name()
+      AND table_name = pg_temp.usuarios_table()
       AND column_name = p_column
   );
 $$;
@@ -22,8 +50,8 @@ AS $$
   SELECT EXISTS (
     SELECT 1
     FROM information_schema.columns
-    WHERE table_schema = 'public'
-      AND table_name = 'usuarios'
+    WHERE table_schema = pg_temp.schema_name()
+      AND table_name = pg_temp.usuarios_table()
       AND column_name = p_column
       AND data_type = p_data_type
   );
@@ -36,7 +64,7 @@ AS $$
   SELECT EXISTS (
     SELECT 1
     FROM information_schema.tables
-    WHERE table_schema = 'public'
+    WHERE table_schema = pg_temp.schema_name()
       AND table_name = p_table
   );
 $$;
@@ -46,8 +74,8 @@ $$;
 -- =========================================================
 SELECT column_name, data_type
 FROM information_schema.columns
-WHERE table_schema = 'public'
-  AND table_name = 'usuarios'
+WHERE table_schema = pg_temp.schema_name()
+  AND table_name = pg_temp.usuarios_table()
 ORDER BY ordinal_position;
 
 -- =========================================================
@@ -71,13 +99,17 @@ ORDER BY u.id;
 -- Como el backend actual soporta texto plano o hash, esto funciona de inmediato.
 UPDATE public.usuarios
 SET password = 'Admin123*'
-WHERE username = 'TU_USUARIO';
+WHERE username = pg_temp.target_username();
 
 -- Activar usuario si existe columna estado
 DO $$
 BEGIN
   IF pg_temp.has_usuarios_column('estado') THEN
-    EXECUTE 'UPDATE public.usuarios SET estado = ''activo'' WHERE username = ''TU_USUARIO''';
+    EXECUTE format(
+      'UPDATE public.usuarios SET estado = %L WHERE username = %L',
+      pg_temp.estado_activo(),
+      pg_temp.target_username()
+    );
   END IF;
 END $$;
 
@@ -115,8 +147,8 @@ BEGIN
     SELECT EXISTS (
       SELECT 1
       FROM information_schema.columns
-      WHERE table_schema='public'
-        AND table_name='usuarios'
+      WHERE table_schema = pg_temp.schema_name()
+        AND table_name = pg_temp.usuarios_table()
         AND column_name IN ('rol_id','idrol')
     ) INTO v_has_rol_id;
 
