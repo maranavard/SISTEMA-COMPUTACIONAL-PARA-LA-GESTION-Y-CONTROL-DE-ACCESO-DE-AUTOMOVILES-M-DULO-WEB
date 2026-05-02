@@ -11,6 +11,11 @@ from app.models.visitante import Visitante
 
 
 control_accesos_bp = Blueprint("control_accesos", __name__, url_prefix="/control-accesos")
+INDEX_ROUTE = "control_accesos.index"
+AUTORIZACION_ROUTE = "control_accesos.autorizacion"
+HISTORIAL_ROUTE = "control_accesos.historial"
+DETALLE_TEMPLATE = "control_accesos/detalle.html"
+RECORD_NOT_FOUND_MSG = "No se encontró el registro solicitado."
 
 
 def control_access_required(view_func):
@@ -64,6 +69,43 @@ def _find_visitante(item_id: int) -> dict | None:
     return None
 
 
+def _flash_vehicular_error(exc: Exception) -> None:
+    error_text = str(exc)
+    if "No hay espacios disponibles" in error_text:
+        flash("No hay espacios disponibles para permitir el ingreso.", "error")
+    elif "placa" in error_text.lower() or "vehículo" in error_text.lower() or "vehiculo" in error_text.lower():
+        flash("La placa no está registrada en el sistema.", "error")
+    else:
+        flash(f"No se pudo validar el acceso vehicular: {exc}", "error")
+
+
+def _process_ingreso_vehicular(placa: str) -> str:
+    doc_status = Vehiculo.get_document_status_by_placa(placa=placa, warning_days=30)
+    level = (doc_status.get("level") or "").strip().lower()
+    message = (doc_status.get("message") or "").strip()
+    block_auto = bool(doc_status.get("block_automatic_assignment"))
+
+    if message and level in {"warning", "error"}:
+        flash(message, "warning" if level == "warning" else "error")
+
+    if block_auto:
+        return "blocked"
+
+    result = Novedad.register_ingreso_by_placa(placa=placa, user_id=int(current_user.id))
+    assigned_space = result.get("assigned_space_num")
+    if not assigned_space:
+        flash("No hay espacios disponibles para permitir el ingreso.", "error")
+        return "blocked"
+
+    flash(f"Ingreso validado para {placa}. Cupo asignado: {assigned_space}.", "success")
+    return redirect(url_for("espacios.list_items", assigned_space=assigned_space, assigned_plate=placa))
+
+
+def _process_salida_vehicular(placa: str) -> None:
+    Novedad.register_salida_by_placa(placa=placa, user_id=int(current_user.id), observaciones="Salida validada en control de accesos")
+    flash(f"Salida validada correctamente para la placa {placa}.", "success")
+
+
 @control_accesos_bp.get("/")
 @login_required
 @control_access_required
@@ -84,7 +126,7 @@ def registrar():
 
     if not identidad or not espacio or not fecha_hora:
         flash("Completa los campos requeridos para registrar el acceso.", "error")
-        return redirect(url_for("control_accesos.index"))
+        return redirect(url_for(INDEX_ROUTE))
 
     placa, nombre, apellido = _parse_identidad(identidad)
     payload = {
@@ -105,9 +147,9 @@ def registrar():
         flash("Registro creado correctamente. Continúa con la autorización.", "success")
     except Exception as exc:
         flash(f"No se pudo registrar el acceso: {exc}", "error")
-        return redirect(url_for("control_accesos.index"))
+        return redirect(url_for(INDEX_ROUTE))
 
-    return redirect(url_for("control_accesos.autorizacion", documento=usuario))
+    return redirect(url_for(AUTORIZACION_ROUTE, documento=usuario))
 
 
 @control_accesos_bp.post("/vehicular")
@@ -119,42 +161,20 @@ def registrar_vehicular():
 
     if not placa:
         flash("Debes indicar la placa para validar el acceso vehicular.", "error")
-        return redirect(url_for("control_accesos.index"))
+        return redirect(url_for(INDEX_ROUTE))
 
     try:
         if movimiento in {"entrada", "ingreso"}:
-            doc_status = Vehiculo.get_document_status_by_placa(placa=placa, warning_days=30)
-            level = (doc_status.get("level") or "").strip().lower()
-            message = (doc_status.get("message") or "").strip()
-            block_auto = bool(doc_status.get("block_automatic_assignment"))
+            ingreso_result = _process_ingreso_vehicular(placa=placa)
+            if ingreso_result != "blocked":
+                return ingreso_result
+            return redirect(url_for(INDEX_ROUTE))
 
-            if message and level in {"warning", "error"}:
-                flash(message, "warning" if level == "warning" else "error")
-
-            if block_auto:
-                return redirect(url_for("control_accesos.index"))
-
-            result = Novedad.register_ingreso_by_placa(placa=placa, user_id=int(current_user.id))
-            assigned_space = result.get("assigned_space_num")
-            if not assigned_space:
-                flash("No hay espacios disponibles para permitir el ingreso.", "error")
-                return redirect(url_for("control_accesos.index"))
-
-            flash(f"Ingreso validado para {placa}. Cupo asignado: {assigned_space}.", "success")
-            return redirect(url_for("espacios.list_items", assigned_space=assigned_space, assigned_plate=placa))
-
-        Novedad.register_salida_by_placa(placa=placa, user_id=int(current_user.id), observaciones="Salida validada en control de accesos")
-        flash(f"Salida validada correctamente para la placa {placa}.", "success")
+        _process_salida_vehicular(placa=placa)
     except Exception as exc:
-        error_text = str(exc)
-        if "No hay espacios disponibles" in error_text:
-            flash("No hay espacios disponibles para permitir el ingreso.", "error")
-        elif "placa" in error_text.lower() or "vehículo" in error_text.lower() or "vehiculo" in error_text.lower():
-            flash("La placa no está registrada en el sistema.", "error")
-        else:
-            flash(f"No se pudo validar el acceso vehicular: {exc}", "error")
+        _flash_vehicular_error(exc)
 
-    return redirect(url_for("control_accesos.index"))
+    return redirect(url_for(INDEX_ROUTE))
 
 
 @control_accesos_bp.get("/historial")
@@ -171,10 +191,10 @@ def historial():
 def historial_visualizar(item_id: int):
     item = _find_visitante(item_id)
     if not item:
-        flash("No se encontró el registro solicitado.", "error")
-        return redirect(url_for("control_accesos.historial"))
+        flash(RECORD_NOT_FOUND_MSG, "error")
+        return redirect(url_for(HISTORIAL_ROUTE))
 
-    return render_template("control_accesos/detalle.html", item=item, printable=False)
+    return render_template(DETALLE_TEMPLATE, item=item, printable=False)
 
 
 @control_accesos_bp.get("/historial/<int:item_id>/pdf")
@@ -183,10 +203,10 @@ def historial_visualizar(item_id: int):
 def historial_pdf(item_id: int):
     item = _find_visitante(item_id)
     if not item:
-        flash("No se encontró el registro solicitado.", "error")
-        return redirect(url_for("control_accesos.historial"))
+        flash(RECORD_NOT_FOUND_MSG, "error")
+        return redirect(url_for(HISTORIAL_ROUTE))
 
-    return render_template("control_accesos/detalle.html", item=item, printable=True)
+    return render_template(DETALLE_TEMPLATE, item=item, printable=True)
 
 
 @control_accesos_bp.get("/autorizacion")
@@ -240,7 +260,7 @@ def autorizar(item_id: int):
     except Exception as exc:
         flash(f"No se pudo autorizar el ingreso: {exc}", "error")
 
-    return redirect(url_for("control_accesos.autorizacion"))
+    return redirect(url_for(AUTORIZACION_ROUTE))
 
 
 @control_accesos_bp.post("/autorizacion/<int:item_id>/rechazar")
@@ -253,7 +273,7 @@ def rechazar(item_id: int):
     except Exception as exc:
         flash(f"No se pudo rechazar la solicitud: {exc}", "error")
 
-    return redirect(url_for("control_accesos.autorizacion"))
+    return redirect(url_for(AUTORIZACION_ROUTE))
 
 
 @control_accesos_bp.get("/autorizacion/<int:item_id>/detalle")
@@ -262,7 +282,7 @@ def rechazar(item_id: int):
 def autorizacion_detalle(item_id: int):
     item = _find_visitante(item_id)
     if not item:
-        flash("No se encontró el registro solicitado.", "error")
-        return redirect(url_for("control_accesos.autorizacion"))
+        flash(RECORD_NOT_FOUND_MSG, "error")
+        return redirect(url_for(AUTORIZACION_ROUTE))
 
-    return render_template("control_accesos/detalle.html", item=item, printable=False)
+    return render_template(DETALLE_TEMPLATE, item=item, printable=False)

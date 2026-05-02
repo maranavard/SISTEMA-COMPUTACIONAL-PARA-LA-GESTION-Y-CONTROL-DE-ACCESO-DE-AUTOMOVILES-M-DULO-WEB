@@ -9,6 +9,7 @@ from app.utils.field_validators import is_valid_cedula, is_valid_email, normaliz
 
 
 users_bp = Blueprint("users", __name__, url_prefix="/usuarios")
+LIST_USERS_ROUTE = "users.list_users"
 
 
 def _normalize_lookup_text(value: str) -> str:
@@ -56,15 +57,15 @@ def create_user():
 
     if not username or not password or not email:
         flash("Usuario, correo institucional y contraseña son obligatorios.", "error")
-        return redirect(url_for("users.list_users"))
+        return redirect(url_for(LIST_USERS_ROUTE))
 
     if not is_valid_email(email):
         flash("Formato de correo inválido. Usa un correo válido (ej: usuario@dominio.com).", "error")
-        return redirect(url_for("users.list_users"))
+        return redirect(url_for(LIST_USERS_ROUTE))
 
     if numero_identificacion and not is_valid_cedula(numero_identificacion):
         flash("Formato de cédula inválido. Debe contener solo números (6 a 12 dígitos).", "error")
-        return redirect(url_for("users.list_users"))
+        return redirect(url_for(LIST_USERS_ROUTE))
 
     try:
         User.create_user(
@@ -81,7 +82,7 @@ def create_user():
     except Exception as exc:
         flash(f"No se pudo crear el usuario: {exc}", "error")
 
-    return redirect(url_for("users.list_users"))
+    return redirect(url_for(LIST_USERS_ROUTE))
 
 
 @users_bp.post("/<int:user_id>/actualizar")
@@ -98,11 +99,11 @@ def update_user(user_id: int):
 
     if email and not is_valid_email(email):
         flash("Formato de correo inválido. Usa un correo válido (ej: usuario@dominio.com).", "error")
-        return redirect(url_for("users.list_users"))
+        return redirect(url_for(LIST_USERS_ROUTE))
 
     if numero_identificacion and not is_valid_cedula(numero_identificacion):
         flash("Formato de cédula inválido. Debe contener solo números (6 a 12 dígitos).", "error")
-        return redirect(url_for("users.list_users"))
+        return redirect(url_for(LIST_USERS_ROUTE))
 
     try:
         User.update_user(
@@ -120,4 +121,4 @@ def update_user(user_id: int):
     except Exception as exc:
         flash(f"No se pudo actualizar el usuario: {exc}", "error")
 
-    return redirect(url_for("users.list_users"))
+    return redirect(url_for(LIST_USERS_ROUTE))

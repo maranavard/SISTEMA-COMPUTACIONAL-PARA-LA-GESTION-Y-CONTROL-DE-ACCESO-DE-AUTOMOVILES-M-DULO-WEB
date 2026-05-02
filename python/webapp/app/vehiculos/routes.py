@@ -16,6 +16,7 @@ vehiculos_bp = Blueprint("vehiculos", __name__, url_prefix="/vehiculos")
 
 WARNING_DAYS = 30
 SENSITIVE_ALLOWED_ROLES = {"admin_sistema", "admin", "administrador"}
+LIST_ITEMS_ROUTE = "vehiculos.list_items"
 
 
 def _can_manage_sensitive() -> bool:
@@ -94,6 +95,58 @@ def _flash_vehicle_document_alert(vehiculo_id: int) -> None:
         flash(message, "error")
 
 
+def _decorate_items_with_doc_status(items: list[dict]) -> tuple[list[dict], list[dict]]:
+    warning_items = []
+    error_items = []
+
+    for item in items:
+        vehiculo_id = item.get("id")
+        if not vehiculo_id:
+            continue
+
+        docs = DocumentoVehiculo.get_vehicle_documents(int(vehiculo_id))
+        status = DocumentoVehiculo.get_status_summary(int(vehiculo_id), warning_days=WARNING_DAYS)
+
+        item["fecha_vencimiento_soat_input"] = _date_to_input((docs.get("soat") or {}).get("fecha_vencimiento"))
+        item["fecha_vencimiento_tecnomecanica_input"] = _date_to_input((docs.get("tecnomecanica") or {}).get("fecha_vencimiento"))
+        item["fecha_vencimiento_tarjeta_propiedad_input"] = _date_to_input((docs.get("tarjeta_propiedad") or {}).get("fecha_vencimiento"))
+        item["doc_status_level"] = status.get("level") or "success"
+        item["doc_status_message"] = status.get("message") or ""
+        item["conductor_ref"] = str(item.get("conductor_id") or "")
+        item["user_ref"] = str(item.get("user_id") or "")
+
+        if item["doc_status_level"] == "warning":
+            warning_items.append(item)
+        elif item["doc_status_level"] == "error":
+            error_items.append(item)
+
+    return warning_items, error_items
+
+
+def _notify_admin_if_offday_registration(placa: str) -> None:
+    eval_result = HorarioOperacion.evaluate_moment()
+    if not (eval_result.get("is_sunday") or eval_result.get("is_holiday")):
+        return
+
+    reason = "domingo" if eval_result.get("is_sunday") else "festivo"
+    fecha_hora_text = eval_result.get("now").strftime("%Y-%m-%d %H:%M:%S")
+    actor_username = (getattr(current_user, "username", "") or "usuario_sistema").strip() or "usuario_sistema"
+
+    try:
+        sent = send_admin_offday_alert(
+            placa=placa,
+            actor_username=actor_username,
+            reason=reason,
+            fecha_hora_text=fecha_hora_text,
+        )
+        if sent:
+            flash("Se envió alerta al administrador por registro en domingo/festivo.", "warning")
+        else:
+            flash("Registro en domingo/festivo detectado. Revisa configuración SMTP para alertas por correo.", "warning")
+    except Exception as alert_exc:
+        flash(f"Registro en domingo/festivo detectado, pero falló envío de alerta: {alert_exc}", "warning")
+
+
 @vehiculos_bp.get("/")
 @login_required
 @community_required
@@ -109,26 +162,7 @@ def list_items():
     warning_items = []
     error_items = []
     if can_manage_sensitive:
-        for item in items:
-            vehiculo_id = item.get("id")
-            if not vehiculo_id:
-                continue
-
-            docs = DocumentoVehiculo.get_vehicle_documents(int(vehiculo_id))
-            status = DocumentoVehiculo.get_status_summary(int(vehiculo_id), warning_days=WARNING_DAYS)
-
-            item["fecha_vencimiento_soat_input"] = _date_to_input((docs.get("soat") or {}).get("fecha_vencimiento"))
-            item["fecha_vencimiento_tecnomecanica_input"] = _date_to_input((docs.get("tecnomecanica") or {}).get("fecha_vencimiento"))
-            item["fecha_vencimiento_tarjeta_propiedad_input"] = _date_to_input((docs.get("tarjeta_propiedad") or {}).get("fecha_vencimiento"))
-            item["doc_status_level"] = status.get("level") or "success"
-            item["doc_status_message"] = status.get("message") or ""
-            item["conductor_ref"] = str(item.get("conductor_id") or "")
-            item["user_ref"] = str(item.get("user_id") or "")
-
-            if item["doc_status_level"] == "warning":
-                warning_items.append(item)
-            elif item["doc_status_level"] == "error":
-                error_items.append(item)
+        warning_items, error_items = _decorate_items_with_doc_status(items=items)
 
     if placa_consulta:
         vehiculo_consulta = Vehiculo.get_by_placa(placa_consulta)
@@ -161,7 +195,7 @@ def list_items():
 def create_item():
     if not _can_manage_sensitive():
         flash("No tienes permisos para registrar o editar información documental de vehículos.", "error")
-        return redirect(url_for("vehiculos.list_items"))
+        return redirect(url_for(LIST_ITEMS_ROUTE))
 
     placa = Vehiculo.normalize_plate(request.form.get("placa", ""))
     tipo_vehiculo_id = request.form.get("tipo_vehiculo_id", "").strip()
@@ -171,14 +205,14 @@ def create_item():
     plate_ok, plate_error = Vehiculo.validate_plate_format(placa=placa, tipo_vehiculo_id=tipo_vehiculo_id)
     if not plate_ok:
         flash(plate_error, "error")
-        return redirect(url_for("vehiculos.list_items"))
+        return redirect(url_for(LIST_ITEMS_ROUTE))
 
     try:
         conductor_id = _resolve_conductor_id(conductor_ref)
         user_id = _resolve_user_id(user_ref)
     except ValueError as exc:
         flash(str(exc), "error")
-        return redirect(url_for("vehiculos.list_items"))
+        return redirect(url_for(LIST_ITEMS_ROUTE))
 
     payload = {
         "placa": placa,
@@ -200,7 +234,7 @@ def create_item():
 
     if not all(docs_payload.values()):
         flash("Debes registrar vencimiento de SOAT, técnico-mecánica y tarjeta de propiedad.", "error")
-        return redirect(url_for("vehiculos.list_items"))
+        return redirect(url_for(LIST_ITEMS_ROUTE))
 
     try:
         vehiculo_id = Vehiculo.create_item(payload)
@@ -208,30 +242,11 @@ def create_item():
             DocumentoVehiculo.upsert_documents(int(vehiculo_id), docs_payload)
             _flash_vehicle_document_alert(int(vehiculo_id))
         flash("Vehiculo creado correctamente.", "success")
-
-        eval_result = HorarioOperacion.evaluate_moment()
-        if eval_result.get("is_sunday") or eval_result.get("is_holiday"):
-            reason = "domingo" if eval_result.get("is_sunday") else "festivo"
-            fecha_hora_text = eval_result.get("now").strftime("%Y-%m-%d %H:%M:%S")
-            actor_username = (getattr(current_user, "username", "") or "usuario_sistema").strip() or "usuario_sistema"
-
-            try:
-                sent = send_admin_offday_alert(
-                    placa=placa,
-                    actor_username=actor_username,
-                    reason=reason,
-                    fecha_hora_text=fecha_hora_text,
-                )
-                if sent:
-                    flash("Se envió alerta al administrador por registro en domingo/festivo.", "warning")
-                else:
-                    flash("Registro en domingo/festivo detectado. Revisa configuración SMTP para alertas por correo.", "warning")
-            except Exception as alert_exc:
-                flash(f"Registro en domingo/festivo detectado, pero falló envío de alerta: {alert_exc}", "warning")
+        _notify_admin_if_offday_registration(placa=placa)
     except Exception as exc:
         flash(f"No se pudo crear vehiculo: {exc}", "error")
 
-    return redirect(url_for("vehiculos.list_items"))
+    return redirect(url_for(LIST_ITEMS_ROUTE))
 
 
 @vehiculos_bp.get("/consultar")
@@ -240,8 +255,8 @@ def create_item():
 def consultar_por_placa():
     placa = (request.args.get("placa", "") or "").strip().upper()
     if not placa:
-        return redirect(url_for("vehiculos.list_items"))
-    return redirect(url_for("vehiculos.list_items", placa=placa))
+        return redirect(url_for(LIST_ITEMS_ROUTE))
+    return redirect(url_for(LIST_ITEMS_ROUTE, placa=placa))
 
 
 @vehiculos_bp.post("/<int:item_id>/actualizar")
@@ -250,7 +265,7 @@ def consultar_por_placa():
 def update_item(item_id: int):
     if not _can_manage_sensitive():
         flash("No tienes permisos para actualizar información documental de otros usuarios.", "error")
-        return redirect(url_for("vehiculos.list_items"))
+        return redirect(url_for(LIST_ITEMS_ROUTE))
 
     placa = Vehiculo.normalize_plate(request.form.get("placa", ""))
     tipo_vehiculo_id = request.form.get("tipo_vehiculo_id", "").strip()
@@ -260,14 +275,14 @@ def update_item(item_id: int):
     plate_ok, plate_error = Vehiculo.validate_plate_format(placa=placa, tipo_vehiculo_id=tipo_vehiculo_id)
     if not plate_ok:
         flash(plate_error, "error")
-        return redirect(url_for("vehiculos.list_items"))
+        return redirect(url_for(LIST_ITEMS_ROUTE))
 
     try:
         conductor_id = _resolve_conductor_id(conductor_ref)
         user_id = _resolve_user_id(user_ref)
     except ValueError as exc:
         flash(str(exc), "error")
-        return redirect(url_for("vehiculos.list_items"))
+        return redirect(url_for(LIST_ITEMS_ROUTE))
 
     payload = {
         "placa": placa,
@@ -295,4 +310,4 @@ def update_item(item_id: int):
     except Exception as exc:
         flash(f"No se pudo actualizar vehiculo: {exc}", "error")
 
-    return redirect(url_for("vehiculos.list_items"))
+    return redirect(url_for(LIST_ITEMS_ROUTE))
