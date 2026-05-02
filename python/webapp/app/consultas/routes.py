@@ -13,6 +13,8 @@ from app.utils.field_validators import is_valid_cedula, is_valid_email
 
 
 consultas_bp = Blueprint("consultas", __name__, url_prefix="/consultas")
+INDEX_ROUTE = "consultas.index"
+EDIT_ROUTE = "consultas.editar"
 
 
 def _is_guard_role() -> bool:
@@ -151,46 +153,38 @@ def _get_user_by_id(user_id: int) -> dict | None:
     return lookup.get(user_id)
 
 
-def _enrich_item_with_user(item: dict, users_lookup: dict[int, dict]) -> dict:
-    enriched = dict(item)
+def _empty_user_data() -> dict:
+    return {
+        "usuario_nombre": "",
+        "usuario_apellido": "",
+        "usuario_nombre_completo": "",
+        "usuario_username": "",
+        "usuario_email": "",
+        "usuario_identificacion": "",
+        "usuario_estado": "",
+        "usuario_rol": "",
+        "usuario_activo_ok": False,
+        "usuario_rol_ok": False,
+        "usuario_email_ok": False,
+        "usuario_cedula_ok": False,
+        "perfil_validado_ok": False,
+        "perfil_validado_msg": "Sin usuario asociado",
+    }
+
+
+def _resolve_user_from_item(item: dict, users_lookup: dict[int, dict]) -> dict | None:
     mapped_user_id = item.get("mapped_user_id")
-    user = None
     raw_user_id = mapped_user_id if mapped_user_id not in (None, "") else item.get("user_id")
-    if raw_user_id not in (None, ""):
-        try:
-            user = users_lookup.get(int(raw_user_id))
-        except (TypeError, ValueError):
-            user = None
+    if raw_user_id in (None, ""):
+        return None
 
-    if not user:
-        enriched.update(
-            {
-                "usuario_nombre": "",
-                "usuario_apellido": "",
-                "usuario_nombre_completo": "",
-                "usuario_username": "",
-                "usuario_email": "",
-                "usuario_identificacion": "",
-                "usuario_estado": "",
-                "usuario_rol": "",
-                "usuario_activo_ok": False,
-                "usuario_rol_ok": False,
-                "usuario_email_ok": False,
-                "usuario_cedula_ok": False,
-                "perfil_validado_ok": False,
-                "perfil_validado_msg": "Sin usuario asociado",
-            }
-        )
-        return enriched
+    try:
+        return users_lookup.get(int(raw_user_id))
+    except (TypeError, ValueError):
+        return None
 
-    nombre = str(user.get("nombre") or "").strip()
-    apellido = str(user.get("apellido") or "").strip()
-    email = str(user.get("email") or "").strip()
-    identificacion = str(user.get("numero_identificacion") or "").strip()
-    estado = str(user.get("estado") or "").strip()
-    rol = str(user.get("rol") or "").strip()
-    username = str(user.get("username") or "").strip()
 
+def _build_user_status(nombre: str, apellido: str, email: str, identificacion: str, estado: str, rol: str) -> tuple[bool, bool, bool, bool, str]:
     activo_ok = _normalize_lookup_text(estado) == "activo"
     rol_ok = _is_student_role(rol)
     email_ok = bool(email) and is_valid_email(email)
@@ -206,6 +200,93 @@ def _enrich_item_with_user(item: dict, users_lookup: dict[int, dict]) -> dict:
     if not cedula_ok:
         issues.append("Cédula inválida")
 
+    message = "OK" if not issues else "; ".join(issues)
+    return activo_ok, rol_ok, email_ok, cedula_ok, message
+
+
+def _build_edit_payloads(form_data) -> tuple[str, str, str, dict, dict]:
+    placa = Vehiculo.normalize_plate(form_data.get("placa", ""))
+    tipo_vehiculo_id = (form_data.get("tipo_vehiculo_id", "") or "").strip()
+    user_ref = form_data.get("user_id", "")
+
+    vehicle_payload = {
+        "placa": placa,
+        "marca": (form_data.get("marca", "") or "").strip(),
+        "modelo": (form_data.get("modelo", "") or "").strip(),
+        "color": (form_data.get("color", "") or "").strip(),
+        "tipo_vehiculo_id": tipo_vehiculo_id,
+        "estado": (form_data.get("estado", "") or "").strip(),
+    }
+
+    user_payload = {
+        "nombre": (form_data.get("user_nombre", "") or "").strip(),
+        "apellido": (form_data.get("user_apellido", "") or "").strip(),
+        "email": (form_data.get("user_email", "") or "").strip().lower(),
+        "numero_identificacion": (form_data.get("user_numero_identificacion", "") or "").strip().replace(" ", ""),
+        "estado": (form_data.get("user_estado", "") or "").strip(),
+        "role": (form_data.get("user_role", "") or "").strip(),
+    }
+
+    return placa, tipo_vehiculo_id, user_ref, vehicle_payload, user_payload
+
+
+def _validate_user_payload(user_payload: dict, email_message: str, cedula_message: str) -> str:
+    if user_payload["email"] and not is_valid_email(user_payload["email"]):
+        return email_message
+    if user_payload["numero_identificacion"] and not is_valid_cedula(user_payload["numero_identificacion"]):
+        return cedula_message
+    return ""
+
+
+def _resolve_related_user_id(user_ref: str, current_item: dict, item_id: int) -> str:
+    if (user_ref or "").strip():
+        return _resolve_user_id(user_ref)
+
+    existing_user_id = str(current_item.get("user_id") or "").strip()
+    if existing_user_id:
+        return existing_user_id
+
+    vehicle_user_map = _load_vehicle_user_map()
+    return str(vehicle_user_map.get(item_id) or "").strip()
+
+
+def _merge_user_payload_with_existing(user_payload: dict, existing_user: dict) -> dict:
+    return {
+        "nombre": user_payload["nombre"] or str(existing_user.get("nombre") or "").strip(),
+        "apellido": user_payload["apellido"] or str(existing_user.get("apellido") or "").strip(),
+        "email": user_payload["email"] or str(existing_user.get("email") or "").strip().lower(),
+        "numero_identificacion": user_payload["numero_identificacion"]
+        or str(existing_user.get("numero_identificacion") or "").strip().replace(" ", ""),
+        "estado": user_payload["estado"] or str(existing_user.get("estado") or "").strip(),
+        "role": user_payload["role"] or str(existing_user.get("rol") or "").strip(),
+    }
+
+
+def _enrich_item_with_user(item: dict, users_lookup: dict[int, dict]) -> dict:
+    enriched = dict(item)
+    user = _resolve_user_from_item(item=item, users_lookup=users_lookup)
+
+    if not user:
+        enriched.update(_empty_user_data())
+        return enriched
+
+    nombre = str(user.get("nombre") or "").strip()
+    apellido = str(user.get("apellido") or "").strip()
+    email = str(user.get("email") or "").strip()
+    identificacion = str(user.get("numero_identificacion") or "").strip()
+    estado = str(user.get("estado") or "").strip()
+    rol = str(user.get("rol") or "").strip()
+    username = str(user.get("username") or "").strip()
+
+    activo_ok, rol_ok, email_ok, cedula_ok, status_message = _build_user_status(
+        nombre=nombre,
+        apellido=apellido,
+        email=email,
+        identificacion=identificacion,
+        estado=estado,
+        rol=rol,
+    )
+
     enriched.update(
         {
             "usuario_nombre": nombre,
@@ -220,11 +301,67 @@ def _enrich_item_with_user(item: dict, users_lookup: dict[int, dict]) -> dict:
             "usuario_rol_ok": rol_ok,
             "usuario_email_ok": email_ok,
             "usuario_cedula_ok": cedula_ok,
-            "perfil_validado_ok": len(issues) == 0,
-            "perfil_validado_msg": "OK" if len(issues) == 0 else "; ".join(issues),
+            "perfil_validado_ok": status_message == "OK",
+            "perfil_validado_msg": status_message,
         }
     )
     return enriched
+
+
+def _attach_mapped_users(items: list[dict]) -> list[dict]:
+    vehicle_user_map = _load_vehicle_user_map()
+    for item in items:
+        vehiculo_id = item.get("id")
+        if vehiculo_id in (None, ""):
+            item["mapped_user_id"] = None
+            continue
+        try:
+            item["mapped_user_id"] = vehicle_user_map.get(int(vehiculo_id))
+        except (TypeError, ValueError):
+            item["mapped_user_id"] = None
+    return items
+
+
+def _filter_items_by_placa(items: list[dict], placa_filtro: str) -> list[dict]:
+    if not placa_filtro:
+        return items
+    return [item for item in items if (item.get("placa") or "").upper().find(placa_filtro) >= 0]
+
+
+def _filter_items_by_usuario(items: list[dict], usuario_filtro: str) -> list[dict]:
+    if not usuario_filtro:
+        return items
+
+    needle = _normalize_lookup_text(usuario_filtro)
+    return [
+        item
+        for item in items
+        if needle in _normalize_lookup_text(item.get("usuario_nombre") or "")
+        or needle in _normalize_lookup_text(item.get("usuario_apellido") or "")
+        or needle in _normalize_lookup_text(item.get("usuario_nombre_completo") or "")
+        or needle in _normalize_lookup_text(item.get("usuario_username") or "")
+        or needle in _normalize_lookup_text(item.get("usuario_email") or "")
+    ]
+
+
+def _filter_items_by_cedula(items: list[dict], cedula_filtro: str) -> list[dict]:
+    if not cedula_filtro:
+        return items
+    needle = _normalize_lookup_text(cedula_filtro)
+    return [item for item in items if needle in _normalize_lookup_text(item.get("usuario_identificacion") or "")]
+
+
+def _resolve_associated_user(item: dict, user_lookup: dict[int, dict], item_id: int) -> dict | None:
+    raw_user_id = item.get("user_id")
+    if raw_user_id in (None, ""):
+        vehicle_user_map = _load_vehicle_user_map()
+        raw_user_id = vehicle_user_map.get(item_id)
+    if raw_user_id in (None, ""):
+        return None
+    try:
+        return user_lookup.get(int(raw_user_id))
+    except (TypeError, ValueError):
+        return None
 
 
 @consultas_bp.get("/")
@@ -235,39 +372,12 @@ def index():
     usuario_filtro = (request.args.get("usuario", "") or "").strip()
     cedula_filtro = (request.args.get("cedula", "") or "").strip()
 
-    items = Vehiculo.list_items()
+    items = _attach_mapped_users(Vehiculo.list_items())
     users_lookup = _build_user_lookup()
-
-    vehicle_user_map = _load_vehicle_user_map()
-    for item in items:
-        vehiculo_id = item.get("id")
-        if vehiculo_id in (None, ""):
-            continue
-        try:
-            item["mapped_user_id"] = vehicle_user_map.get(int(vehiculo_id))
-        except (TypeError, ValueError):
-            item["mapped_user_id"] = None
-
     items = [_enrich_item_with_user(item=item, users_lookup=users_lookup) for item in items]
-
-    if placa_filtro:
-        items = [item for item in items if (item.get("placa") or "").upper().find(placa_filtro) >= 0]
-
-    if usuario_filtro:
-        needle = _normalize_lookup_text(usuario_filtro)
-        items = [
-            item
-            for item in items
-            if needle in _normalize_lookup_text(item.get("usuario_nombre") or "")
-            or needle in _normalize_lookup_text(item.get("usuario_apellido") or "")
-            or needle in _normalize_lookup_text(item.get("usuario_nombre_completo") or "")
-            or needle in _normalize_lookup_text(item.get("usuario_username") or "")
-            or needle in _normalize_lookup_text(item.get("usuario_email") or "")
-        ]
-
-    if cedula_filtro:
-        needle = _normalize_lookup_text(cedula_filtro)
-        items = [item for item in items if needle in _normalize_lookup_text(item.get("usuario_identificacion") or "")]
+    items = _filter_items_by_placa(items=items, placa_filtro=placa_filtro)
+    items = _filter_items_by_usuario(items=items, usuario_filtro=usuario_filtro)
+    items = _filter_items_by_cedula(items=items, cedula_filtro=cedula_filtro)
 
     return render_template(
         "consultas/index.html",
@@ -286,7 +396,7 @@ def visualizar(item_id: int):
     item = Vehiculo.get_by_id(item_id)
     if not item:
         flash("No se encontró el vehículo solicitado.", "error")
-        return redirect(url_for("consultas.index"))
+        return redirect(url_for(INDEX_ROUTE))
 
     return render_template("consultas/view.html", item=item)
 
@@ -297,26 +407,16 @@ def visualizar(item_id: int):
 def editar(item_id: int):
     if _is_guard_role():
         flash("El perfil vigilante solo puede consultar información básica por placa.", "error")
-        return redirect(url_for("consultas.index"))
+        return redirect(url_for(INDEX_ROUTE))
 
     item = Vehiculo.get_by_id(item_id)
     if not item:
         flash("No se encontró el vehículo para editar.", "error")
-        return redirect(url_for("consultas.index"))
+        return redirect(url_for(INDEX_ROUTE))
 
     tipos_vehiculo = Vehiculo.list_vehicle_types()
     user_lookup = _build_user_lookup()
-
-    usuario_asociado = None
-    raw_user_id = item.get("user_id")
-    if raw_user_id in (None, ""):
-        vehicle_user_map = _load_vehicle_user_map()
-        raw_user_id = vehicle_user_map.get(item_id)
-    if raw_user_id not in (None, ""):
-        try:
-            usuario_asociado = user_lookup.get(int(raw_user_id))
-        except (TypeError, ValueError):
-            usuario_asociado = None
+    usuario_asociado = _resolve_associated_user(item=item, user_lookup=user_lookup, item_id=item_id)
 
     editable_roles = [
         "estudiante_udec",
@@ -342,64 +442,37 @@ def editar(item_id: int):
 def guardar_edicion(item_id: int):
     if _is_guard_role():
         flash("El perfil vigilante no puede editar información vehicular.", "error")
-        return redirect(url_for("consultas.index"))
+        return redirect(url_for(INDEX_ROUTE))
 
     current_item = Vehiculo.get_by_id(item_id)
     if not current_item:
         flash("No se encontró el vehículo para editar.", "error")
-        return redirect(url_for("consultas.index"))
+        return redirect(url_for(INDEX_ROUTE))
 
-    placa = Vehiculo.normalize_plate(request.form.get("placa", ""))
-    tipo_vehiculo_id = (request.form.get("tipo_vehiculo_id", "") or "").strip()
-    user_ref = request.form.get("user_id", "")
+    placa, tipo_vehiculo_id, user_ref, payload, user_payload = _build_edit_payloads(request.form)
 
     plate_ok, plate_error = Vehiculo.validate_plate_format(placa=placa, tipo_vehiculo_id=tipo_vehiculo_id)
     if not plate_ok:
         flash(plate_error, "error")
-        return redirect(url_for("consultas.editar", item_id=item_id))
+        return redirect(url_for(EDIT_ROUTE, item_id=item_id))
 
-    payload = {
-        "placa": placa,
-        "marca": (request.form.get("marca", "") or "").strip(),
-        "modelo": (request.form.get("modelo", "") or "").strip(),
-        "color": (request.form.get("color", "") or "").strip(),
-        "tipo_vehiculo_id": tipo_vehiculo_id,
-        "estado": (request.form.get("estado", "") or "").strip(),
-    }
-
-    user_payload = {
-        "nombre": (request.form.get("user_nombre", "") or "").strip(),
-        "apellido": (request.form.get("user_apellido", "") or "").strip(),
-        "email": (request.form.get("user_email", "") or "").strip().lower(),
-        "numero_identificacion": (request.form.get("user_numero_identificacion", "") or "").strip().replace(" ", ""),
-        "estado": (request.form.get("user_estado", "") or "").strip(),
-        "role": (request.form.get("user_role", "") or "").strip(),
-    }
-
-    if user_payload["email"] and not is_valid_email(user_payload["email"]):
-        flash("Formato de correo inválido. Usa un correo válido (ej: usuario@dominio.com).", "error")
-        return redirect(url_for("consultas.editar", item_id=item_id))
-
-    if user_payload["numero_identificacion"] and not is_valid_cedula(user_payload["numero_identificacion"]):
-        flash("Formato de cédula inválido. Debe contener solo números (6 a 12 dígitos).", "error")
-        return redirect(url_for("consultas.editar", item_id=item_id))
+    user_payload_error = _validate_user_payload(
+        user_payload=user_payload,
+        email_message="Formato de correo inválido. Usa un correo válido (ej: usuario@dominio.com).",
+        cedula_message="Formato de cédula inválido. Debe contener solo números (6 a 12 dígitos).",
+    )
+    if user_payload_error:
+        flash(user_payload_error, "error")
+        return redirect(url_for(EDIT_ROUTE, item_id=item_id))
 
     user_fields_started = any(user_payload.values())
 
     try:
-        resolved_user_id = ""
-        if (user_ref or "").strip():
-            resolved_user_id = _resolve_user_id(user_ref)
-        else:
-            existing_user_id = str(current_item.get("user_id") or "").strip()
-            if not existing_user_id:
-                vehicle_user_map = _load_vehicle_user_map()
-                existing_user_id = str(vehicle_user_map.get(item_id) or "").strip()
-            resolved_user_id = existing_user_id
+        resolved_user_id = _resolve_related_user_id(user_ref=user_ref, current_item=current_item, item_id=item_id)
 
         if user_fields_started and not resolved_user_id:
             flash("Para editar datos del usuario debes indicar un usuario asociado válido.", "error")
-            return redirect(url_for("consultas.editar", item_id=item_id))
+            return redirect(url_for(EDIT_ROUTE, item_id=item_id))
 
         if resolved_user_id:
             payload["user_id"] = resolved_user_id
@@ -415,25 +488,18 @@ def guardar_edicion(item_id: int):
             existing_user = _get_user_by_id(int(resolved_user_id))
             if not existing_user:
                 flash("No se encontró el usuario asociado para completar los datos faltantes.", "error")
-                return redirect(url_for("consultas.editar", item_id=item_id))
+                return redirect(url_for(EDIT_ROUTE, item_id=item_id))
 
-            merged_user_payload = {
-                "nombre": user_payload["nombre"] or str(existing_user.get("nombre") or "").strip(),
-                "apellido": user_payload["apellido"] or str(existing_user.get("apellido") or "").strip(),
-                "email": user_payload["email"] or str(existing_user.get("email") or "").strip().lower(),
-                "numero_identificacion": user_payload["numero_identificacion"]
-                or str(existing_user.get("numero_identificacion") or "").strip().replace(" ", ""),
-                "estado": user_payload["estado"] or str(existing_user.get("estado") or "").strip(),
-                "role": user_payload["role"] or str(existing_user.get("rol") or "").strip(),
-            }
+            merged_user_payload = _merge_user_payload_with_existing(user_payload=user_payload, existing_user=existing_user)
 
-            if merged_user_payload["email"] and not is_valid_email(merged_user_payload["email"]):
-                flash("El correo final del usuario es inválido. Corrígelo para guardar.", "error")
-                return redirect(url_for("consultas.editar", item_id=item_id))
-
-            if merged_user_payload["numero_identificacion"] and not is_valid_cedula(merged_user_payload["numero_identificacion"]):
-                flash("La cédula final del usuario es inválida. Corrígela para guardar.", "error")
-                return redirect(url_for("consultas.editar", item_id=item_id))
+            merged_user_error = _validate_user_payload(
+                user_payload=merged_user_payload,
+                email_message="El correo final del usuario es inválido. Corrígelo para guardar.",
+                cedula_message="La cédula final del usuario es inválida. Corrígela para guardar.",
+            )
+            if merged_user_error:
+                flash(merged_user_error, "error")
+                return redirect(url_for(EDIT_ROUTE, item_id=item_id))
 
             User.update_user(
                 user_id=int(resolved_user_id),
@@ -451,7 +517,7 @@ def guardar_edicion(item_id: int):
     except Exception as exc:
         flash(f"No se pudo actualizar la información: {exc}", "error")
 
-    return redirect(url_for("consultas.index"))
+    return redirect(url_for(INDEX_ROUTE))
 
 
 @consultas_bp.post("/<int:item_id>/borrar")
@@ -460,7 +526,7 @@ def guardar_edicion(item_id: int):
 def borrar(item_id: int):
     if _is_guard_role():
         flash("El perfil vigilante no puede eliminar información vehicular.", "error")
-        return redirect(url_for("consultas.index"))
+        return redirect(url_for(INDEX_ROUTE))
 
     try:
         Vehiculo.delete_item(item_id)
@@ -468,4 +534,4 @@ def borrar(item_id: int):
     except Exception as exc:
         flash(f"No se pudo eliminar el vehículo: {exc}", "error")
 
-    return redirect(url_for("consultas.index"))
+    return redirect(url_for(INDEX_ROUTE))
