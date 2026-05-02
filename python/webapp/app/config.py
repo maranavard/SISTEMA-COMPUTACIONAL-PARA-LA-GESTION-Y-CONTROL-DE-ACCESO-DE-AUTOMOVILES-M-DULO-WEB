@@ -41,7 +41,7 @@ class Config:
     MAIL_SUPPRESS_SEND = os.getenv("MAIL_SUPPRESS_SEND", "0") in {"1", "true", "True"}
 
     # Token de recuperación de contraseña.
-    PASSWORD_RESET_SALT = os.getenv("PASSWORD_RESET_SALT", "password-reset-salt")
+    PASSWORD_RESET_SALT = os.getenv("PASSWORD_RESET_SALT") or f"{SECRET_KEY}-reset-salt"
     PASSWORD_RESET_MAX_AGE_SECONDS = int(os.getenv("PASSWORD_RESET_MAX_AGE_SECONDS", "3600"))
 
     # Token para integración JSON con módulo de hardware local.
