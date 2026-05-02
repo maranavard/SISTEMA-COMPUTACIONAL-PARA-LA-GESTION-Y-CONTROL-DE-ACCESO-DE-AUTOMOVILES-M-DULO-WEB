@@ -19,7 +19,7 @@ WHERE table_schema = c.schema_name
     'registro_visitantes','visitantes','documentos','tipo_doc','tipo_documento',
     'novedades_audit','asignaciones_log'
   )
-ORDER BY table_name;
+ORDER BY table_name ASC;
 
 -- 2) Revisar estructura de usuarios/roles
 SELECT column_name, data_type
@@ -90,7 +90,7 @@ JOIN pg_namespace n ON n.oid = c.relnamespace
 WHERE n.nspname = 'public'
   AND c.relname = 'novedad'
   AND NOT t.tgisinternal
-ORDER BY t.tgname;
+ORDER BY t.tgname ASC;
 
 -- 11) Código fuente de funciones clave de asignación/liberación
 SELECT p.proname AS function_name,

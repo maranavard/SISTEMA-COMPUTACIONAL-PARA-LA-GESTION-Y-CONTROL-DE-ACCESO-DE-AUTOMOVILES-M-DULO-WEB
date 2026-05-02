@@ -25,8 +25,8 @@ FALLBACK_MODEL_PATH = IA_DIR / "lstm_model_fallback.pkl"
 # serie: cada paso = 5 minutos
 STEP_MINUTES = 5
 H_minutes = 40
-H = H_minutes // STEP_MINUTES  # 8
-T_past = 24  # ventanas pasadas: 24*5min = 120min (2h)
+h = H_minutes // STEP_MINUTES  # 8
+t_past = 24  # ventanas pasadas: 24*5min = 120min (2h)
 
 def load_data(csv_path):
     df = pd.read_csv(csv_path, parse_dates=['timestamp'])
@@ -44,20 +44,20 @@ def load_data(csv_path):
     cols = ['timestamp', 'ocupados', 'hora', 'dia_semana', 'registrado_ratio']
     return df[cols]
 
-def make_supervised(features_scaled, target_scaled, T_past, H):
+def make_supervised(features_scaled, target_scaled, t_past, h):
     X, y = [], []
     n = len(features_scaled)
-    for i in range(n - T_past - H + 1):
-        X.append(features_scaled[i: i + T_past])
-        y.append(target_scaled[i + T_past: i + T_past + H])
+    for i in range(n - t_past - h + 1):
+        X.append(features_scaled[i: i + t_past])
+        y.append(target_scaled[i + t_past: i + t_past + h])
     if not X:
-        return np.empty((0, T_past, 1)), np.empty((0, H))
+        return np.empty((0, t_past, 1)), np.empty((0, h))
     return np.array(X), np.array(y)
 
 def train():
     df = load_data(CSV_PATH)
     # Si hay muy pocos datos, avisar
-    if len(df) < (T_past + H + 1):
+    if len(df) < (t_past + h + 1):
         print("ATENCIÓN: muy pocos datos para entrenar LSTM. Filas:", len(df))
         # no abortar: igual intentamos un run rápido
     
@@ -69,7 +69,7 @@ def train():
     features_scaled = scaler_x.fit_transform(features)
     target_scaled = scaler_y.fit_transform(target).flatten()
 
-    X, y = make_supervised(features_scaled, target_scaled, T_past, H)
+    X, y = make_supervised(features_scaled, target_scaled, t_past, h)
     if X.shape[0] == 0:
         print("No hay ventanas suficientes. Generando ejemplo para continuar (no recomendado).")
         return
@@ -78,16 +78,16 @@ def train():
 
     # split train/val
     split = int(0.8 * len(X))
-    X_train, X_val = X[:split], X[split:]
+    X_train, x_val = X[:split], X[split:]
     y_train, y_val = y[:split], y[split:]
 
     if TF_AVAILABLE:
         n_features = X.shape[2]
         model = Sequential([
-            LSTM(64, input_shape=(T_past, n_features), return_sequences=False),
+            LSTM(64, input_shape=(t_past, n_features), return_sequences=False),
             Dropout(0.2),
             Dense(32, activation='relu'),
-            Dense(H, activation='linear')
+            Dense(h, activation='linear')
         ])
         model.compile(optimizer='adam', loss='mse', metrics=['mae'])
 
@@ -98,7 +98,7 @@ def train():
 
         model.fit(
             X_train, y_train,
-            validation_data=(X_val, y_val),
+            validation_data=(x_val, y_val),
             epochs=60,
             batch_size=32,
             callbacks=callbacks,
@@ -109,7 +109,7 @@ def train():
     else:
         print("TensorFlow no disponible. Entrenando modelo secuencial de respaldo para demo.")
         x_train_flat = X_train.reshape((X_train.shape[0], -1))
-        x_val_flat = X_val.reshape((X_val.shape[0], -1))
+        x_val_flat = x_val.reshape((x_val.shape[0], -1))
         model = MLPRegressor(
             hidden_layer_sizes=(128, 64),
             activation='relu',

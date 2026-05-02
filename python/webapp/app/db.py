@@ -10,13 +10,13 @@ from flask import current_app
 
 def get_connection():
     # Lee credenciales desde la configuración cargada en Flask app context.
-    params = dict(
-        host=current_app.config["DB_HOST"],
-        port=current_app.config["DB_PORT"],
-        dbname=current_app.config["DB_NAME"],
-        user=current_app.config["DB_USER"],
-        password=current_app.config["DB_PASSWORD"],
-    )
+    params = {
+        "host": current_app.config["DB_HOST"],
+        "port": current_app.config["DB_PORT"],
+        "dbname": current_app.config["DB_NAME"],
+        "user": current_app.config["DB_USER"],
+        "password": current_app.config["DB_PASSWORD"],
+    }
 
     # Primer intento: conexión estándar.
     try:
@@ -41,13 +41,13 @@ def get_local_connection():
     if not current_app.config.get("LOCAL_DB_ENABLED", False):
         raise RuntimeError("Sincronización local deshabilitada (LOCAL_DB_ENABLED=0).")
 
-    params = dict(
-        host=current_app.config["LOCAL_DB_HOST"],
-        port=current_app.config["LOCAL_DB_PORT"],
-        dbname=current_app.config["LOCAL_DB_NAME"],
-        user=current_app.config["LOCAL_DB_USER"],
-        password=current_app.config["LOCAL_DB_PASSWORD"],
-    )
+    params = {
+        "host": current_app.config["LOCAL_DB_HOST"],
+        "port": current_app.config["LOCAL_DB_PORT"],
+        "dbname": current_app.config["LOCAL_DB_NAME"],
+        "user": current_app.config["LOCAL_DB_USER"],
+        "password": current_app.config["LOCAL_DB_PASSWORD"],
+    }
 
     try:
         return psycopg2.connect(**params)

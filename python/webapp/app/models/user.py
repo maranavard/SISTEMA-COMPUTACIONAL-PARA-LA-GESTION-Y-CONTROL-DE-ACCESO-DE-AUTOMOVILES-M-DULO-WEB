@@ -217,7 +217,7 @@ class User(UserMixin):
             f"u.{id_doc_col} AS numero_identificacion" if id_doc_col else "NULL::text AS numero_identificacion"
         )
 
-        if "estado" in columns.keys():
+        if "estado" in columns:
             select_fields.append("u.estado")
         else:
             select_fields.append("'activo'::text AS estado")
@@ -270,10 +270,10 @@ class User(UserMixin):
         email_col = cls._pick_existing(columns, "email", "correo", "correo_institucional")
         id_doc_col = cls._pick_existing(columns, "numero_identificacion", "identificacion", "documento", "cedula")
 
-        if "role" in columns.keys():
+        if "role" in columns:
             insert_columns.append("role")
             insert_values.append([role] if role_is_array else role)
-        if "estado" in columns.keys():
+        if "estado" in columns:
             insert_columns.append("estado")
             insert_values.append(estado)
         if nombre_col:

@@ -407,7 +407,7 @@ def descargar_excel(module_key: str):
         return redirect(url_for(GESTION_ROUTE))
 
     try:
-        definition, rows, columns, _ = _load_rows(module_key)
+        _, rows, columns, _ = _load_rows(module_key)
     except Exception as exc:
         flash(f"No se pudo generar el archivo Excel: {exc}", "error")
         return redirect(url_for(GESTION_ROUTE))

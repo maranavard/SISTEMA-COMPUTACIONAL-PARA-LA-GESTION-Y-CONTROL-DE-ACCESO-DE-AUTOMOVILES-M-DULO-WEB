@@ -65,12 +65,12 @@ class Vehiculo:
             return False, "Debes ingresar una placa válida."
 
         if tipo_nombre == "automóvil":
-            if not re.fullmatch(r"[A-Z]{3}[0-9]{3}", plate):
+            if not re.fullmatch(r"[A-Z]{3}\d{3}", plate):
                 return False, "Formato inválido para automóvil. Usa 3 letras y 3 números (ej: ABC123)."
             return True, ""
 
         if tipo_nombre == "motocicleta":
-            if not re.fullmatch(r"[A-Z]{3}[0-9]{2}[A-Z]?", plate):
+            if not re.fullmatch(r"[A-Z]{3}\d{2}[A-Z]?", plate):
                 return False, (
                     "Formato inválido para motocicleta. Usa 3 letras, 2 números y 1 letra opcional "
                     "(ej: ABC12D o ABC12)."

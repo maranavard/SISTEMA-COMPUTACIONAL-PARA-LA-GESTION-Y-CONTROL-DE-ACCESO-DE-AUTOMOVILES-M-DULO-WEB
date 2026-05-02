@@ -85,8 +85,8 @@
 
 {% if printable %}
 <script>
-  window.addEventListener('load', function () {
-    window.print();
+  globalThis.addEventListener('load', function () {
+    globalThis.print();
   });
 </script>
 {% endif %}

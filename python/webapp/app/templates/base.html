@@ -45,7 +45,7 @@
           return;
         }
         alertElement.classList.add('alert-hidden');
-        window.setTimeout(() => {
+        globalThis.setTimeout(() => {
           alertElement.remove();
           const alertList = document.querySelector('.alerts');
           if (alertList && !alertList.children.length) {

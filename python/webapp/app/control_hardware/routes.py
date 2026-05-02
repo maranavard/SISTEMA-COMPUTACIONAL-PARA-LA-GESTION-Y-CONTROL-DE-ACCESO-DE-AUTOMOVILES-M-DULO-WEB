@@ -67,7 +67,7 @@ def _is_valid_uuid(value: str) -> bool:
     try:
         UUID(value)
         return True
-    except (ValueError, TypeError):
+    except ValueError:
         return False
 
 
@@ -388,5 +388,5 @@ def api_comando():
 @token_required
 def api_evento():
     data = request.get_json(silent=True)
-    ok, response, status_code = _ingest_event_data(data)
+    _, response, status_code = _ingest_event_data(data)
     return jsonify(response), status_code
