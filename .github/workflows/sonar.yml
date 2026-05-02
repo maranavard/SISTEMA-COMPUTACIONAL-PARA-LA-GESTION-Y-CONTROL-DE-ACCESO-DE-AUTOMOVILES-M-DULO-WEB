@@ -10,10 +10,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
 
       - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@v2
+        uses: SonarSource/sonarcloud-github-action@e44258b109568baa0df60ed515909fc6c72cba92 # v2
         with:
           args: >
             -Dsonar.projectKey=maranavard_SISTEMA-COMPUTACIONAL-PARA-LA-GESTION-Y-CONTROL-DE-ACCESO-DE-AUTOMOVILES-M-DULO-WEB
