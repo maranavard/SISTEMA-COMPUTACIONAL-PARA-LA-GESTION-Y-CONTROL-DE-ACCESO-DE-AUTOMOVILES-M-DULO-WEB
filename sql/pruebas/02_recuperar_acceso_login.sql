@@ -30,6 +30,20 @@ AS $$
   SELECT 'activo'::text;
 $$;
 
+CREATE OR REPLACE FUNCTION pg_temp.estado_column()
+RETURNS text
+LANGUAGE sql
+AS $$
+  SELECT 'estado'::text;
+$$;
+
+CREATE OR REPLACE FUNCTION pg_temp.role_column()
+RETURNS text
+LANGUAGE sql
+AS $$
+  SELECT 'role'::text;
+$$;
+
 CREATE OR REPLACE FUNCTION pg_temp.has_usuarios_column(p_column text)
 RETURNS boolean
 LANGUAGE sql
@@ -85,8 +99,8 @@ ORDER BY ordinal_position;
 SELECT
   u.id,
   u.username,
-  CASE WHEN pg_temp.has_usuarios_column('estado') THEN u.estado::text ELSE 'N/A' END AS estado,
-  CASE WHEN pg_temp.has_usuarios_column('role') THEN COALESCE(u.role::text,'') ELSE '' END AS role_text
+  CASE WHEN pg_temp.has_usuarios_column(pg_temp.estado_column()) THEN u.estado::text ELSE 'N/A' END AS estado,
+  CASE WHEN pg_temp.has_usuarios_column(pg_temp.role_column()) THEN COALESCE(u.role::text,'') ELSE '' END AS role_text
 FROM public.usuarios u
 ORDER BY u.id;
 
@@ -104,7 +118,7 @@ WHERE username = pg_temp.target_username();
 -- Activar usuario si existe columna estado
 DO $$
 BEGIN
-  IF pg_temp.has_usuarios_column('estado') THEN
+  IF pg_temp.has_usuarios_column(pg_temp.estado_column()) THEN
     EXECUTE format(
       'UPDATE public.usuarios SET estado = %L WHERE username = %L',
       pg_temp.estado_activo(),
@@ -134,12 +148,12 @@ BEGIN
   SELECT COUNT(*) INTO v_total FROM public.usuarios;
 
   IF v_total = 0 THEN
-    SELECT pg_temp.has_usuarios_column('role') INTO v_has_role;
+    SELECT pg_temp.has_usuarios_column(pg_temp.role_column()) INTO v_has_role;
 
-    SELECT pg_temp.has_usuarios_column_type('role', 'ARRAY')
+    SELECT pg_temp.has_usuarios_column_type(pg_temp.role_column(), 'ARRAY')
     INTO v_role_is_array;
 
-    SELECT pg_temp.has_usuarios_column('estado') INTO v_has_estado;
+    SELECT pg_temp.has_usuarios_column(pg_temp.estado_column()) INTO v_has_estado;
     SELECT pg_temp.has_usuarios_column('nombre') INTO v_has_nombre;
     SELECT pg_temp.has_usuarios_column('apellido') INTO v_has_apellido;
     SELECT pg_temp.has_usuarios_column('email') INTO v_has_email;
@@ -203,8 +217,8 @@ END $$;
 -- PASO 4) Verificación final
 -- =========================================================
 SELECT id, username,
-       CASE WHEN pg_temp.has_usuarios_column('estado') THEN estado::text ELSE 'N/A' END AS estado,
-       CASE WHEN pg_temp.has_usuarios_column('role') THEN COALESCE(role::text,'') ELSE '' END AS role_text
+  CASE WHEN pg_temp.has_usuarios_column(pg_temp.estado_column()) THEN estado::text ELSE 'N/A' END AS estado,
+  CASE WHEN pg_temp.has_usuarios_column(pg_temp.role_column()) THEN COALESCE(role::text,'') ELSE '' END AS role_text
 FROM public.usuarios
 ORDER BY id;
 

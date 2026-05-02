@@ -109,17 +109,15 @@ def _passes_access_filters(
     usuario_filter: str,
     vigilante_filter: str,
 ) -> bool:
-    if placa_filter and placa_filter not in _normalize_text(placa_text):
-        return False
-    if fecha_filter and fecha_filter != _normalize_text(fecha_text):
-        return False
-    if usuario_filter:
-        hay_usuario = usuario_filter in _normalize_text(usuario_display) or usuario_filter in _normalize_text(user_id)
-        if not hay_usuario:
-            return False
-    if vigilante_filter and vigilante_filter not in _normalize_text(vigilante_display):
-        return False
-    return True
+    placa_ok = not placa_filter or placa_filter in _normalize_text(placa_text)
+    fecha_ok = not fecha_filter or fecha_filter == _normalize_text(fecha_text)
+    usuario_ok = (
+        not usuario_filter
+        or usuario_filter in _normalize_text(usuario_display)
+        or usuario_filter in _normalize_text(user_id)
+    )
+    vigilante_ok = not vigilante_filter or vigilante_filter in _normalize_text(vigilante_display)
+    return placa_ok and fecha_ok and usuario_ok and vigilante_ok
 
 
 def _build_access_report_row(
