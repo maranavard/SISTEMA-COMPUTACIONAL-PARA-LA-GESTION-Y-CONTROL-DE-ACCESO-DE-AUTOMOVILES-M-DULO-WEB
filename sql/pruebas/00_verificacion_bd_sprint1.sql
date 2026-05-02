@@ -87,7 +87,7 @@ SELECT
 FROM pg_trigger t
 JOIN pg_class c ON c.oid = t.tgrelid
 JOIN pg_namespace n ON n.oid = c.relnamespace
-WHERE n.nspname = 'public'
+WHERE n.nspname = (SELECT schema_name FROM tmp_verif_const LIMIT 1)
   AND c.relname = 'novedad'
   AND NOT t.tgisinternal
 ORDER BY t.tgname ASC;
@@ -97,7 +97,7 @@ SELECT p.proname AS function_name,
        pg_get_functiondef(p.oid) AS function_definition
 FROM pg_proc p
 JOIN pg_namespace n ON n.oid = p.pronamespace
-WHERE n.nspname = 'public'
+WHERE n.nspname = (SELECT schema_name FROM tmp_verif_const LIMIT 1)
   AND p.proname IN ('fn_asignar_liberar_espacio', 'fn_novedad_space_manage', 'assign_space_and_register_ingreso');
 
 DROP TABLE IF EXISTS tmp_verif_const;
