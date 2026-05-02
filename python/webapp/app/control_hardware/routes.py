@@ -143,62 +143,92 @@ def _validate_event_payload(event_type: str, payload: dict) -> tuple[bool, str]:
     return validator(payload)
 
 
-def _ingest_event_data(data: dict) -> tuple[bool, dict, int]:
-    if not isinstance(data, dict):
-        return False, {"ok": False, "error": "JSON invalido"}, 400
+def _reject(error_message: str, status_code: int, **extra_fields):
+    payload = {"ok": False, "error": error_message}
+    payload.update(extra_fields)
+    return False, payload, status_code
 
-    event_id = str(data.get("event_id") or "").strip()
-    event_type = str(data.get("event_type") or "").strip()
-    source_device = str(data.get("source_device") or "").strip()
-    occurred_at_raw = str(data.get("occurred_at") or "").strip()
-    schema_version = str(data.get("schema_version") or "").strip()
-    payload = data.get("payload")
-    trace = data.get("trace")
 
-    if not event_id:
-        return False, {"ok": False, "error": "Campo event_id es obligatorio"}, 400
-    if not _is_valid_uuid(event_id):
-        return False, {"ok": False, "error": "event_id debe ser UUID valido"}, 422
+def _extract_event_fields(data: dict) -> dict:
+    return {
+        "event_id": str(data.get("event_id") or "").strip(),
+        "event_type": str(data.get("event_type") or "").strip(),
+        "source_device": str(data.get("source_device") or "").strip(),
+        "occurred_at_raw": str(data.get("occurred_at") or "").strip(),
+        "schema_version": str(data.get("schema_version") or "").strip(),
+        "payload": data.get("payload"),
+        "trace": data.get("trace"),
+    }
 
-    if not event_type:
-        return False, {"ok": False, "error": "Campo event_type es obligatorio"}, 400
-    if event_type not in ALLOWED_EVENT_TYPES:
-        return False, {"ok": False, "error": "event_type no permitido"}, 422
 
-    if not source_device:
-        return False, {"ok": False, "error": "Campo source_device es obligatorio"}, 400
+def _validate_required_event_fields(fields: dict):
+    if not fields["event_id"]:
+        return _reject("Campo event_id es obligatorio", 400)
+    if not _is_valid_uuid(fields["event_id"]):
+        return _reject("event_id debe ser UUID valido", 422)
 
-    occurred_at = _parse_iso_datetime(occurred_at_raw)
-    if not occurred_at:
-        return False, {"ok": False, "error": "Campo occurred_at invalido; usa ISO-8601"}, 422
+    if not fields["event_type"]:
+        return _reject("Campo event_type es obligatorio", 400)
+    if fields["event_type"] not in ALLOWED_EVENT_TYPES:
+        return _reject("event_type no permitido", 422)
 
-    if not schema_version:
-        return False, {"ok": False, "error": "Campo schema_version es obligatorio"}, 400
+    if not fields["source_device"]:
+        return _reject("Campo source_device es obligatorio", 400)
+    if not fields["schema_version"]:
+        return _reject("Campo schema_version es obligatorio", 400)
 
+    return None
+
+
+def _validate_event_objects(event_type: str, payload, trace):
     if not isinstance(payload, dict):
-        return False, {"ok": False, "error": "Campo payload debe ser objeto JSON"}, 422
-
+        return _reject("Campo payload debe ser objeto JSON", 422)
     if trace is not None and not isinstance(trace, dict):
-        return False, {"ok": False, "error": "Campo trace debe ser objeto JSON"}, 422
+        return _reject("Campo trace debe ser objeto JSON", 422)
 
     valid, validation_error = _validate_event_payload(event_type=event_type, payload=payload)
     if not valid:
-        return False, {"ok": False, "error": validation_error}, 422
+        return _reject(validation_error, 422)
+
+    return None
+
+
+def _ingest_event_data(data: dict) -> tuple[bool, dict, int]:
+    if not isinstance(data, dict):
+        return _reject("JSON invalido", 400)
+
+    fields = _extract_event_fields(data)
+
+    required_error = _validate_required_event_fields(fields)
+    if required_error:
+        return required_error
+
+    occurred_at = _parse_iso_datetime(fields["occurred_at_raw"])
+    if not occurred_at:
+        return _reject("Campo occurred_at invalido; usa ISO-8601", 422)
+
+    objects_error = _validate_event_objects(
+        event_type=fields["event_type"],
+        payload=fields["payload"],
+        trace=fields["trace"],
+    )
+    if objects_error:
+        return objects_error
 
     inserted = ControlHardware.register_event(
-        event_id=event_id,
-        event_type=event_type,
-        source_device=source_device,
+        event_id=fields["event_id"],
+        event_type=fields["event_type"],
+        source_device=fields["source_device"],
         occurred_at=occurred_at,
-        schema_version=schema_version,
-        payload=payload,
-        trace=trace,
+        schema_version=fields["schema_version"],
+        payload=fields["payload"],
+        trace=fields["trace"],
     )
 
     if not inserted:
-        return False, {"ok": False, "error": "Evento duplicado", "event_id": event_id}, 409
+        return _reject("Evento duplicado", 409, event_id=fields["event_id"])
 
-    return True, {"ok": True, "status": "accepted", "event_id": event_id}, 202
+    return True, {"ok": True, "status": "accepted", "event_id": fields["event_id"]}, 202
 
 
 def _resolve_shared_path(config_value: str) -> Path:
