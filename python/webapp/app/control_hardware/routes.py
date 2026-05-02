@@ -19,6 +19,8 @@ from app.utils.authz import normalize_role
 control_hardware_bp = Blueprint("control_hardware", __name__, url_prefix="/control-hardware")
 
 ALLOWED_EVENT_TYPES = {"acceso_detectado", "validacion_externa", "estado_dispositivo", "heartbeat"}
+ALLOWED_ACCESS_ROLES = {"admin_sistema", "admin", "administrador", "seguridad_udec", "vigilante", "vigilancia"}
+INDEX_ROUTE = "control_hardware.index"
 
 
 def _current_role() -> str:
@@ -35,9 +37,8 @@ def control_access_required(view_func):
         if not current_user.is_authenticated:
             abort(401)
 
-        allowed = {"admin_sistema", "admin", "administrador", "seguridad_udec", "vigilante", "vigilancia"}
         rol = normalize_role(getattr(current_user, "rol", ""))
-        if rol not in allowed:
+        if rol not in ALLOWED_ACCESS_ROLES:
             abort(403)
 
         return view_func(*args, **kwargs)
@@ -86,47 +87,60 @@ def _normalize_plate(value: str) -> str:
     return str(value or "").strip().upper()
 
 
+def _validate_access_detected_payload(payload: dict) -> tuple[bool, str]:
+    placa = _normalize_plate(payload.get("placa"))
+    movimiento = str(payload.get("movimiento") or "").strip().lower()
+    if not placa:
+        return False, "payload.placa es obligatorio para acceso_detectado"
+    if movimiento not in {"entrada", "salida"}:
+        return False, "payload.movimiento debe ser entrada o salida"
+    payload["placa"] = placa
+    payload["movimiento"] = movimiento
+    return True, ""
+
+
+def _validate_external_validation_payload(payload: dict) -> tuple[bool, str]:
+    placa = _normalize_plate(payload.get("placa"))
+    resultado = str(payload.get("resultado") or "").strip().lower()
+    if not placa:
+        return False, "payload.placa es obligatorio para validacion_externa"
+    if resultado not in {"autorizado", "rechazado", "pendiente"}:
+        return False, "payload.resultado debe ser autorizado, rechazado o pendiente"
+    payload["placa"] = placa
+    payload["resultado"] = resultado
+    return True, ""
+
+
+def _validate_device_state_payload(payload: dict) -> tuple[bool, str]:
+    dispositivo = str(payload.get("dispositivo") or "").strip()
+    estado = str(payload.get("estado") or "").strip().lower()
+    if not dispositivo:
+        return False, "payload.dispositivo es obligatorio para estado_dispositivo"
+    if estado not in {"on", "off"}:
+        return False, "payload.estado debe ser on u off"
+    payload["estado"] = estado
+    return True, ""
+
+
+def _validate_heartbeat_payload(payload: dict) -> tuple[bool, str]:
+    status = str(payload.get("status") or "").strip().lower()
+    if not status:
+        return False, "payload.status es obligatorio para heartbeat"
+    payload["status"] = status
+    return True, ""
+
+
 def _validate_event_payload(event_type: str, payload: dict) -> tuple[bool, str]:
-    if event_type == "acceso_detectado":
-        placa = _normalize_plate(payload.get("placa"))
-        movimiento = str(payload.get("movimiento") or "").strip().lower()
-        if not placa:
-            return False, "payload.placa es obligatorio para acceso_detectado"
-        if movimiento not in {"entrada", "salida"}:
-            return False, "payload.movimiento debe ser entrada o salida"
-        payload["placa"] = placa
-        payload["movimiento"] = movimiento
-        return True, ""
-
-    if event_type == "validacion_externa":
-        placa = _normalize_plate(payload.get("placa"))
-        resultado = str(payload.get("resultado") or "").strip().lower()
-        if not placa:
-            return False, "payload.placa es obligatorio para validacion_externa"
-        if resultado not in {"autorizado", "rechazado", "pendiente"}:
-            return False, "payload.resultado debe ser autorizado, rechazado o pendiente"
-        payload["placa"] = placa
-        payload["resultado"] = resultado
-        return True, ""
-
-    if event_type == "estado_dispositivo":
-        dispositivo = str(payload.get("dispositivo") or "").strip()
-        estado = str(payload.get("estado") or "").strip().lower()
-        if not dispositivo:
-            return False, "payload.dispositivo es obligatorio para estado_dispositivo"
-        if estado not in {"on", "off"}:
-            return False, "payload.estado debe ser on u off"
-        payload["estado"] = estado
-        return True, ""
-
-    if event_type == "heartbeat":
-        status = str(payload.get("status") or "").strip().lower()
-        if not status:
-            return False, "payload.status es obligatorio para heartbeat"
-        payload["status"] = status
-        return True, ""
-
-    return False, "event_type no soportado"
+    validators = {
+        "acceso_detectado": _validate_access_detected_payload,
+        "validacion_externa": _validate_external_validation_payload,
+        "estado_dispositivo": _validate_device_state_payload,
+        "heartbeat": _validate_heartbeat_payload,
+    }
+    validator = validators.get(event_type)
+    if not validator:
+        return False, "event_type no soportado"
+    return validator(payload)
 
 
 def _ingest_event_data(data: dict) -> tuple[bool, dict, int]:
@@ -268,7 +282,7 @@ def index():
 def procesar_archivos():
     if not _is_admin_role():
         flash("No tienes permisos para procesar eventos por archivos compartidos.", "error")
-        return redirect(url_for("control_hardware.index"))
+        return redirect(url_for(INDEX_ROUTE))
 
     max_batch = int(current_app.config.get("HARDWARE_SHARED_MAX_BATCH", 30) or 30)
     report = _process_shared_events_batch(max_files=max_batch)
@@ -282,7 +296,7 @@ def procesar_archivos():
         ),
         "success",
     )
-    return redirect(url_for("control_hardware.index"))
+    return redirect(url_for(INDEX_ROUTE))
 
 
 @control_hardware_bp.post("/guardar")
@@ -297,7 +311,7 @@ def guardar():
 
     ControlHardware.update_states(update_map, user_id=int(getattr(current_user, "id", 0) or 0))
     flash("Estado de dispositivos actualizado correctamente.", "success")
-    return redirect(url_for("control_hardware.index"))
+    return redirect(url_for(INDEX_ROUTE))
 
 
 @control_hardware_bp.get("/api/estado")

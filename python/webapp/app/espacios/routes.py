@@ -11,6 +11,8 @@ from app.utils.authz import admin_required, normalize_role, parking_ops_required
 
 
 espacios_bp = Blueprint("espacios", __name__, url_prefix="/espacios")
+LIST_ITEMS_ROUTE = "espacios.list_items"
+NO_SPACES_AVAILABLE_MSG = "No hay espacios disponibles para asignar en este momento."
 
 
 def _is_guard_role() -> bool:
@@ -18,38 +20,52 @@ def _is_guard_role() -> bool:
     return rol in {"vigilante", "vigilancia", "seguridad_udec"}
 
 
-@espacios_bp.get("/")
-@login_required
-@parking_ops_required
-def list_items():
-    items = Espacio.list_items()
-    tipos_vehiculo = Vehiculo.list_vehicle_types()
-    slots = Espacio.build_slots(total_slots=50)
-    summary = Espacio.slot_summary(slots)
-
+def _build_assignment_notice() -> dict | None:
     assigned_space = (request.args.get("assigned_space", "") or "").strip()
     assigned_plate = (request.args.get("assigned_plate", "") or "").strip()
-    assignment_notice = None
     if assigned_space and assigned_plate:
-        assignment_notice = {
-            "space": assigned_space,
-            "plate": assigned_plate,
-        }
+        return {"space": assigned_space, "plate": assigned_plate}
+    return None
 
+
+def _run_background_prediction() -> None:
     try:
         # Predicción silenciosa para mantener el modelo operativo sin botones en UI.
         predict_next_40_minutes()
     except Exception:
         pass
 
-    recent_raw = Novedad.list_recent(limit=150)
-    space_by_id = {}
+
+def _build_space_lookup(items: list[dict]) -> dict[int, str]:
+    space_by_id: dict[int, str] = {}
     for item in items:
         if item.get("id") is not None:
             space_by_id[int(item["id"])] = item.get("numero")
+    return space_by_id
 
-    recent_ingresos = []
+
+def _resolve_space_number(row: dict, space_by_id: dict[int, str]):
+    space_num = row.get("espacio_numero")
+    if space_num not in (None, ""):
+        return space_num
+
+    space_id = row.get("id_espacio")
+    if space_id is None:
+        return space_num
+
+    try:
+        return space_by_id.get(int(space_id), space_id)
+    except Exception:
+        return space_id
+
+
+def _extract_recent_ingresos(items: list[dict]) -> tuple[list[dict], dict[str, str]]:
+    recent_raw = Novedad.list_recent(limit=150)
+    space_by_id = _build_space_lookup(items)
+
+    recent_ingresos: list[dict] = []
     latest_plate_by_space: dict[str, str] = {}
+
     for row in recent_raw:
         tipo = (row.get("tipo_novedad") or "").strip().lower()
         if tipo not in {"ingreso", "entrada"}:
@@ -58,15 +74,7 @@ def list_items():
         fecha = row.get("fecha_hora")
         fecha_texto = str(fecha or "")
         hora_ingreso = fecha.strftime("%H:%M:%S") if hasattr(fecha, "strftime") else ""
-
-        space_num = row.get("espacio_numero")
-        if space_num in (None, ""):
-            space_id = row.get("id_espacio")
-            if space_id is not None:
-                try:
-                    space_num = space_by_id.get(int(space_id), space_id)
-                except Exception:
-                    space_num = space_id
+        space_num = _resolve_space_number(row=row, space_by_id=space_by_id)
 
         if space_num:
             key_num = str(space_num)
@@ -82,15 +90,15 @@ def list_items():
             }
         )
 
-    recent_ingresos = recent_ingresos[:25]
+    return recent_ingresos[:25], latest_plate_by_space
 
+
+def _build_table_items(items: list[dict], latest_plate_by_space: dict[str, str]) -> list[dict]:
     table_items = []
     for item in items:
         numero = str(item.get("numero") or "")
         placa_salida = latest_plate_by_space.get(numero, "")
-        placa_display = placa_salida
-        if not placa_display:
-            placa_display = item.get("estado") or ""
+        placa_display = placa_salida or item.get("estado") or ""
         table_items.append(
             {
                 **item,
@@ -106,6 +114,65 @@ def list_items():
             return 0
 
     table_items.sort(key=_item_sort_key)
+    return table_items
+
+
+def _redirect_to_list_items():
+    return redirect(url_for(LIST_ITEMS_ROUTE))
+
+
+def _validate_docs_before_auto_assignment(placa: str) -> bool:
+    try:
+        doc_status = Vehiculo.get_document_status_by_placa(placa=placa, warning_days=30)
+        level = (doc_status.get("level") or "").strip().lower()
+        message = (doc_status.get("message") or "").strip()
+        block_auto = bool(doc_status.get("block_automatic_assignment"))
+
+        if message and level in {"warning", "error"}:
+            flash(message, "warning" if level == "warning" else "error")
+
+        return block_auto
+    except Exception as exc:
+        flash(f"No se pudo validar documentación para la placa {placa}: {exc}", "error")
+        return True
+
+
+def _flash_predicted_occupancy_alert() -> None:
+    try:
+        pred = predict_next_40_minutes()
+        if int(pred.get("maximo") or 0) >= 45:
+            flash("Alerta de ocupación: se prevé alta demanda en los próximos 40 minutos.", "error")
+    except Exception:
+        pass
+
+
+def _handle_auto_assignment_error(exc: Exception) -> None:
+    error_text = str(exc)
+    if "No hay espacios disponibles" in error_text:
+        flash(NO_SPACES_AVAILABLE_MSG, "error")
+        return
+
+    error_lower = error_text.lower()
+    if "placa" in error_lower or "vehículo" in error_lower or "vehiculo" in error_lower:
+        flash("La placa no está registrada en la base de datos. Debes registrar el vehículo primero.", "error")
+        return
+
+    flash(f"No se pudo ejecutar la asignación automática: {exc}", "error")
+
+
+@espacios_bp.get("/")
+@login_required
+@parking_ops_required
+def list_items():
+    items = Espacio.list_items()
+    tipos_vehiculo = Vehiculo.list_vehicle_types()
+    slots = Espacio.build_slots(total_slots=50)
+    summary = Espacio.slot_summary(slots)
+
+    assignment_notice = _build_assignment_notice()
+    _run_background_prediction()
+    recent_ingresos, latest_plate_by_space = _extract_recent_ingresos(items)
+    table_items = _build_table_items(items=items, latest_plate_by_space=latest_plate_by_space)
 
     return render_template(
         "espacios/index.html",
@@ -137,7 +204,7 @@ def create_item():
     except Exception as exc:
         flash(f"No se pudo crear espacio: {exc}", "error")
 
-    return redirect(url_for("espacios.list_items"))
+    return _redirect_to_list_items()
 
 
 @espacios_bp.post("/registrar")
@@ -168,7 +235,7 @@ def upsert_slot():
     except Exception as exc:
         flash(f"No se pudo registrar el espacio: {exc}", "error")
 
-    return redirect(url_for("espacios.list_items"))
+    return _redirect_to_list_items()
 
 
 @espacios_bp.post("/<int:item_id>/actualizar")
@@ -188,7 +255,7 @@ def update_item(item_id: int):
     except Exception as exc:
         flash(f"No se pudo actualizar espacio: {exc}", "error")
 
-    return redirect(url_for("espacios.list_items"))
+    return _redirect_to_list_items()
 
 
 @espacios_bp.get("/<int:item_id>/visualizar")
@@ -198,7 +265,7 @@ def visualizar_item(item_id: int):
     item = Espacio.get_by_id(item_id)
     if not item:
         flash("No se encontró el espacio solicitado.", "error")
-        return redirect(url_for("espacios.list_items"))
+        return _redirect_to_list_items()
 
     return render_template("espacios/view.html", item=item)
 
@@ -210,7 +277,7 @@ def editar_item(item_id: int):
     item = Espacio.get_by_id(item_id)
     if not item:
         flash("No se encontró el espacio para editar.", "error")
-        return redirect(url_for("espacios.list_items"))
+        return _redirect_to_list_items()
 
     tipos_vehiculo = Vehiculo.list_vehicle_types()
     return render_template("espacios/edit.html", item=item, tipos_vehiculo=tipos_vehiculo)
@@ -236,7 +303,7 @@ def guardar_edicion(item_id: int):
     except Exception as exc:
         flash(f"No se pudo actualizar el espacio: {exc}", "error")
 
-    return redirect(url_for("espacios.list_items"))
+    return _redirect_to_list_items()
 
 
 @espacios_bp.post("/<int:item_id>/borrar")
@@ -249,7 +316,7 @@ def borrar_item(item_id: int):
     except Exception as exc:
         flash(f"No se pudo eliminar el espacio: {exc}", "error")
 
-    return redirect(url_for("espacios.list_items"))
+    return _redirect_to_list_items()
 
 
 @espacios_bp.post("/asignacion-automatica")
@@ -259,51 +326,28 @@ def asignacion_automatica():
     placa = (request.form.get("placa", "") or "").strip().upper()
     if not placa:
         flash("Debes indicar una placa para asignar espacio automáticamente.", "error")
-        return redirect(url_for("espacios.list_items"))
+        return _redirect_to_list_items()
 
-    try:
-        doc_status = Vehiculo.get_document_status_by_placa(placa=placa, warning_days=30)
-        level = (doc_status.get("level") or "").strip().lower()
-        message = (doc_status.get("message") or "").strip()
-        block_auto = bool(doc_status.get("block_automatic_assignment"))
-
-        if message and level in {"warning", "error"}:
-            flash(message, "warning" if level == "warning" else "error")
-
-        if block_auto:
-            return redirect(url_for("espacios.list_items"))
-    except Exception as exc:
-        flash(f"No se pudo validar documentación para la placa {placa}: {exc}", "error")
-        return redirect(url_for("espacios.list_items"))
+    if _validate_docs_before_auto_assignment(placa):
+        return _redirect_to_list_items()
 
     try:
         result = Novedad.register_ingreso_by_placa(placa=placa, user_id=int(current_user.id))
         if not result.get("assigned_space_num"):
-            flash("No hay espacios disponibles para asignar en este momento.", "error")
-            return redirect(url_for("espacios.list_items"))
+            flash(NO_SPACES_AVAILABLE_MSG, "error")
+            return _redirect_to_list_items()
         else:
             space_num = result.get("assigned_space_num")
-            try:
-                pred = predict_next_40_minutes()
-                if int(pred.get("maximo") or 0) >= 45:
-                    flash("Alerta de ocupación: se prevé alta demanda en los próximos 40 minutos.", "error")
-            except Exception:
-                pass
+            _flash_predicted_occupancy_alert()
 
             return redirect(
                 url_for(
-                    "espacios.list_items",
+                    LIST_ITEMS_ROUTE,
                     assigned_space=space_num,
                     assigned_plate=placa,
                 )
             )
     except Exception as exc:
-        error_text = str(exc)
-        if "No hay espacios disponibles" in error_text:
-            flash("No hay espacios disponibles para asignar en este momento.", "error")
-        elif "placa" in error_text.lower() or "vehículo" in error_text.lower() or "vehiculo" in error_text.lower():
-            flash("La placa no está registrada en la base de datos. Debes registrar el vehículo primero.", "error")
-        else:
-            flash(f"No se pudo ejecutar la asignación automática: {exc}", "error")
+        _handle_auto_assignment_error(exc)
 
-    return redirect(url_for("espacios.list_items"))
+    return _redirect_to_list_items()
