@@ -5,13 +5,19 @@ AS $$
 DECLARE
     v_tipo integer;
     v_espacio_id integer;
+    c_tipo_ingreso constant text := 'ingreso';
+    c_tipo_salida constant text := 'salida';
+    c_estado_pendiente constant text := 'pendiente';
+    c_estado_registrado constant text := 'registrado';
+    c_estado_libre constant text := 'libre';
+    c_estado_ocupado constant text := 'ocupado';
 BEGIN
     -- Solo actuamos en ingresos o salidas
     IF NEW.tipo_novedad IS NULL THEN
         RETURN NEW;
     END IF;
 
-    IF lower(NEW.tipo_novedad) = 'ingreso' THEN
+    IF lower(NEW.tipo_novedad) = c_tipo_ingreso THEN
         -- Obtener tipo de vehiculo del id_vehiculo enviado
         SELECT tipo_vehiculo_id
         INTO v_tipo
@@ -22,7 +28,7 @@ BEGIN
         -- Si no encontramos tipo, dejamos pendiente
         IF v_tipo IS NULL THEN
             NEW.id_espacio := NULL;
-            NEW.estado := COALESCE(NEW.estado, 'pendiente');
+            NEW.estado := COALESCE(NEW.estado, c_estado_pendiente);
             RETURN NEW;
         END IF;
 
@@ -31,7 +37,7 @@ BEGIN
         INTO v_espacio_id
         FROM public.espacio
         WHERE tipo_vehiculo_id = v_tipo
-          AND estado = 'libre'
+          AND estado = c_estado_libre
         ORDER BY numero
         FOR UPDATE SKIP LOCKED
         LIMIT 1;
@@ -39,27 +45,27 @@ BEGIN
         IF v_espacio_id IS NOT NULL THEN
             -- marcar espacio como ocupado
             UPDATE public.espacio
-            SET estado = 'ocupado'
+            SET estado = c_estado_ocupado
             WHERE id_espacio = v_espacio_id;
 
             NEW.id_espacio := v_espacio_id;
-            NEW.estado := 'registrado'; -- ya asignado
+            NEW.estado := c_estado_registrado; -- ya asignado
         ELSE
             -- No hay espacio libre: dejamos pendiente
             NEW.id_espacio := NULL;
-            NEW.estado := 'pendiente';
+            NEW.estado := c_estado_pendiente;
         END IF;
 
         RETURN NEW;
-    ELSIF lower(NEW.tipo_novedad) = 'salida' THEN
+    ELSIF lower(NEW.tipo_novedad) = c_tipo_salida THEN
         -- Si no nos dieron id_espacio, intentar recuperarlo del último ingreso registrado
         IF NEW.id_espacio IS NULL THEN
             SELECT id_espacio
             INTO v_espacio_id
             FROM public.novedad
             WHERE id_vehiculo = NEW.id_vehiculo
-              AND lower(tipo_novedad) = 'ingreso'
-              AND estado = 'registrado'
+              AND lower(tipo_novedad) = c_tipo_ingreso
+              AND estado = c_estado_registrado
             ORDER BY fecha_hora DESC
             LIMIT 1;
         ELSE
@@ -69,14 +75,14 @@ BEGIN
         IF v_espacio_id IS NOT NULL THEN
             -- liberar espacio
             UPDATE public.espacio
-            SET estado = 'libre'
+            SET estado = c_estado_libre
             WHERE id_espacio = v_espacio_id;
             NEW.id_espacio := v_espacio_id;
-            NEW.estado := COALESCE(NEW.estado, 'registrado');
+            NEW.estado := COALESCE(NEW.estado, c_estado_registrado);
         ELSE
             -- no se encontró espacio asociado; mantener info
             NEW.id_espacio := NULL;
-            NEW.estado := COALESCE(NEW.estado, 'registrado');
+            NEW.estado := COALESCE(NEW.estado, c_estado_registrado);
         END IF;
 
         RETURN NEW;

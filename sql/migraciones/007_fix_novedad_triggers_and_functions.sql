@@ -11,12 +11,19 @@ AS $$
 DECLARE
     v_tipo INTEGER;
     v_espacio_id INTEGER;
+    c_tipo_ingreso constant text := 'ingreso';
+    c_tipo_salida constant text := 'salida';
+    c_estado_pendiente constant text := 'pendiente';
+    c_estado_registrado constant text := 'registrado';
+    c_estado_finalizado constant text := 'finalizado';
+    c_estado_libre constant text := 'libre';
+    c_estado_ocupado constant text := 'ocupado';
 BEGIN
     IF NEW.tipo_novedad IS NULL THEN
         RETURN NEW;
     END IF;
 
-    IF lower(NEW.tipo_novedad) = 'ingreso' THEN
+    IF lower(NEW.tipo_novedad) = c_tipo_ingreso THEN
         SELECT tipo_vehiculo_id
         INTO v_tipo
         FROM public.vehiculos
@@ -25,7 +32,7 @@ BEGIN
 
         IF v_tipo IS NULL THEN
             NEW.id_espacio := NULL;
-            NEW.estado := COALESCE(NEW.estado, 'pendiente');
+            NEW.estado := COALESCE(NEW.estado, c_estado_pendiente);
             RETURN NEW;
         END IF;
 
@@ -33,32 +40,32 @@ BEGIN
         INTO v_espacio_id
         FROM public.espacio
         WHERE tipo_vehiculo_id = v_tipo
-          AND estado = 'libre'
+          AND estado = c_estado_libre
         ORDER BY numero
         FOR UPDATE SKIP LOCKED
         LIMIT 1;
 
         IF v_espacio_id IS NOT NULL THEN
             UPDATE public.espacio
-            SET estado = 'ocupado'
+            SET estado = c_estado_ocupado
             WHERE id_espacio = v_espacio_id;
 
             NEW.id_espacio := v_espacio_id;
-            NEW.estado := 'registrado';
+            NEW.estado := c_estado_registrado;
         ELSE
             NEW.id_espacio := NULL;
-            NEW.estado := 'pendiente';
+            NEW.estado := c_estado_pendiente;
         END IF;
 
         RETURN NEW;
-    ELSIF lower(NEW.tipo_novedad) = 'salida' THEN
+    ELSIF lower(NEW.tipo_novedad) = c_tipo_salida THEN
         IF NEW.id_espacio IS NULL THEN
             SELECT id_espacio
             INTO v_espacio_id
             FROM public.novedad
             WHERE id_vehiculo = NEW.id_vehiculo
-              AND lower(tipo_novedad) = 'ingreso'
-              AND estado = 'registrado'
+              AND lower(tipo_novedad) = c_tipo_ingreso
+              AND estado = c_estado_registrado
               AND id_espacio IS NOT NULL
             ORDER BY fecha_hora DESC
             LIMIT 1;
@@ -68,14 +75,14 @@ BEGIN
 
         IF v_espacio_id IS NOT NULL THEN
             UPDATE public.espacio
-            SET estado = 'libre'
+            SET estado = c_estado_libre
             WHERE id_espacio = v_espacio_id;
 
             NEW.id_espacio := v_espacio_id;
-            NEW.estado := COALESCE(NEW.estado, 'finalizado');
+            NEW.estado := COALESCE(NEW.estado, c_estado_finalizado);
         ELSE
             NEW.id_espacio := NULL;
-            NEW.estado := COALESCE(NEW.estado, 'pendiente');
+            NEW.estado := COALESCE(NEW.estado, c_estado_pendiente);
         END IF;
 
         RETURN NEW;
@@ -98,6 +105,10 @@ DECLARE
     v_tipo_id INT;
     v_space_id INT;
     v_space_num VARCHAR;
+    c_estado_libre constant text := 'libre';
+    c_estado_ocupado constant text := 'ocupado';
+    c_tipo_ingreso constant text := 'ingreso';
+    c_estado_registrado constant text := 'registrado';
 BEGIN
     SELECT id, tipo_vehiculo_id
     INTO v_vehicle_id, v_tipo_id
@@ -112,7 +123,7 @@ BEGIN
     SELECT id_espacio, numero
     INTO v_space_id, v_space_num
     FROM public.espacio
-    WHERE estado = 'libre'
+        WHERE estado = c_estado_libre
       AND (tipo_vehiculo_id = v_tipo_id OR tipo_vehiculo_id IS NULL)
     ORDER BY id_espacio
     LIMIT 1;
@@ -124,7 +135,7 @@ BEGIN
     END IF;
 
     UPDATE public.espacio
-    SET estado = 'ocupado'
+    SET estado = c_estado_ocupado
     WHERE id_espacio = v_space_id;
 
     INSERT INTO public.novedad (
@@ -137,13 +148,13 @@ BEGIN
         estado
     )
     VALUES (
-        'ingreso',
+        c_tipo_ingreso,
         v_vehicle_id,
         NOW(),
         p_user_id,
         v_space_id,
         'Ingreso automático',
-        'registrado'
+        c_estado_registrado
     );
 
     RETURN QUERY SELECT v_space_id, v_space_num;
