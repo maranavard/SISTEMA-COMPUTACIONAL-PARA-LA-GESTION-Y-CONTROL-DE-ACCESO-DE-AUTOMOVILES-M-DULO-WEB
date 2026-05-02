@@ -11,6 +11,18 @@ from app.db import get_connection
 
 
 class Espacio:
+    ESTADO_LOGICAL_MAP = {
+        "disponible": ["disponible", "libre", "dispo"],
+        "ocupado": ["ocupado", "ocupada", "ocupa"],
+        "inhabilitado": ["inhabilitado", "inactivo", "bloqueado", "no_disponible", "fuera_servicio"],
+    }
+
+    ESTADO_FALLBACK_MAP = {
+        "inhabilitado": ("inactivo", "bloqueado", "ocupado", "ocupa"),
+        "ocupado": ("ocupa", "ocupada", "disponible", "libre"),
+        "disponible": ("libre", "dispo", "ocupado"),
+    }
+
     @staticmethod
     def _get_table_name() -> str:
         query = """
@@ -84,33 +96,24 @@ class Espacio:
         if requested in allowed:
             return requested, False
 
-        logical_map = {
-            "disponible": ["disponible", "libre", "dispo"],
-            "ocupado": ["ocupado", "ocupada", "ocupa"],
-            "inhabilitado": ["inhabilitado", "inactivo", "bloqueado", "no_disponible", "fuera_servicio"],
-        }
-
-        candidates = logical_map.get(requested, [requested])
+        candidates = cls.ESTADO_LOGICAL_MAP.get(requested, [requested])
         for candidate in candidates:
             if candidate in allowed:
                 return candidate, candidate != requested
 
-        # Fallback robusto: escoger valor más cercano por categoría
-        if requested == "inhabilitado":
-            for candidate in ("inactivo", "bloqueado", "ocupado", "ocupa"):
-                if candidate in allowed:
-                    return candidate, True
-        if requested == "ocupado":
-            for candidate in ("ocupa", "ocupada", "disponible", "libre"):
-                if candidate in allowed:
-                    return candidate, True
-        if requested == "disponible":
-            for candidate in ("libre", "dispo", "ocupado"):
-                if candidate in allowed:
-                    return candidate, True
+        fallback = cls._pick_estado_fallback(requested=requested, allowed=allowed)
+        if fallback:
+            return fallback, True
 
         first = sorted(allowed)[0]
         return first, True
+
+    @classmethod
+    def _pick_estado_fallback(cls, requested: str, allowed: set[str]) -> str | None:
+        for candidate in cls.ESTADO_FALLBACK_MAP.get(requested, ()):  # pragma: no branch
+            if candidate in allowed:
+                return candidate
+        return None
 
     @classmethod
     def list_items(cls) -> list[dict]:

@@ -9,11 +9,16 @@ from app.utils.authz import community_required, normalize_role
 
 
 visitantes_bp = Blueprint("visitantes", __name__, url_prefix="/visitantes")
+LIST_ITEMS_ROUTE = "visitantes.list_items"
 
 
 def _is_guard_role() -> bool:
     rol = normalize_role(getattr(current_user, "rol", ""))
     return rol in {"vigilante", "vigilancia", "seguridad_udec"}
+
+
+def _redirect_list_items():
+    return redirect(url_for(LIST_ITEMS_ROUTE))
 
 
 @visitantes_bp.get("/")
@@ -30,12 +35,12 @@ def list_items():
 def create_item():
     if _is_guard_role():
         flash("El perfil vigilante no puede registrar visitantes anticipados desde este módulo.", "error")
-        return redirect(url_for("visitantes.list_items"))
+        return _redirect_list_items()
 
     area_destino = request.form.get("area_destino", "").strip()
     if not AreaDestino.exists_active(area_destino):
         flash("Debes seleccionar un area destino valida.", "error")
-        return redirect(url_for("visitantes.list_items"))
+        return _redirect_list_items()
 
     payload = {
         "nombres": request.form.get("nombres", "").strip(),
@@ -57,7 +62,7 @@ def create_item():
     except Exception as exc:
         flash(f"No se pudo crear visitante: {exc}", "error")
 
-    return redirect(url_for("visitantes.list_items"))
+    return _redirect_list_items()
 
 
 @visitantes_bp.post("/<int:item_id>/actualizar")
@@ -67,7 +72,7 @@ def update_item(item_id: int):
     area_destino = request.form.get("area_destino", "").strip()
     if area_destino and not AreaDestino.exists_active(area_destino):
         flash("El area destino seleccionada no es valida.", "error")
-        return redirect(url_for("visitantes.list_items"))
+        return _redirect_list_items()
 
     payload = {
         "nombres": request.form.get("nombres", "").strip(),
@@ -88,4 +93,4 @@ def update_item(item_id: int):
     except Exception as exc:
         flash(f"No se pudo actualizar visitante: {exc}", "error")
 
-    return redirect(url_for("visitantes.list_items"))
+    return _redirect_list_items()

@@ -15,6 +15,11 @@ from app.utils.local_sync import LocalSyncService
 
 
 class Vehiculo:
+    TIPO_NOMBRE_SUBQUERY = (
+        "(SELECT tv.nombre FROM public.tipo_vehiculo tv WHERE tv.id = v.tipo_vehiculo_id LIMIT 1) AS tipo_vehiculo_nombre"
+    )
+    NULL_TIPO_NOMBRE_EXPR = "NULL::text AS tipo_vehiculo_nombre"
+
     @staticmethod
     def _doc_status(ok: bool, level: str, message: str, block_automatic_assignment: bool) -> dict:
         return {
@@ -68,8 +73,28 @@ class Vehiculo:
         return True, ""
 
     @staticmethod
-    def list_vehicle_types() -> list[dict]:
-        table_query = """
+    def _normalize_type_text(value: str) -> str:
+        text = (value or "").strip().lower()
+        text = unicodedata.normalize("NFKD", text)
+        text = "".join(ch for ch in text if not unicodedata.combining(ch))
+        return text
+
+    @staticmethod
+    def _match_type_key(normalized_name: str) -> str | None:
+        if any(token in normalized_name for token in ("bus", "autobus", "buseta", "microbus")):
+            return "bus"
+        if any(token in normalized_name for token in ("motocicleta", "moto")):
+            return "motocicleta"
+        if "camion" in normalized_name:
+            return "camion"
+        if any(token in normalized_name for token in ("automovil", "auto", "carro", "sedan", "particular")):
+            return "automovil"
+        return None
+
+    @staticmethod
+    def _resolve_tipo_vehiculo_table(cur) -> str | None:
+        cur.execute(
+            """
             SELECT table_name
             FROM information_schema.tables
             WHERE table_schema = 'public'
@@ -80,38 +105,37 @@ class Vehiculo:
                 ELSE 2
             END
             LIMIT 1
-        """
+            """
+        )
+        row = cur.fetchone()
+        return row[0] if row else None
 
+    @staticmethod
+    def _resolve_type_columns(cur, table_name: str) -> tuple[str | None, str | None]:
+        cur.execute(
+            """
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = %s
+            """,
+            (table_name,),
+        )
+        cols = {r[0] for r in cur.fetchall()}
+        id_col = "id" if "id" in cols else ("id_tipo_vehiculo" if "id_tipo_vehiculo" in cols else None)
+        nombre_col = next((candidate for candidate in ("nombre", "tipo", "descripcion", "codigo") if candidate in cols), None)
+        return id_col, nombre_col
+
+    @classmethod
+    def _load_raw_vehicle_types(cls) -> list[tuple]:
         with get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(table_query)
-                row = cur.fetchone()
-                if not row:
+                table_name = cls._resolve_tipo_vehiculo_table(cur)
+                if not table_name:
                     return []
 
-                table_name = row[0]
-                cur.execute(
-                    """
-                    SELECT column_name
-                    FROM information_schema.columns
-                    WHERE table_schema = 'public'
-                      AND table_name = %s
-                    """,
-                    (table_name,),
-                )
-                cols = {r[0] for r in cur.fetchall()}
-
-                id_col = "id" if "id" in cols else ("id_tipo_vehiculo" if "id_tipo_vehiculo" in cols else None)
-                if not id_col:
-                    return []
-
-                nombre_col = None
-                for candidate in ("nombre", "tipo", "descripcion", "codigo"):
-                    if candidate in cols:
-                        nombre_col = candidate
-                        break
-
-                if not nombre_col:
+                id_col, nombre_col = cls._resolve_type_columns(cur, table_name)
+                if not id_col or not nombre_col:
                     return []
 
                 query = f"""
@@ -120,13 +144,19 @@ class Vehiculo:
                     ORDER BY {nombre_col}
                 """
                 cur.execute(query)
-                rows = cur.fetchall()
+                return cur.fetchall()
 
-        def _normalize_text(value: str) -> str:
-            text = (value or "").strip().lower()
-            text = unicodedata.normalize("NFKD", text)
-            text = "".join(ch for ch in text if not unicodedata.combining(ch))
-            return text
+    @classmethod
+    def _tipo_nombre_expr(cls, cols: set[str]) -> str:
+        if "tipo_vehiculo_id" in cols:
+            return cls.TIPO_NOMBRE_SUBQUERY
+        return cls.NULL_TIPO_NOMBRE_EXPR
+
+    @staticmethod
+    def list_vehicle_types() -> list[dict]:
+        rows = Vehiculo._load_raw_vehicle_types()
+        if not rows:
+            return []
 
         canonical_labels = {
             "automovil": "automóvil",
@@ -138,17 +168,8 @@ class Vehiculo:
         found: dict[str, dict] = {}
         for row in rows:
             item_id, raw_name = row[0], str(row[1] or "")
-            name = _normalize_text(raw_name)
-
-            matched_key = None
-            if any(token in name for token in ("bus", "autobus", "buseta", "microbus")):
-                matched_key = "bus"
-            elif any(token in name for token in ("motocicleta", "moto")):
-                matched_key = "motocicleta"
-            elif any(token in name for token in ("camion",)):
-                matched_key = "camion"
-            elif any(token in name for token in ("automovil", "auto", "carro", "sedan", "particular")):
-                matched_key = "automovil"
+            name = Vehiculo._normalize_type_text(raw_name)
+            matched_key = Vehiculo._match_type_key(name)
 
             if matched_key and matched_key not in found:
                 found[matched_key] = {"id": item_id, "nombre": canonical_labels[matched_key]}
@@ -342,11 +363,7 @@ class Vehiculo:
         table_name = cls._get_table_name()
         cols = cls._get_columns(table_name)
 
-        tipo_nombre_expr = (
-            "(SELECT tv.nombre FROM public.tipo_vehiculo tv WHERE tv.id = v.tipo_vehiculo_id LIMIT 1) AS tipo_vehiculo_nombre"
-            if "tipo_vehiculo_id" in cols
-            else "NULL::text AS tipo_vehiculo_nombre"
-        )
+        tipo_nombre_expr = cls._tipo_nombre_expr(cols)
 
         select_map = {
             "id": "v.id",
@@ -408,11 +425,7 @@ class Vehiculo:
         if "placa" not in cols:
             return None
 
-        tipo_nombre_expr = (
-            "(SELECT tv.nombre FROM public.tipo_vehiculo tv WHERE tv.id = v.tipo_vehiculo_id LIMIT 1) AS tipo_vehiculo_nombre"
-            if "tipo_vehiculo_id" in cols
-            else "NULL::text AS tipo_vehiculo_nombre"
-        )
+        tipo_nombre_expr = cls._tipo_nombre_expr(cols)
 
         query = f"""
             SELECT
@@ -453,11 +466,7 @@ class Vehiculo:
         table_name = cls._get_table_name()
         cols = cls._get_columns(table_name)
 
-        tipo_nombre_expr = (
-            "(SELECT tv.nombre FROM public.tipo_vehiculo tv WHERE tv.id = v.tipo_vehiculo_id LIMIT 1) AS tipo_vehiculo_nombre"
-            if "tipo_vehiculo_id" in cols
-            else "NULL::text AS tipo_vehiculo_nombre"
-        )
+        tipo_nombre_expr = cls._tipo_nombre_expr(cols)
 
         query = f"""
             SELECT

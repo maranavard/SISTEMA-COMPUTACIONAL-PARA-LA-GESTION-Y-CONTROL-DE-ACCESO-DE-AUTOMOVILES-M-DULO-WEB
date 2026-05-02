@@ -18,6 +18,11 @@ jobs:
           args: >
             -Dsonar.projectKey=maranavard_SISTEMA-COMPUTACIONAL-PARA-LA-GESTION-Y-CONTROL-DE-ACCESO-DE-AUTOMOVILES-M-DULO-WEB
             -Dsonar.organization=maranavard
+            -Dsonar.python.version=3.12
+            -Dsonar.sourceEncoding=UTF-8
+            -Dsonar.sources=python
+            -Dsonar.tests=tests
+            -Dsonar.exclusions=sql/sistema_control_backup.sql
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           
