@@ -12,7 +12,7 @@ RESET_PASSWORD_ROUTE = "auth.reset_password"
 import smtplib
 from email.message import EmailMessage
 
-from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
+from itsdangerous import BadSignature, URLSafeTimedSerializer
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask import current_app
 from flask_login import current_user, login_user, logout_user
@@ -58,7 +58,7 @@ def _verify_reset_token(token: str) -> str | None:
             salt=current_app.config["PASSWORD_RESET_SALT"],
             max_age=current_app.config["PASSWORD_RESET_MAX_AGE_SECONDS"],
         )
-    except (SignatureExpired, BadSignature):
+    except BadSignature:
         return None
 
 
