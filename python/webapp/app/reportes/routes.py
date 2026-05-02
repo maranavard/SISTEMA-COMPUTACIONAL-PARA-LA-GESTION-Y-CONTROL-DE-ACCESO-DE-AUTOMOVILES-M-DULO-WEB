@@ -18,6 +18,10 @@ from app.utils.authz import normalize_role
 
 
 reportes_bp = Blueprint("reportes", __name__, url_prefix="/reportes")
+ALLOWED_REPORT_ROLES = {"admin_sistema", "admin", "administrador", "seguridad_udec", "vigilante", "vigilancia"}
+GUARD_ALLOWED_MODULE = "accesos_salidas"
+GESTION_ROUTE = "reportes.gestion"
+EXPORT_PERMISSION_MSG = "No tienes permisos para exportar reportes."
 
 
 def _current_role() -> str:
@@ -42,8 +46,7 @@ def control_access_required(view_func):
 
         rol = _current_role()
 
-        allowed = {"admin_sistema", "admin", "administrador", "seguridad_udec", "vigilante", "vigilancia"}
-        if rol not in allowed:
+        if rol not in ALLOWED_REPORT_ROLES:
             abort(403)
 
         return view_func(*args, **kwargs)
@@ -62,6 +65,61 @@ def _parse_filters_from_request() -> dict:
         "usuario": (request.args.get("usuario", "") or "").strip(),
         "vigilante": (request.args.get("vigilante", "") or "").strip(),
     }
+
+
+def _safe_int(value):
+    try:
+        return int(value) if value not in (None, "") else None
+    except Exception:
+        return None
+
+
+def _format_date_only(value) -> str:
+    if hasattr(value, "strftime"):
+        return value.strftime("%Y-%m-%d")
+    return str(value or "")[:10]
+
+
+def _extract_user_context(row: dict, users: dict[int, dict]) -> dict:
+    user_id_int = _safe_int(row.get("id_usuario"))
+    user_data = users.get(user_id_int or -1, {})
+    usuario_display = user_data.get("display") or ""
+    usuario_nombre = user_data.get("nombre") or ""
+    usuario_apellido = user_data.get("apellido") or ""
+    usuario_role = user_data.get("role") or ""
+    is_vigilante = usuario_role in {"vigilante", "vigilancia", "seguridad_udec"}
+    return {
+        "usuario_display": usuario_display,
+        "usuario_nombre": usuario_nombre,
+        "usuario_apellido": usuario_apellido,
+        "vigilante_display": usuario_display if is_vigilante else "",
+        "vigilante_nombre": usuario_nombre if is_vigilante else "",
+        "vigilante_apellido": usuario_apellido if is_vigilante else "",
+    }
+
+
+def _passes_access_filters(
+    placa_text: str,
+    fecha_text: str,
+    user_id,
+    usuario_display: str,
+    vigilante_display: str,
+    placa_filter: str,
+    fecha_filter: str,
+    usuario_filter: str,
+    vigilante_filter: str,
+) -> bool:
+    if placa_filter and placa_filter not in _normalize_text(placa_text):
+        return False
+    if fecha_filter and fecha_filter != _normalize_text(fecha_text):
+        return False
+    if usuario_filter:
+        hay_usuario = usuario_filter in _normalize_text(usuario_display) or usuario_filter in _normalize_text(user_id)
+        if not hay_usuario:
+            return False
+    if vigilante_filter and vigilante_filter not in _normalize_text(vigilante_display):
+        return False
+    return True
 
 
 def _user_lookup() -> dict[int, dict]:
@@ -107,45 +165,27 @@ def _load_accesos_salidas(filters: dict | None = None) -> list[dict]:
     for row in rows:
         tipo = (row.get("tipo_novedad") or "").strip().lower()
         user_id = row.get("id_usuario")
-
-        try:
-            user_id_int = int(user_id) if user_id not in (None, "") else None
-        except Exception:
-            user_id_int = None
-
-        user_data = users.get(user_id_int or -1, {})
-        usuario_display = user_data.get("display") or ""
-        usuario_nombre = user_data.get("nombre") or ""
-        usuario_apellido = user_data.get("apellido") or ""
-        usuario_role = user_data.get("role") or ""
-        is_vigilante = usuario_role in {"vigilante", "vigilancia", "seguridad_udec"}
-        vigilante_display = usuario_display if is_vigilante else ""
-        vigilante_nombre = usuario_nombre if is_vigilante else ""
-        vigilante_apellido = usuario_apellido if is_vigilante else ""
+        user_context = _extract_user_context(row=row, users=users)
 
         fecha_hora = row.get("fecha_hora")
-        fecha_text = ""
-        if hasattr(fecha_hora, "strftime"):
-            fecha_text = fecha_hora.strftime("%Y-%m-%d")
-        else:
-            fecha_text = str(fecha_hora or "")[:10]
+        fecha_text = _format_date_only(fecha_hora)
 
         if only_today and fecha_text != today_text:
             continue
 
         placa_text = str(row.get("placa") or "")
-
-        if placa_filter and placa_filter not in _normalize_text(placa_text):
+        if not _passes_access_filters(
+            placa_text=placa_text,
+            fecha_text=fecha_text,
+            user_id=user_id,
+            usuario_display=user_context["usuario_display"],
+            vigilante_display=user_context["vigilante_display"],
+            placa_filter=placa_filter,
+            fecha_filter=fecha_filter,
+            usuario_filter=usuario_filter,
+            vigilante_filter=vigilante_filter,
+        ):
             continue
-        if fecha_filter and fecha_filter != _normalize_text(fecha_text):
-            continue
-        if usuario_filter:
-            hay_usuario = usuario_filter in _normalize_text(usuario_display) or usuario_filter in _normalize_text(user_id)
-            if not hay_usuario:
-                continue
-        if vigilante_filter:
-            if vigilante_filter not in _normalize_text(vigilante_display):
-                continue
 
         report_rows.append(
             {
@@ -155,10 +195,10 @@ def _load_accesos_salidas(filters: dict | None = None) -> list[dict]:
                 "fecha_hora": fecha_hora or "",
                 "estado": row.get("estado") or "",
                 "observaciones": row.get("observaciones") or "",
-                "usuario_nombre": usuario_nombre,
-                "usuario_apellido": usuario_apellido,
-                "vigilante_nombre": vigilante_nombre,
-                "vigilante_apellido": vigilante_apellido,
+                "usuario_nombre": user_context["usuario_nombre"],
+                "usuario_apellido": user_context["usuario_apellido"],
+                "vigilante_nombre": user_context["vigilante_nombre"],
+                "vigilante_apellido": user_context["vigilante_apellido"],
             }
         )
 
@@ -228,7 +268,7 @@ def _get_module_key(module_key: str) -> str:
 
 def _load_rows(module_key: str) -> tuple[dict, list[dict], list[str], dict]:
     key = _get_module_key(module_key)
-    if _is_guard_role() and key != "accesos_salidas":
+    if _is_guard_role() and key != GUARD_ALLOWED_MODULE:
         raise PermissionError("El perfil vigilante solo puede consultar reportes operativos del dia.")
 
     definition = REPORT_DEFINITIONS[key]
@@ -259,7 +299,7 @@ def gestion():
     is_guard_role = _is_guard_role()
     modules = []
     for key, value in REPORT_DEFINITIONS.items():
-        if is_guard_role and key != "accesos_salidas":
+        if is_guard_role and key != GUARD_ALLOWED_MODULE:
             continue
         modules.append({"key": key, **value})
 
@@ -274,7 +314,7 @@ def visualizar(module_key: str):
         definition, rows, columns, filters = _load_rows(module_key)
     except Exception as exc:
         flash(f"No se pudo cargar el reporte: {exc}", "error")
-        return redirect(url_for("reportes.gestion"))
+        return redirect(url_for(GESTION_ROUTE))
 
     return render_template(
         "reportes/preview.html",
@@ -294,14 +334,14 @@ def visualizar(module_key: str):
 @control_access_required
 def imprimir(module_key: str):
     if _is_guard_role():
-        flash("No tienes permisos para exportar reportes.", "error")
-        return redirect(url_for("reportes.gestion"))
+        flash(EXPORT_PERMISSION_MSG, "error")
+        return redirect(url_for(GESTION_ROUTE))
 
     try:
         definition, rows, columns, filters = _load_rows(module_key)
     except Exception as exc:
         flash(f"No se pudo preparar la impresión: {exc}", "error")
-        return redirect(url_for("reportes.gestion"))
+        return redirect(url_for(GESTION_ROUTE))
 
     return render_template(
         "reportes/preview.html",
@@ -319,14 +359,14 @@ def imprimir(module_key: str):
 @control_access_required
 def descargar_excel(module_key: str):
     if _is_guard_role():
-        flash("No tienes permisos para exportar reportes.", "error")
-        return redirect(url_for("reportes.gestion"))
+        flash(EXPORT_PERMISSION_MSG, "error")
+        return redirect(url_for(GESTION_ROUTE))
 
     try:
         definition, rows, columns, _ = _load_rows(module_key)
     except Exception as exc:
         flash(f"No se pudo generar el archivo Excel: {exc}", "error")
-        return redirect(url_for("reportes.gestion"))
+        return redirect(url_for(GESTION_ROUTE))
 
     workbook = Workbook()
     sheet = workbook.active
