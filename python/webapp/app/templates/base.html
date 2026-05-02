@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="csrf-token" content="{{ csrf_token() }}" />
   <title>{{ title or 'Sistema Control Vehicular' }}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}" />
 </head>
@@ -35,6 +36,26 @@
 
   <script>
     (function () {
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+      if (csrfToken) {
+        const forms = document.querySelectorAll('form');
+        forms.forEach((formElement) => {
+          const method = (formElement.getAttribute('method') || 'get').toLowerCase();
+          if (method !== 'post') {
+            return;
+          }
+
+          let hiddenToken = formElement.querySelector('input[name="_csrf_token"]');
+          if (!hiddenToken) {
+            hiddenToken = document.createElement('input');
+            hiddenToken.type = 'hidden';
+            hiddenToken.name = '_csrf_token';
+            formElement.appendChild(hiddenToken);
+          }
+          hiddenToken.value = csrfToken;
+        });
+      }
+
       const alerts = document.querySelectorAll('.alerts .alert');
       if (!alerts.length) {
         return;

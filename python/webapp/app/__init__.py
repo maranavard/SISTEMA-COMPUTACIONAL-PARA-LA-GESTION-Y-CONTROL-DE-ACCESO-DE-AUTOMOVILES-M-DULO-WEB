@@ -6,7 +6,10 @@ Responsabilidades:
 3) Registrar blueprints (módulos de rutas).
 """
 
-from flask import Flask
+import hmac
+import secrets
+
+from flask import Flask, request, session
 from flask_login import LoginManager
 
 from .config import Config
@@ -17,12 +20,28 @@ login_manager = LoginManager()
 login_manager.login_view = "auth.login"
 login_manager.login_message = "Inicia sesion para continuar."
 DOCENTE_LABEL = "Docente UDEC"
+CSRF_TOKEN_KEY = "_csrf_token"
+CSRF_EXEMPT_ENDPOINT_PREFIXES = ("control_hardware.api_",)
 
 
 @login_manager.user_loader
 def load_user(user_id: str):
     # Flask-Login usa este callback para reconstruir el usuario de la sesión.
     return User.get_by_id(int(user_id))
+
+
+def _is_csrf_exempt_endpoint(endpoint: str | None) -> bool:
+    if not endpoint:
+        return False
+    return endpoint.startswith(CSRF_EXEMPT_ENDPOINT_PREFIXES)
+
+
+def _get_or_create_csrf_token() -> str:
+    token = session.get(CSRF_TOKEN_KEY)
+    if not token:
+        token = secrets.token_urlsafe(32)
+        session[CSRF_TOKEN_KEY] = token
+    return str(token)
 
 
 def create_app() -> Flask:
@@ -34,6 +53,30 @@ def create_app() -> Flask:
 
     # Inicializa manejo de sesiones/autenticación.
     login_manager.init_app(app)
+
+    @app.context_processor
+    def inject_csrf_token():
+        return {"csrf_token": _get_or_create_csrf_token}
+
+    @app.before_request
+    def enforce_csrf_protection():
+        if request.method in {"GET", "HEAD", "OPTIONS", "TRACE"}:
+            return None
+
+        if _is_csrf_exempt_endpoint(request.endpoint):
+            return None
+
+        session_token = str(session.get(CSRF_TOKEN_KEY) or "")
+        request_token = (
+            request.form.get(CSRF_TOKEN_KEY)
+            or request.headers.get("X-CSRF-Token")
+            or ""
+        ).strip()
+
+        if not session_token or not request_token or not hmac.compare_digest(session_token, request_token):
+            return "CSRF token inválido o ausente.", 400
+
+        return None
 
     @app.template_filter("role_label")
     def role_label(value):
