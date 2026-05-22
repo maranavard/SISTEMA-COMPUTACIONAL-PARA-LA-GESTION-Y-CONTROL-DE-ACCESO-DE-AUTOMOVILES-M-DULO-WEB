@@ -11,7 +11,76 @@
     </div>
   </div>
 
-  {% if can_manage_sensitive %}
+  {% if is_funcionario %}
+  {# Funcionario self-service: manage only their own conductor record #}
+  <div class="conductores-register-card">
+    {% if own_conductor %}
+    <h2>Mi perfil de conductor</h2>
+    <form method="post" action="{{ url_for('conductores.update_item', item_id=own_conductor.id) }}" class="conductores-register-form">
+      <input name="nombre" type="text" placeholder="Nombre" value="{{ own_conductor.nombre or '' }}" required />
+      <input name="apellido" type="text" placeholder="Apellido" value="{{ own_conductor.apellido or '' }}" required />
+      <input name="cedula" type="text" placeholder="No. Identificación" inputmode="numeric" pattern="[0-9]{6,12}" title="Solo números, entre 6 y 12 dígitos" value="{{ own_conductor.cedula or '' }}" required />
+      <label class="form-field-label" for="conductor-estado">Estado</label>
+      <select id="conductor-estado" name="estado" required>
+        <option value="activo" {% if (own_conductor.estado or 'activo') == 'activo' %}selected{% endif %}>Estado: activo</option>
+        <option value="inactivo" {% if own_conductor.estado == 'inactivo' %}selected{% endif %}>Estado: inactivo</option>
+      </select>
+      <input name="email" type="email" placeholder="Correo Electrónico" pattern="[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}" title="Ingresa un correo válido (ej: usuario@dominio.com)" value="{{ own_conductor.email or '' }}" required />
+      <input name="telefono" type="text" placeholder="Telefono" value="{{ own_conductor.telefono or '' }}" />
+      <input name="dependencia" type="text" placeholder="Dependencia" value="{{ own_conductor.dependencia or '' }}" />
+      <input name="tipo" type="text" placeholder="Tipo" value="{{ own_conductor.tipo or '' }}" />
+
+      <div class="conductores-date-row">
+        <div class="date-field-group">
+          <label class="form-field-label" for="conductor-fecha-vence">Fecha vence pase</label>
+          <input id="conductor-fecha-vence" name="fecha_vencimiento_pase" type="date" value="{{ own_conductor.fecha_vencimiento_pase_input or '' }}" required />
+        </div>
+        <div class="date-field-group">
+          <label class="form-field-label" for="conductor-fecha-registro">Fecha de Registro</label>
+          <input id="conductor-fecha-registro" name="fecha_registro" type="datetime-local" value="{{ own_conductor.fecha_registro_input or '' }}" required />
+        </div>
+      </div>
+
+      <input name="numero_pase" type="text" placeholder="No. Pase" value="{{ own_conductor.numero_pase or '' }}" required />
+      <input name="categoria_pase" type="text" placeholder="Categoría Pase" value="{{ own_conductor.categoria_pase or '' }}" required />
+      <button type="submit" class="conductores-register-btn">Actualizar mis datos</button>
+    </form>
+    {% else %}
+    <h2>Registro de mi perfil de conductor</h2>
+    <p class="auth-form-hint">No tienes un perfil de conductor registrado. Completa el formulario para crear el tuyo.</p>
+    <form method="post" action="{{ url_for('conductores.create_item') }}" class="conductores-register-form">
+      <input name="nombre" type="text" placeholder="Nombre" required />
+      <input name="apellido" type="text" placeholder="Apellido" required />
+      <input name="cedula" type="text" placeholder="No. Identificación" inputmode="numeric" pattern="[0-9]{6,12}" title="Solo números, entre 6 y 12 dígitos" required />
+      <label class="form-field-label" for="conductor-estado">Estado</label>
+      <select id="conductor-estado" name="estado" required>
+        <option value="activo" selected>Estado: activo</option>
+        <option value="inactivo">Estado: inactivo</option>
+      </select>
+      <input name="email" type="email" placeholder="Correo Electrónico" pattern="[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}" title="Ingresa un correo válido (ej: usuario@dominio.com)" required />
+      <input name="telefono" type="text" placeholder="Telefono" />
+      <input name="dependencia" type="text" placeholder="Dependencia" />
+      <input name="tipo" type="text" placeholder="Tipo" />
+
+      <div class="conductores-date-row">
+        <div class="date-field-group">
+          <label class="form-field-label" for="conductor-fecha-vence">Fecha vence pase</label>
+          <input id="conductor-fecha-vence" name="fecha_vencimiento_pase" type="date" required />
+        </div>
+        <div class="date-field-group">
+          <label class="form-field-label" for="conductor-fecha-registro">Fecha de Registro</label>
+          <input id="conductor-fecha-registro" name="fecha_registro" type="datetime-local" required />
+        </div>
+      </div>
+
+      <input name="numero_pase" type="text" placeholder="No. Pase" required />
+      <input name="categoria_pase" type="text" placeholder="Categoría Pase" required />
+      <button type="submit" class="conductores-register-btn">Registrar</button>
+    </form>
+    {% endif %}
+  </div>
+
+  {% elif can_manage_sensitive %}
   <div class="conductores-register-card">
     <h2>Formulario de Registro de conductor</h2>
     <form method="post" action="{{ url_for('conductores.create_item') }}" class="conductores-register-form">

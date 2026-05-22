@@ -11,7 +11,104 @@
     </div>
   </div>
 
-  {% if can_manage_sensitive %}
+  {% if is_funcionario %}
+  {# Funcionario self-service: register and manage their own vehicles #}
+  <div class="vehiculos-register-card">
+    <h2>Registrar mi vehículo</h2>
+    <form method="post" action="{{ url_for('vehiculos.create_item') }}" class="vehiculos-register-form">
+      <input name="placa" type="text" placeholder="Placa" required />
+      <input name="marca" type="text" placeholder="Marca" required />
+      <input name="color" type="text" placeholder="Color" required />
+      <input name="modelo" type="text" placeholder="Modelo" required />
+      <label class="form-field-label" for="vehiculo-fecha-registro">Fecha de Registro</label>
+      <input id="vehiculo-fecha-registro" name="fecha_registro" type="datetime-local" required />
+
+      <label class="form-field-label" for="vehiculo-fecha-soat">Vencimiento SOAT</label>
+      <input id="vehiculo-fecha-soat" name="fecha_vencimiento_soat" type="date" required />
+
+      <label class="form-field-label" for="vehiculo-fecha-tecnomecanica">Vencimiento Técnico-mecánica</label>
+      <input id="vehiculo-fecha-tecnomecanica" name="fecha_vencimiento_tecnomecanica" type="date" required />
+
+      <label class="form-field-label" for="vehiculo-fecha-tarjeta">Vencimiento Tarjeta de propiedad</label>
+      <input id="vehiculo-fecha-tarjeta" name="fecha_vencimiento_tarjeta_propiedad" type="date" required />
+
+      <label class="form-field-label" for="vehiculo-tipo">Tipo de vehículo</label>
+      <select id="vehiculo-tipo" name="tipo_vehiculo_id">
+        <option value="">Seleccione tipo de vehículo</option>
+        {% for tipo in tipos_vehiculo %}
+        <option value="{{ tipo.id }}">{{ tipo.nombre }}</option>
+        {% endfor %}
+      </select>
+      <input name="estado" type="text" placeholder="Estado" value="activo" />
+      <button type="submit" class="vehiculos-register-btn">Registrar vehículo</button>
+    </form>
+  </div>
+
+  {% if items %}
+  <div class="vehiculos-register-card">
+    <h3>Mis vehículos</h3>
+
+    {% if warning_items or error_items %}
+    <div class="doc-alert-panel">
+      {% if error_items %}
+      <p class="doc-alert-error">{{ error_items|length }} vehículo(s) con documentación vencida o incompleta.</p>
+      {% endif %}
+      {% if warning_items %}
+      <p class="doc-alert-warning">{{ warning_items|length }} vehículo(s) con documentación próxima a vencer (30 días).</p>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="table-wrap">
+      <table class="users-table">
+        <thead>
+          <tr>
+            <th>Vehículo</th>
+            <th>SOAT</th>
+            <th>Técnico-mecánica</th>
+            <th>Tarjeta propiedad</th>
+            <th>Estado documental</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in items %}
+          <tr>
+            <td>
+              <strong>{{ item.placa or '' }}</strong><br/>
+              <small>{{ item.tipo_vehiculo_nombre or '' }} - {{ item.marca or '' }} {{ item.modelo or '' }}</small>
+            </td>
+            <td>{{ item.fecha_vencimiento_soat_input or '' }}</td>
+            <td>{{ item.fecha_vencimiento_tecnomecanica_input or '' }}</td>
+            <td>{{ item.fecha_vencimiento_tarjeta_propiedad_input or '' }}</td>
+            <td>
+              <span class="doc-status-badge doc-status-{{ item.doc_status_level }}">{{ (item.doc_status_level or '')|title }}</span>
+              <div><small>{{ item.doc_status_message }}</small></div>
+            </td>
+            <td>
+              <form method="post" action="{{ url_for('vehiculos.update_item', item_id=item.id) }}" class="inline-form">
+                <input type="hidden" name="placa" value="{{ item.placa or '' }}" />
+                <input type="hidden" name="tipo_vehiculo_id" value="{{ item.tipo_vehiculo_id or '' }}" />
+                <input type="hidden" name="marca" value="{{ item.marca or '' }}" />
+                <input type="hidden" name="modelo" value="{{ item.modelo or '' }}" />
+                <input type="hidden" name="color" value="{{ item.color or '' }}" />
+                <input type="hidden" name="estado" value="{{ item.estado or '' }}" />
+
+                <input type="date" name="fecha_vencimiento_soat" value="{{ item.fecha_vencimiento_soat_input or '' }}" required />
+                <input type="date" name="fecha_vencimiento_tecnomecanica" value="{{ item.fecha_vencimiento_tecnomecanica_input or '' }}" required />
+                <input type="date" name="fecha_vencimiento_tarjeta_propiedad" value="{{ item.fecha_vencimiento_tarjeta_propiedad_input or '' }}" required />
+                <button type="submit">Actualizar</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  {% elif can_manage_sensitive %}
   <div class="vehiculos-register-card">
     <h2>Formulario de Registro de Vehiculos</h2>
     <form method="post" action="{{ url_for('vehiculos.create_item') }}" class="vehiculos-register-form">
