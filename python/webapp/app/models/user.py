@@ -1,6 +1,6 @@
 """Modelo de usuario para autenticación.
 
-Este modelo conecta Flask-Login con la tabla usuarios de PostgreSQL.
+Este modelo conecta Flask-Login con la tabla usuarios de PostgreSQL en Neon.
 """
 
 from dataclasses import dataclass
@@ -8,7 +8,20 @@ from psycopg2 import sql
 from flask_login import UserMixin
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from app.db import get_connection
+# CORREGIDO: Importar correctamente get_connection
+import os
+import psycopg2
+from dotenv import load_dotenv
+
+load_dotenv()
+
+
+def get_connection():
+    """Obtiene conexión directa a Neon PostgreSQL."""
+    database_url = os.getenv("DATABASE_URL")
+    if not database_url:
+        raise ValueError("❌ DATABASE_URL no configurada")
+    return psycopg2.connect(dsn=database_url, sslmode='require')
 
 
 @dataclass
@@ -355,7 +368,6 @@ class User(UserMixin):
 
     def verify_password(self, candidate_password: str) -> bool:
         # Soporta hash seguro (pbkdf2/scrypt) y fallback temporal en texto plano.
-        # Recomendación: migrar todo a hash y eliminar fallback plano.
         if not self.password:
             return False
 
