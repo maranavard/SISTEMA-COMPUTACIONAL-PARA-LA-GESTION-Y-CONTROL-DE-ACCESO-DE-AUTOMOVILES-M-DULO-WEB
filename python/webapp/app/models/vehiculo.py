@@ -441,6 +441,70 @@ class Vehiculo:
         ]
 
     @classmethod
+    def list_by_user_id(cls, user_id: int) -> list[dict]:
+        table_name = cls._get_table_name()
+        cols = cls._get_columns(table_name)
+
+        if "user_id" not in cols:
+            return []
+
+        tipo_nombre_expr = cls._tipo_nombre_expr(cols)
+
+        select_map = {
+            "id": "v.id",
+            "placa": "v.placa" if "placa" in cols else "NULL::text AS placa",
+            "tipo_vehiculo_id": "v.tipo_vehiculo_id" if "tipo_vehiculo_id" in cols else "NULL::int AS tipo_vehiculo_id",
+            "tipo_vehiculo_nombre": tipo_nombre_expr,
+            "marca": "v.marca" if "marca" in cols else "NULL::text AS marca",
+            "modelo": "v.modelo" if "modelo" in cols else "NULL::text AS modelo",
+            "color": "v.color" if "color" in cols else "NULL::text AS color",
+            "fecha_registro": "v.fecha_registro" if "fecha_registro" in cols else "NULL::timestamp AS fecha_registro",
+            "estado": "v.estado" if "estado" in cols else "NULL::text AS estado",
+            "conductor_id": "v.conductor_id" if "conductor_id" in cols else "NULL::int AS conductor_id",
+            "user_id": "v.user_id",
+        }
+
+        query = f"""
+            SELECT
+                {select_map['id']},
+                {select_map['placa']},
+                {select_map['tipo_vehiculo_id']},
+                {select_map['tipo_vehiculo_nombre']},
+                {select_map['marca']},
+                {select_map['modelo']},
+                {select_map['color']},
+                {select_map['fecha_registro']},
+                {select_map['estado']},
+                {select_map['conductor_id']},
+                {select_map['user_id']}
+            FROM public.{table_name} v
+            WHERE v.user_id = %s
+            ORDER BY v.id DESC
+        """
+
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, (user_id,))
+                rows = cur.fetchall()
+
+        return [
+            {
+                "id": row[0],
+                "placa": row[1],
+                "tipo_vehiculo_id": row[2],
+                "tipo_vehiculo_nombre": row[3],
+                "marca": row[4],
+                "modelo": row[5],
+                "color": row[6],
+                "fecha_registro": row[7],
+                "estado": row[8],
+                "conductor_id": row[9],
+                "user_id": row[10],
+            }
+            for row in rows
+        ]
+
+    @classmethod
     def get_by_placa(cls, placa: str) -> dict | None:
         table_name = cls._get_table_name()
         cols = cls._get_columns(table_name)

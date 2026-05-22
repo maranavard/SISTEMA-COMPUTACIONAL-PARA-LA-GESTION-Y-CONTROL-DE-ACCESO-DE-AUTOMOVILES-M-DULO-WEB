@@ -116,6 +116,74 @@ class Conductor:
         ]
 
     @classmethod
+    def get_by_user_id(cls, user_id: int) -> dict | None:
+        table_name = cls._get_table_name()
+        cols = cls._get_columns(table_name)
+
+        if "user_id" not in cols:
+            return None
+
+        select_map = {
+            "id": "c.id",
+            "nombre": "c.nombre" if "nombre" in cols else "NULL::text AS nombre",
+            "apellido": "c.apellido" if "apellido" in cols else "NULL::text AS apellido",
+            "cedula": "c.cedula" if "cedula" in cols else "NULL::text AS cedula",
+            "email": "c.email" if "email" in cols else "NULL::text AS email",
+            "telefono": "c.telefono" if "telefono" in cols else "NULL::text AS telefono",
+            "dependencia": "c.dependencia" if "dependencia" in cols else "NULL::text AS dependencia",
+            "tipo": "c.tipo" if "tipo" in cols else "NULL::text AS tipo",
+            "estado": "c.estado" if "estado" in cols else "'activo'::text AS estado",
+            "numero_pase": "c.numero_pase" if "numero_pase" in cols else "NULL::text AS numero_pase",
+            "categoria_pase": "c.categoria_pase" if "categoria_pase" in cols else "NULL::text AS categoria_pase",
+            "fecha_registro": "c.fecha_registro" if "fecha_registro" in cols else "NULL::timestamp AS fecha_registro",
+            "fecha_vencimiento_pase": "c.fecha_vencimiento_pase" if "fecha_vencimiento_pase" in cols else "NULL::date AS fecha_vencimiento_pase",
+        }
+
+        query = f"""
+            SELECT
+                {select_map['id']},
+                {select_map['nombre']},
+                {select_map['apellido']},
+                {select_map['cedula']},
+                {select_map['email']},
+                {select_map['telefono']},
+                {select_map['dependencia']},
+                {select_map['tipo']},
+                {select_map['estado']},
+                {select_map['numero_pase']},
+                {select_map['categoria_pase']},
+                {select_map['fecha_registro']},
+                {select_map['fecha_vencimiento_pase']}
+            FROM public.{table_name} c
+            WHERE c.user_id = %s
+            LIMIT 1
+        """
+
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, (user_id,))
+                row = cur.fetchone()
+
+        if not row:
+            return None
+
+        return {
+            "id": row[0],
+            "nombre": row[1],
+            "apellido": row[2],
+            "cedula": row[3],
+            "email": row[4],
+            "telefono": row[5],
+            "dependencia": row[6],
+            "tipo": row[7],
+            "estado": row[8],
+            "numero_pase": row[9],
+            "categoria_pase": row[10],
+            "fecha_registro": row[11],
+            "fecha_vencimiento_pase": row[12],
+        }
+
+    @classmethod
     def create_item(cls, data: dict) -> None:
         table_name = cls._get_table_name()
         cols = cls._get_columns(table_name)
@@ -133,6 +201,7 @@ class Conductor:
             "categoria_pase",
             "fecha_registro",
             "fecha_vencimiento_pase",
+            "user_id",
         ]
 
         insert_cols = []
@@ -174,6 +243,7 @@ class Conductor:
             "categoria_pase",
             "fecha_registro",
             "fecha_vencimiento_pase",
+            "user_id",
         ]
 
         assignments = []

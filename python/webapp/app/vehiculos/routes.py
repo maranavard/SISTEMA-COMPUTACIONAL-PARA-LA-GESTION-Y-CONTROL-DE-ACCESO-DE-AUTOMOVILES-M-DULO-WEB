@@ -16,12 +16,18 @@ vehiculos_bp = Blueprint("vehiculos", __name__, url_prefix="/vehiculos")
 
 WARNING_DAYS = 30
 SENSITIVE_ALLOWED_ROLES = {"admin_sistema", "admin", "administrador"}
+FUNCIONARIO_ROLES = {"funcionario_area"}
 LIST_ITEMS_ROUTE = "vehiculos.list_items"
 
 
 def _can_manage_sensitive() -> bool:
     rol = normalize_role(getattr(current_user, "rol", ""))
     return rol in SENSITIVE_ALLOWED_ROLES
+
+
+def _is_funcionario() -> bool:
+    rol = normalize_role(getattr(current_user, "rol", ""))
+    return rol in FUNCIONARIO_ROLES
 
 
 def _normalize_lookup_text(value: str) -> str:
@@ -152,9 +158,35 @@ def _notify_admin_if_offday_registration(placa: str) -> None:
 @community_required
 def list_items():
     can_manage_sensitive = _can_manage_sensitive()
+    is_funcionario = _is_funcionario()
     placa_consulta = (request.args.get("placa", "") or "").strip().upper()
     vehiculo_consulta = None
     tipos_vehiculo = Vehiculo.list_vehicle_types()
+
+    # Funcionario self-service: show only their own vehicles
+    if is_funcionario:
+        user_id = getattr(current_user, "id", None)
+        own_items = Vehiculo.list_by_user_id(user_id) if user_id else []
+        own_warning_items, own_error_items = _decorate_items_with_doc_status(items=own_items)
+
+        if placa_consulta:
+            vehiculo_consulta = Vehiculo.get_by_placa(placa_consulta)
+
+        return render_template(
+            "vehiculos/index.html",
+            placa_consulta=placa_consulta,
+            vehiculo_consulta=vehiculo_consulta,
+            doc_status_consulta=None,
+            items=own_items,
+            warning_items=own_warning_items,
+            error_items=own_error_items,
+            can_manage_sensitive=False,
+            is_funcionario=True,
+            tipos_vehiculo=tipos_vehiculo,
+            conductores=[],
+            usuarios=[],
+        )
+
     conductores = Conductor.list_items()
     usuarios = User.list_users()
     items = Vehiculo.list_items()
@@ -183,6 +215,7 @@ def list_items():
         warning_items=warning_items,
         error_items=error_items,
         can_manage_sensitive=can_manage_sensitive,
+        is_funcionario=False,
         tipos_vehiculo=tipos_vehiculo,
         conductores=conductores,
         usuarios=usuarios,
@@ -193,26 +226,31 @@ def list_items():
 @login_required
 @community_required
 def create_item():
-    if not _can_manage_sensitive():
+    if not _can_manage_sensitive() and not _is_funcionario():
         flash("No tienes permisos para registrar o editar información documental de vehículos.", "error")
         return redirect(url_for(LIST_ITEMS_ROUTE))
 
     placa = Vehiculo.normalize_plate(request.form.get("placa", ""))
     tipo_vehiculo_id = request.form.get("tipo_vehiculo_id", "").strip()
-    conductor_ref = request.form.get("conductor_id", "")
-    user_ref = request.form.get("user_id", "")
 
     plate_ok, plate_error = Vehiculo.validate_plate_format(placa=placa, tipo_vehiculo_id=tipo_vehiculo_id)
     if not plate_ok:
         flash(plate_error, "error")
         return redirect(url_for(LIST_ITEMS_ROUTE))
 
-    try:
-        conductor_id = _resolve_conductor_id(conductor_ref)
-        user_id = _resolve_user_id(user_ref)
-    except ValueError as exc:
-        flash(str(exc), "error")
-        return redirect(url_for(LIST_ITEMS_ROUTE))
+    # Funcionario always registers vehicles under their own user_id
+    if _is_funcionario():
+        user_id = str(getattr(current_user, "id", "") or "")
+        conductor_id = ""
+    else:
+        conductor_ref = request.form.get("conductor_id", "")
+        user_ref = request.form.get("user_id", "")
+        try:
+            conductor_id = _resolve_conductor_id(conductor_ref)
+            user_id = _resolve_user_id(user_ref)
+        except ValueError as exc:
+            flash(str(exc), "error")
+            return redirect(url_for(LIST_ITEMS_ROUTE))
 
     payload = {
         "placa": placa,
@@ -263,26 +301,39 @@ def consultar_por_placa():
 @login_required
 @community_required
 def update_item(item_id: int):
-    if not _can_manage_sensitive():
+    if not _can_manage_sensitive() and not _is_funcionario():
         flash("No tienes permisos para actualizar información documental de otros usuarios.", "error")
         return redirect(url_for(LIST_ITEMS_ROUTE))
 
+    # Funcionario can only update vehicles belonging to their own user_id
+    if _is_funcionario():
+        user_id = getattr(current_user, "id", None)
+        own_items = Vehiculo.list_by_user_id(user_id) if user_id else []
+        own_ids = {item.get("id") for item in own_items}
+        if item_id not in own_ids:
+            flash("No tienes permisos para modificar el vehículo de otro usuario.", "error")
+            return redirect(url_for(LIST_ITEMS_ROUTE))
+
     placa = Vehiculo.normalize_plate(request.form.get("placa", ""))
     tipo_vehiculo_id = request.form.get("tipo_vehiculo_id", "").strip()
-    conductor_ref = request.form.get("conductor_id", "")
-    user_ref = request.form.get("user_id", "")
 
     plate_ok, plate_error = Vehiculo.validate_plate_format(placa=placa, tipo_vehiculo_id=tipo_vehiculo_id)
     if not plate_ok:
         flash(plate_error, "error")
         return redirect(url_for(LIST_ITEMS_ROUTE))
 
-    try:
-        conductor_id = _resolve_conductor_id(conductor_ref)
-        user_id = _resolve_user_id(user_ref)
-    except ValueError as exc:
-        flash(str(exc), "error")
-        return redirect(url_for(LIST_ITEMS_ROUTE))
+    if _is_funcionario():
+        conductor_id = ""
+        user_id_val = str(getattr(current_user, "id", "") or "")
+    else:
+        conductor_ref = request.form.get("conductor_id", "")
+        user_ref = request.form.get("user_id", "")
+        try:
+            conductor_id = _resolve_conductor_id(conductor_ref)
+            user_id_val = _resolve_user_id(user_ref)
+        except ValueError as exc:
+            flash(str(exc), "error")
+            return redirect(url_for(LIST_ITEMS_ROUTE))
 
     payload = {
         "placa": placa,
@@ -292,7 +343,7 @@ def update_item(item_id: int):
         "color": request.form.get("color", "").strip(),
         "estado": request.form.get("estado", "").strip(),
         "conductor_id": conductor_id,
-        "user_id": user_id,
+        "user_id": user_id_val,
     }
 
     docs_payload = {

@@ -14,6 +14,7 @@ conductores_bp = Blueprint("conductores", __name__, url_prefix="/conductores")
 
 WARNING_DAYS = 30
 SENSITIVE_ALLOWED_ROLES = {"admin_sistema", "admin", "administrador"}
+FUNCIONARIO_ROLES = {"funcionario_area"}
 LIST_ITEMS_ROUTE = "conductores.list_items"
 DATETIME_LOCAL_FORMAT = "%Y-%m-%dT%H:%M"
 
@@ -21,6 +22,11 @@ DATETIME_LOCAL_FORMAT = "%Y-%m-%dT%H:%M"
 def _can_manage_sensitive() -> bool:
     rol = normalize_role(getattr(current_user, "rol", ""))
     return rol in SENSITIVE_ALLOWED_ROLES
+
+
+def _is_funcionario() -> bool:
+    rol = normalize_role(getattr(current_user, "rol", ""))
+    return rol in FUNCIONARIO_ROLES
 
 
 def _parse_date(raw_value):
@@ -133,6 +139,26 @@ def _validate_fecha_vencimiento_pase(raw_value: str) -> tuple[bool, str]:
 @community_required
 def list_items():
     can_manage_sensitive = _can_manage_sensitive()
+    is_funcionario = _is_funcionario()
+
+    # Funcionario self-service: only show/edit their own conductor record
+    if is_funcionario:
+        user_id = getattr(current_user, "id", None)
+        own_conductor = Conductor.get_by_user_id(user_id) if user_id else None
+        if own_conductor:
+            own_conductor["fecha_registro_input"] = _to_datetime_local_input(own_conductor.get("fecha_registro"))
+            own_conductor["fecha_vencimiento_pase_input"] = _to_date_input(own_conductor.get("fecha_vencimiento_pase"))
+        return render_template(
+            "conductores/index.html",
+            items=[],
+            cedula_filtro="",
+            warning_items=[],
+            error_items=[],
+            can_manage_sensitive=False,
+            is_funcionario=True,
+            own_conductor=own_conductor,
+        )
+
     items = Conductor.list_items()
     cedula_filtro = (request.args.get("cedula", "") or "").strip()
     if cedula_filtro and can_manage_sensitive:
@@ -168,6 +194,8 @@ def list_items():
         warning_items=warning_items,
         error_items=error_items,
         can_manage_sensitive=can_manage_sensitive,
+        is_funcionario=False,
+        own_conductor=None,
     )
 
 
@@ -175,7 +203,7 @@ def list_items():
 @login_required
 @community_required
 def create_item():
-    if not _can_manage_sensitive():
+    if not _can_manage_sensitive() and not _is_funcionario():
         flash("No tienes permisos para registrar o editar perfiles de conductor.", "error")
         return redirect(url_for(LIST_ITEMS_ROUTE))
 
@@ -211,6 +239,12 @@ def create_item():
         "fecha_vencimiento_pase": fecha_vencimiento_pase,
     }
 
+    # Funcionario always links the record to their own user_id
+    if _is_funcionario():
+        user_id = getattr(current_user, "id", None)
+        if user_id:
+            payload["user_id"] = user_id
+
     try:
         Conductor.create_item(payload)
         flash("Conductor creado correctamente.", "success")
@@ -225,9 +259,17 @@ def create_item():
 @login_required
 @community_required
 def update_item(item_id: int):
-    if not _can_manage_sensitive():
+    if not _can_manage_sensitive() and not _is_funcionario():
         flash("No tienes permisos para actualizar información documental de otros usuarios.", "error")
         return redirect(url_for(LIST_ITEMS_ROUTE))
+
+    # Funcionario can only update their own conductor record
+    if _is_funcionario():
+        user_id = getattr(current_user, "id", None)
+        own_conductor = Conductor.get_by_user_id(user_id) if user_id else None
+        if not own_conductor or own_conductor.get("id") != item_id:
+            flash("No tienes permisos para modificar el registro de otro conductor.", "error")
+            return redirect(url_for(LIST_ITEMS_ROUTE))
 
     cedula = normalize_cedula(request.form.get("cedula", ""))
     email = normalize_email(request.form.get("email", ""))
