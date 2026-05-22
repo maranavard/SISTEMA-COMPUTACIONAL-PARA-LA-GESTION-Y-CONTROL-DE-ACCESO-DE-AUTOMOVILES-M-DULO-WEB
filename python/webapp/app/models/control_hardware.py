@@ -2,8 +2,21 @@
 
 from __future__ import annotations
 
-from app.db import get_connection
+# CORREGIDO: Usar conexión directa con DATABASE_URL
+import os
+import psycopg2
+from dotenv import load_dotenv
 from psycopg2.extras import Json
+
+load_dotenv()
+
+
+def get_connection():
+    """Obtiene conexión directa a Neon PostgreSQL."""
+    database_url = os.getenv("DATABASE_URL")
+    if not database_url:
+        raise ValueError("❌ DATABASE_URL no configurada")
+    return psycopg2.connect(dsn=database_url, sslmode='require')
 
 
 class ControlHardware:
