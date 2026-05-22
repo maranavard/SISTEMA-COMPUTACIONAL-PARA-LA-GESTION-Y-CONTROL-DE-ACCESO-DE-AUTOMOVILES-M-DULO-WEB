@@ -22,7 +22,10 @@ def _can_manage_sensitive() -> bool:
     rol = normalize_role(getattr(current_user, "rol", ""))
     return rol in SENSITIVE_ALLOWED_ROLES
 
-
+def _is_funcionario_role() -> bool:
+    rol = normalize_role(getattr(current_user, "rol", ""))
+    return rol == "funcionario_area"
+    
 def _parse_date(raw_value):
     if raw_value in (None, ""):
         return None
@@ -133,8 +136,15 @@ def _validate_fecha_vencimiento_pase(raw_value: str) -> tuple[bool, str]:
 @community_required
 def list_items():
     can_manage_sensitive = _can_manage_sensitive()
-    items = Conductor.list_items()
+    is_funcionario = _is_funcionario_role()
     cedula_filtro = (request.args.get("cedula", "") or "").strip()
+
+    if is_funcionario and not can_manage_sensitive:
+        own_item = Conductor.get_by_user_id(int(current_user.id))
+        items = [own_item] if own_item else []
+    else:
+        items = Conductor.list_items()
+
     if cedula_filtro and can_manage_sensitive:
         needle = cedula_filtro.lower()
         items = [
@@ -146,7 +156,7 @@ def list_items():
     warning_items = []
     error_items = []
 
-    if can_manage_sensitive:
+    if can_manage_sensitive or is_funcionario:
         for item in items:
             status = _document_status(item.get("fecha_vencimiento_pase"))
             item["doc_status_level"] = status["level"]
@@ -168,16 +178,21 @@ def list_items():
         warning_items=warning_items,
         error_items=error_items,
         can_manage_sensitive=can_manage_sensitive,
+        is_funcionario=is_funcionario,
     )
-
-
-@conductores_bp.post("/crear")
-@login_required
-@community_required
 def create_item():
-    if not _can_manage_sensitive():
+    can_manage_sensitive = _can_manage_sensitive()
+    is_funcionario = _is_funcionario_role()
+
+    if not can_manage_sensitive and not is_funcionario:
         flash("No tienes permisos para registrar o editar perfiles de conductor.", "error")
         return redirect(url_for(LIST_ITEMS_ROUTE))
+
+    if is_funcionario:
+        existing = Conductor.get_by_user_id(int(current_user.id))
+        if existing:
+            flash("Ya tienes un perfil de conductor registrado. Usa la opción de actualizar.", "warning")
+            return redirect(url_for(LIST_ITEMS_ROUTE))
 
     cedula = normalize_cedula(request.form.get("cedula", ""))
     email = normalize_email(request.form.get("email", ""))
@@ -197,6 +212,7 @@ def create_item():
         return redirect(url_for(LIST_ITEMS_ROUTE))
 
     payload = {
+        "user_id": int(current_user.id) if is_funcionario else request.form.get("user_id", "").strip(),
         "nombre": request.form.get("nombre", "").strip(),
         "apellido": request.form.get("apellido", "").strip(),
         "cedula": cedula,
@@ -219,15 +235,24 @@ def create_item():
         flash(f"No se pudo crear conductor: {exc}", "error")
 
     return redirect(url_for(LIST_ITEMS_ROUTE))
-
-
-@conductores_bp.post("/<int:item_id>/actualizar")
-@login_required
-@community_required
+    
 def update_item(item_id: int):
-    if not _can_manage_sensitive():
-        flash("No tienes permisos para actualizar información documental de otros usuarios.", "error")
+    can_manage_sensitive = _can_manage_sensitive()
+    is_funcionario = _is_funcionario_role()
+
+    if not can_manage_sensitive and not is_funcionario:
+        flash("No tienes permisos para actualizar información documental de conductores.", "error")
         return redirect(url_for(LIST_ITEMS_ROUTE))
+
+    if is_funcionario and not can_manage_sensitive:
+        own_item = Conductor.get_by_user_id(int(current_user.id))
+        if not own_item:
+            flash("No tienes un perfil de conductor asociado para actualizar.", "error")
+            return redirect(url_for(LIST_ITEMS_ROUTE))
+
+        if int(own_item.get("id")) != int(item_id):
+            flash("No puedes modificar el perfil de conductor de otro usuario.", "error")
+            return redirect(url_for(LIST_ITEMS_ROUTE))
 
     cedula = normalize_cedula(request.form.get("cedula", ""))
     email = normalize_email(request.form.get("email", ""))
@@ -247,6 +272,7 @@ def update_item(item_id: int):
         return redirect(url_for(LIST_ITEMS_ROUTE))
 
     payload = {
+        "user_id": int(current_user.id) if is_funcionario else request.form.get("user_id", "").strip(),
         "nombre": request.form.get("nombre", "").strip(),
         "apellido": request.form.get("apellido", "").strip(),
         "cedula": cedula,
