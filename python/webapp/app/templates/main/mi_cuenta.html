@@ -12,7 +12,54 @@
     <h3>Datos del usuario</h3>
     <p><strong>Usuario:</strong> {{ user.username or '' }}</p>
     <p><strong>Rol:</strong> {{ (user.rol or '') | role_label }}</p>
-    <p>Si necesitas actualizar tus datos, solicita el ajuste al administrador del sistema.</p>
+
+    <form method="post" action="{{ url_for('main.actualizar_mi_cuenta') }}" style="margin-top: 1rem;">
+      <div style="display: grid; gap: 0.85rem;">
+        <input
+          type="text"
+          name="nombre"
+          placeholder="Nombre"
+          value="{{ user.nombre or '' }}"
+          required
+        />
+
+        <input
+          type="text"
+          name="apellido"
+          placeholder="Apellido"
+          value="{{ user.apellido or '' }}"
+          required
+        />
+
+        <input
+          type="email"
+          name="email"
+          placeholder="Correo institucional"
+          value="{{ user.email or '' }}"
+          pattern="[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"
+          title="Ingresa un correo válido (ej: usuario@dominio.com)"
+          required
+        />
+
+        <input
+          type="text"
+          name="numero_identificacion"
+          placeholder="Número de identificación"
+          value="{{ user.numero_identificacion or '' }}"
+          inputmode="numeric"
+          pattern="[0-9]{6,12}"
+          title="Solo números, entre 6 y 12 dígitos"
+        />
+
+        <input
+          type="password"
+          name="new_password"
+          placeholder="Nueva contraseña (opcional)"
+        />
+
+        <button type="submit" class="panel-action-btn">Guardar cambios</button>
+      </div>
+    </form>
 
     <div class="panel-actions" style="margin-top: 1rem;">
       <a class="panel-action-btn" href="{{ url_for('main.dashboard') }}">Volver al panel</a>
