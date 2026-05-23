@@ -4,37 +4,49 @@ Aquí centralizamos la forma de abrir conexión PostgreSQL para no repetir
 credenciales ni lógica de conexión en cada módulo.
 """
 
+import os
+
 import psycopg2
 from flask import current_app
 
 
-def get_connection():
-    # Lee credenciales desde la configuración cargada en Flask app context.
-    params = {
-        "host": current_app.config["DB_HOST"],
-        "port": current_app.config["DB_PORT"],
-        "dbname": current_app.config["DB_NAME"],
-        "user": current_app.config["DB_USER"],
-        "password": current_app.config["DB_PASSWORD"],
-    }
-
-    # Primer intento: conexión estándar.
+def _connect_with_fallback(**kwargs):
     try:
-        return psycopg2.connect(**params)
+        return psycopg2.connect(**kwargs)
     except UnicodeDecodeError:
-        # Fallback para servidores/errores en codificación LATIN1.
         try:
-            conn = psycopg2.connect(**params, options="-c client_encoding=LATIN1")
+            conn = psycopg2.connect(**kwargs, options="-c client_encoding=LATIN1")
             conn.set_client_encoding("LATIN1")
             return conn
         except Exception as exc:
-            raise RuntimeError(
-                "No fue posible conectar a PostgreSQL. Revisa DB_HOST/DB_PORT/DB_NAME/DB_USER/DB_PASSWORD en .env"
-            ) from exc
+            raise RuntimeError("No fue posible conectar a PostgreSQL.") from exc
     except Exception as exc:
+        raise RuntimeError("No fue posible conectar a PostgreSQL.") from exc
+
+
+def get_connection():
+    # Prioridad 1: DATABASE_URL (Render / Neon / despliegue actual)
+    database_url = current_app.config.get("DATABASE_URL") or os.getenv("DATABASE_URL")
+    if database_url:
+        return _connect_with_fallback(dsn=database_url, sslmode="require")
+
+    # Prioridad 2: variables separadas (compatibilidad local/anterior)
+    params = {
+        "host": current_app.config.get("DB_HOST"),
+        "port": current_app.config.get("DB_PORT"),
+        "dbname": current_app.config.get("DB_NAME"),
+        "user": current_app.config.get("DB_USER"),
+        "password": current_app.config.get("DB_PASSWORD"),
+    }
+
+    missing = [key for key, value in params.items() if not value]
+    if missing:
         raise RuntimeError(
-            "No fue posible conectar a PostgreSQL. Revisa DB_HOST/DB_PORT/DB_NAME/DB_USER/DB_PASSWORD en .env"
-        ) from exc
+            "No fue posible conectar a PostgreSQL. "
+            "Configura DATABASE_URL o completa DB_HOST/DB_PORT/DB_NAME/DB_USER/DB_PASSWORD."
+        )
+
+    return _connect_with_fallback(**params)
 
 
 def get_local_connection():
