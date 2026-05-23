@@ -24,6 +24,11 @@ def _can_manage_sensitive() -> bool:
     return rol in SENSITIVE_ALLOWED_ROLES
 
 
+def _is_funcionario_role() -> bool:
+    rol = normalize_role(getattr(current_user, "rol", ""))
+    return rol == "funcionario_area"
+
+
 def _normalize_lookup_text(value: str) -> str:
     return " ".join((value or "").strip().lower().split())
 
@@ -152,12 +157,19 @@ def _notify_admin_if_offday_registration(placa: str) -> None:
 @community_required
 def list_items():
     can_manage_sensitive = _can_manage_sensitive()
+    is_funcionario = _is_funcionario_role()
     placa_consulta = (request.args.get("placa", "") or "").strip().upper()
     vehiculo_consulta = None
     tipos_vehiculo = Vehiculo.list_vehicle_types()
-    conductores = Conductor.list_items()
-    usuarios = User.list_users()
-    items = Vehiculo.list_items()
+
+    if is_funcionario and not can_manage_sensitive:
+        conductores = [Conductor.get_by_user_id(int(current_user.id))] if Conductor.get_by_user_id(int(current_user.id)) else []
+        usuarios = []
+        items = Vehiculo.list_items_by_user_id(int(current_user.id))
+    else:
+        conductores = Conductor.list_items()
+        usuarios = User.list_users()
+        items = Vehiculo.list_items()
 
     warning_items = []
     error_items = []
@@ -183,6 +195,7 @@ def list_items():
         warning_items=warning_items,
         error_items=error_items,
         can_manage_sensitive=can_manage_sensitive,
+        is_funcionario=is_funcionario,
         tipos_vehiculo=tipos_vehiculo,
         conductores=conductores,
         usuarios=usuarios,
@@ -193,26 +206,38 @@ def list_items():
 @login_required
 @community_required
 def create_item():
-    if not _can_manage_sensitive():
+    can_manage_sensitive = _can_manage_sensitive()
+    is_funcionario = _is_funcionario_role()
+
+    if not can_manage_sensitive and not is_funcionario:
         flash("No tienes permisos para registrar o editar información documental de vehículos.", "error")
         return redirect(url_for(LIST_ITEMS_ROUTE))
 
     placa = Vehiculo.normalize_plate(request.form.get("placa", ""))
     tipo_vehiculo_id = request.form.get("tipo_vehiculo_id", "").strip()
-    conductor_ref = request.form.get("conductor_id", "")
-    user_ref = request.form.get("user_id", "")
 
     plate_ok, plate_error = Vehiculo.validate_plate_format(placa=placa, tipo_vehiculo_id=tipo_vehiculo_id)
     if not plate_ok:
         flash(plate_error, "error")
         return redirect(url_for(LIST_ITEMS_ROUTE))
 
-    try:
-        conductor_id = _resolve_conductor_id(conductor_ref)
-        user_id = _resolve_user_id(user_ref)
-    except ValueError as exc:
-        flash(str(exc), "error")
-        return redirect(url_for(LIST_ITEMS_ROUTE))
+    if is_funcionario and not can_manage_sensitive:
+        own_conductor = Conductor.get_by_user_id(int(current_user.id))
+        if not own_conductor:
+            flash("Primero debes registrar tu perfil de conductor antes de asociar vehículos.", "error")
+            return redirect(url_for("conductores.list_items"))
+
+        conductor_id = str(own_conductor.get("id") or "").strip()
+        user_id = str(current_user.id)
+    else:
+        conductor_ref = request.form.get("conductor_id", "")
+        user_ref = request.form.get("user_id", "")
+        try:
+            conductor_id = _resolve_conductor_id(conductor_ref)
+            user_id = _resolve_user_id(user_ref)
+        except ValueError as exc:
+            flash(str(exc), "error")
+            return redirect(url_for(LIST_ITEMS_ROUTE))
 
     payload = {
         "placa": placa,
@@ -263,26 +288,43 @@ def consultar_por_placa():
 @login_required
 @community_required
 def update_item(item_id: int):
-    if not _can_manage_sensitive():
-        flash("No tienes permisos para actualizar información documental de otros usuarios.", "error")
+    can_manage_sensitive = _can_manage_sensitive()
+    is_funcionario = _is_funcionario_role()
+
+    if not can_manage_sensitive and not is_funcionario:
+        flash("No tienes permisos para actualizar información documental de vehículos.", "error")
         return redirect(url_for(LIST_ITEMS_ROUTE))
+
+    if is_funcionario and not can_manage_sensitive:
+        if not Vehiculo.belongs_to_user(item_id=item_id, user_id=int(current_user.id)):
+            flash("No puedes modificar vehículos de otros usuarios.", "error")
+            return redirect(url_for(LIST_ITEMS_ROUTE))
 
     placa = Vehiculo.normalize_plate(request.form.get("placa", ""))
     tipo_vehiculo_id = request.form.get("tipo_vehiculo_id", "").strip()
-    conductor_ref = request.form.get("conductor_id", "")
-    user_ref = request.form.get("user_id", "")
 
     plate_ok, plate_error = Vehiculo.validate_plate_format(placa=placa, tipo_vehiculo_id=tipo_vehiculo_id)
     if not plate_ok:
         flash(plate_error, "error")
         return redirect(url_for(LIST_ITEMS_ROUTE))
 
-    try:
-        conductor_id = _resolve_conductor_id(conductor_ref)
-        user_id = _resolve_user_id(user_ref)
-    except ValueError as exc:
-        flash(str(exc), "error")
-        return redirect(url_for(LIST_ITEMS_ROUTE))
+    if is_funcionario and not can_manage_sensitive:
+        own_conductor = Conductor.get_by_user_id(int(current_user.id))
+        if not own_conductor:
+            flash("No tienes perfil de conductor asociado.", "error")
+            return redirect(url_for("conductores.list_items"))
+
+        conductor_id = str(own_conductor.get("id") or "").strip()
+        user_id = str(current_user.id)
+    else:
+        conductor_ref = request.form.get("conductor_id", "")
+        user_ref = request.form.get("user_id", "")
+        try:
+            conductor_id = _resolve_conductor_id(conductor_ref)
+            user_id = _resolve_user_id(user_ref)
+        except ValueError as exc:
+            flash(str(exc), "error")
+            return redirect(url_for(LIST_ITEMS_ROUTE))
 
     payload = {
         "placa": placa,
