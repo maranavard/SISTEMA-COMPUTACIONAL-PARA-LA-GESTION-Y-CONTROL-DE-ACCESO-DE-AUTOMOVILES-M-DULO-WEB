@@ -439,7 +439,55 @@ class Vehiculo:
             }
             for row in rows
         ]
+    @classmethod
+    def list_items_by_user_id(cls, user_id: int) -> list[dict]:
+        table_name = cls._get_table_name()
+        cols = cls._get_columns(table_name)
 
+        if "user_id" not in cols:
+            return []
+
+        tipo_nombre_expr = cls._tipo_nombre_expr(cols)
+
+        query = f"""
+            SELECT
+                v.id,
+                {"v.placa" if "placa" in cols else "NULL::text"},
+                {"v.tipo_vehiculo_id" if "tipo_vehiculo_id" in cols else "NULL::int"},
+                {tipo_nombre_expr},
+                {"v.marca" if "marca" in cols else "NULL::text"},
+                {"v.modelo" if "modelo" in cols else "NULL::text"},
+                {"v.color" if "color" in cols else "NULL::text"},
+                {"v.fecha_registro" if "fecha_registro" in cols else "NULL::timestamp"},
+                {"v.estado" if "estado" in cols else "NULL::text"},
+                {"v.conductor_id" if "conductor_id" in cols else "NULL::int"},
+                {"v.user_id" if "user_id" in cols else "NULL::int"}
+            FROM public.{table_name} v
+            WHERE v.user_id = %s
+            ORDER BY v.id DESC
+        """
+
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, (user_id,))
+                rows = cur.fetchall()
+
+        return [
+            {
+                "id": row[0],
+                "placa": row[1],
+                "tipo_vehiculo_id": row[2],
+                "tipo_vehiculo_nombre": row[3],
+                "marca": row[4],
+                "modelo": row[5],
+                "color": row[6],
+                "fecha_registro": row[7],
+                "estado": row[8],
+                "conductor_id": row[9],
+                "user_id": row[10],
+            }
+            for row in rows
+        ]
     @classmethod
     def get_by_placa(cls, placa: str) -> dict | None:
         table_name = cls._get_table_name()
@@ -529,7 +577,12 @@ class Vehiculo:
             "conductor_id": row[9],
             "user_id": row[10],
         }
-
+    @classmethod
+    def belongs_to_user(cls, item_id: int, user_id: int) -> bool:
+        item = cls.get_by_id(item_id)
+        if not item:
+            return False
+        return str(item.get("user_id") or "") == str(user_id)
     @classmethod
     def create_item(cls, data: dict) -> int | None:
         table_name = cls._get_table_name()
