@@ -26,11 +26,15 @@ def get_connection():
 
 @dataclass
 class User(UserMixin):
-    # Atributos mínimos que usa Flask-Login y la UI actual.
     id: int
     username: str
     password: str
     rol: str
+    nombre: str = ""
+    apellido: str = ""
+    email: str = ""
+    numero_identificacion: str = ""
+    estado: str = "activo"
 
     @staticmethod
     def _normalize_role(role_value) -> str:
@@ -144,29 +148,37 @@ class User(UserMixin):
         values.append(value)
 
     @classmethod
-    def _base_select_query(cls, where_clause: str) -> tuple[str, set[str]]:
+    def _base_select_query(cls, where_clause: str) -> tuple[str, dict[str, str]]:
         """Arma query base para obtener usuario autenticable según esquema disponible."""
         columns = cls._get_usuarios_columns()
         roles_columns = cls._get_roles_columns()
         role_expr, join_roles_sql = cls._role_select_expr(columns, roles_columns)
+
+        nombre_col = cls._pick_existing(columns, "nombre", "nombres")
+        apellido_col = cls._pick_existing(columns, "apellido", "apellidos")
+        email_col = cls._pick_existing(columns, "email", "correo", "correo_institucional")
+        id_doc_col = cls._pick_existing(columns, "numero_identificacion", "identificacion", "documento", "cedula")
 
         query = f"""
             SELECT
                 u.id,
                 u.username,
                 u.password,
-                {role_expr}
+                {role_expr},
+                {f'u.{nombre_col}' if nombre_col else "NULL::text"} AS nombre,
+                {f'u.{apellido_col}' if apellido_col else "NULL::text"} AS apellido,
+                {f'u.{email_col}' if email_col else "NULL::text"} AS email,
+                {f'u.{id_doc_col}' if id_doc_col else "NULL::text"} AS numero_identificacion,
+                {("u.estado" if "estado" in columns else "'activo'::text")} AS estado
             FROM public.usuarios u
         """
 
         query += join_roles_sql
-
         query += f" {where_clause} LIMIT 1 "
         return query, columns
-
+        
     @staticmethod
     def _map_row(row):
-        # Convierte una fila SQL en objeto User del dominio.
         if not row:
             return None
         return User(
@@ -174,6 +186,11 @@ class User(UserMixin):
             username=row[1],
             password=row[2],
             rol=User._normalize_role(row[3]),
+            nombre=row[4] or "",
+            apellido=row[5] or "",
+            email=row[6] or "",
+            numero_identificacion=row[7] or "",
+            estado=row[8] or "activo",
         )
 
     @classmethod
