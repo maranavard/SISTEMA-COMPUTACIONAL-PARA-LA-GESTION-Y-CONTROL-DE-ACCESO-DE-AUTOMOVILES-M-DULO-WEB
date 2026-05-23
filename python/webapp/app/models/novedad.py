@@ -1,6 +1,7 @@
 """Modelo de novedades para control de ingreso/salida por placa."""
 
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from psycopg2 import sql
 
@@ -25,6 +26,10 @@ from app.utils.local_sync import LocalSyncService
 
 
 class Novedad:
+    @staticmethod
+    def _now_local() -> datetime:
+        return datetime.now(ZoneInfo("America/Bogota")).replace(tzinfo=None)
+
     @staticmethod
     def _get_columns() -> set[str]:
         query = """
@@ -51,6 +56,23 @@ class Novedad:
                 cur.execute(query, (placa,))
                 row = cur.fetchone()
         return row[0] if row else None
+
+    @staticmethod
+    def _find_vehicle_by_plate(placa: str) -> tuple[int, int | None] | None:
+        query = """
+            SELECT id, tipo_vehiculo_id
+            FROM public.vehiculos
+            WHERE upper(placa) = upper(%s)
+            LIMIT 1
+        """
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, (placa,))
+                row = cur.fetchone()
+
+        if not row:
+            return None
+        return row[0], row[1]
 
     @staticmethod
     def list_recent(limit: int = 50) -> list[dict]:
@@ -120,7 +142,7 @@ class Novedad:
                         "id_vehiculo": vehicle_id,
                         "id_usuario": user_id,
                         "id_espacio": row[0],
-                        "fecha_hora": datetime.now(),
+                        "fecha_hora": Novedad._now_local(),
                         "observaciones": "Ingreso automático sincronizado",
                         "estado": "registrado",
                     },
@@ -138,23 +160,6 @@ class Novedad:
 
         return {"assigned_space_id": None, "assigned_space_num": None}
 
-    @staticmethod
-    def _find_vehicle_by_plate(placa: str) -> tuple[int, int | None] | None:
-        query = """
-            SELECT id, tipo_vehiculo_id
-            FROM public.vehiculos
-            WHERE upper(placa) = upper(%s)
-            LIMIT 1
-        """
-        with get_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(query, (placa,))
-                row = cur.fetchone()
-
-        if not row:
-            return None
-        return row[0], row[1]
-
     @classmethod
     def _insert_ingreso_novedad(
         cls,
@@ -168,7 +173,7 @@ class Novedad:
             "tipo_novedad": "ingreso",
             "id_vehiculo": vehicle_id,
             "id_espacio": espacio_id,
-            "fecha_hora": datetime.now(),
+            "fecha_hora": cls._now_local(),
             "id_usuario": user_id,
             "observaciones": observaciones,
             "estado": "registrado",
@@ -271,26 +276,65 @@ class Novedad:
 
     @staticmethod
     def register_salida_by_placa(placa: str, user_id: int, observaciones: str = "Salida manual web") -> int:
-        query = """
-            INSERT INTO public.novedad (tipo_novedad, id_vehiculo, fecha_hora, id_usuario, observaciones)
-            SELECT 'salida', v.id, NOW(), %s, %s
-            FROM public.vehiculos v
-            WHERE upper(v.placa) = upper(%s)
+        now_local = Novedad._now_local()
+        vehicle = Novedad._find_vehicle_by_plate(placa)
+        if not vehicle:
+            raise ValueError(f"No existe vehículo con placa {placa}")
+
+        vehicle_id, _ = vehicle
+
+        latest_ingreso_query = """
+            SELECT n.id_espacio
+            FROM public.novedad n
+            WHERE n.id_vehiculo = %s
+              AND lower(coalesce(n.tipo_novedad, '')) = 'ingreso'
+              AND n.id_espacio IS NOT NULL
+            ORDER BY n.fecha_hora DESC, n.id DESC
             LIMIT 1
-            RETURNING id
         """
+
+        espacio_id = None
+        row = None
 
         with get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(query, (user_id, observaciones, placa))
+                cur.execute(latest_ingreso_query, (vehicle_id,))
+                row_ingreso = cur.fetchone()
+                espacio_id = row_ingreso[0] if row_ingreso else None
+
+                insert_query = """
+                    INSERT INTO public.novedad (
+                        tipo_novedad,
+                        id_vehiculo,
+                        fecha_hora,
+                        id_usuario,
+                        observaciones,
+                        id_espacio,
+                        estado
+                    )
+                    VALUES ('salida', %s, %s, %s, %s, %s, 'registrado')
+                    RETURNING id
+                """
+                cur.execute(insert_query, (vehicle_id, now_local, user_id, observaciones, espacio_id))
                 row = cur.fetchone()
+
             conn.commit()
 
         if not row:
-            raise ValueError(f"No existe vehículo con placa {placa}")
+            raise ValueError(f"No se pudo registrar salida para la placa {placa}")
+
+        if espacio_id is not None:
+            espacio = Espacio.get_by_id(int(espacio_id))
+            if espacio and espacio.get("numero") is not None:
+                Espacio.upsert_by_numero(
+                    {
+                        "numero": str(espacio.get("numero")),
+                        "estado": "disponible",
+                        "tipo_vehiculo_id": espacio.get("tipo_vehiculo_id") or "",
+                    }
+                )
 
         try:
-            vehicle_id = Novedad._find_vehicle_id_by_plate(placa)
             LocalSyncService.sync_event(
                 entidad="novedad",
                 operacion="insert",
@@ -298,7 +342,8 @@ class Novedad:
                     "tipo_novedad": "salida",
                     "id_vehiculo": vehicle_id,
                     "id_usuario": user_id,
-                    "fecha_hora": datetime.now(),
+                    "id_espacio": espacio_id,
+                    "fecha_hora": now_local,
                     "observaciones": observaciones,
                     "estado": "registrado",
                 },
