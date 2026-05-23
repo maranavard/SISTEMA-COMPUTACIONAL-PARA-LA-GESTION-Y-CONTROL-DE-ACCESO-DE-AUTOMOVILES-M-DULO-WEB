@@ -107,7 +107,11 @@ def _process_ingreso_vehicular(placa: str) -> Response | str:
 
 
 def _process_salida_vehicular(placa: str) -> None:
-    Novedad.register_salida_by_placa(placa=placa, user_id=int(current_user.id), observaciones="Salida validada en control de accesos")
+    Novedad.register_salida_by_placa(
+        placa=placa,
+        user_id=int(current_user.id),
+        observaciones="Salida validada en control de accesos",
+    )
     flash(f"Salida validada correctamente para la placa {placa}.", "success")
 
 
@@ -143,7 +147,7 @@ def registrar():
         "placa": placa,
         "fecha_hora_registro": fecha_hora,
         "fecha_hora_prevista": fecha_hora,
-        "estado": "pendiente_autorizacion",
+        "estado": "pendiente",
         "registrado_por_usuario_id": int(current_user.id),
     }
 
@@ -163,23 +167,26 @@ def registrar():
 def registrar_vehicular():
     placa = (request.form.get("placa", "") or "").strip().upper()
     movimiento = (request.form.get("movimiento", "entrada") or "entrada").strip().lower()
+    next_url = (request.form.get("next_url", "") or "").strip()
+
+    redirect_target = next_url or url_for(INDEX_ROUTE)
 
     if not placa:
         flash("Debes indicar la placa para validar el acceso vehicular.", "error")
-        return redirect(url_for(INDEX_ROUTE))
+        return redirect(redirect_target)
 
     try:
         if movimiento in {"entrada", "ingreso"}:
             ingreso_result = _process_ingreso_vehicular(placa=placa)
             if ingreso_result != "blocked":
                 return ingreso_result
-            return redirect(url_for(INDEX_ROUTE))
+            return redirect(redirect_target)
 
         _process_salida_vehicular(placa=placa)
     except Exception as exc:
         _flash_vehicular_error(exc)
 
-    return redirect(url_for(INDEX_ROUTE))
+    return redirect(redirect_target)
 
 
 @control_accesos_bp.get("/historial")
