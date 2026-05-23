@@ -56,7 +56,7 @@ class Visitante:
 
         nombres_col = cls._pick_existing(cols, "nombres", "nombre")
         apellidos_col = cls._pick_existing(cols, "apellidos", "apellido")
-        doc_col = cls._pick_existing(cols, "numero_identificacion", "identificacion", "documento")
+        doc_col = cls._pick_existing(cols, "numero_identificacion", "identificacion", "documento", "cedula")
         area_col = cls._pick_existing(cols, "area_destino", "area")
         funcionario_col = cls._pick_existing(
             cols,
@@ -67,9 +67,9 @@ class Visitante:
             "funcionario",
         )
         motivo_col = cls._pick_existing(cols, "motivo_visita", "motivo")
-        placa_col = cls._pick_existing(cols, "placa")
+        placa_col = cls._pick_existing(cols, "placa", "placa_vehiculo")
         fecha_reg_col = cls._pick_existing(cols, "fecha_hora_registro", "fecha_registro", "fecha")
-        fecha_prev_col = cls._pick_existing(cols, "fecha_hora_prevista", "fecha_prevista")
+        fecha_prev_col = cls._pick_existing(cols, "fecha_hora_prevista", "fecha_prevista", "fecha_registro")
         estado_col = cls._pick_existing(cols, "estado")
         user_col = cls._pick_existing(cols, "registrado_por_usuario_id", "usuario_id", "id_usuario")
 
@@ -137,7 +137,7 @@ class Visitante:
         field_map = {
             "nombres": ["nombres", "nombre"],
             "apellidos": ["apellidos", "apellido"],
-            "numero_identificacion": ["numero_identificacion", "identificacion", "documento"],
+            "numero_identificacion": ["numero_identificacion", "identificacion", "documento", "cedula"],
             "area_destino": ["area_destino", "area"],
             "funcionario_recibe": [
                 "funcionario_recibe",
@@ -147,9 +147,9 @@ class Visitante:
                 "funcionario",
             ],
             "motivo_visita": ["motivo_visita", "motivo"],
-            "placa": ["placa"],
+            "placa": ["placa", "placa_vehiculo"],
             "fecha_hora_registro": ["fecha_hora_registro", "fecha_registro", "fecha"],
-            "fecha_hora_prevista": ["fecha_hora_prevista", "fecha_prevista"],
+            "fecha_hora_prevista": ["fecha_hora_prevista", "fecha_prevista", "fecha_registro"],
             "estado": ["estado"],
             "registrado_por_usuario_id": ["registrado_por_usuario_id", "usuario_id", "id_usuario"],
         }
@@ -195,7 +195,7 @@ class Visitante:
         field_map = {
             "nombres": ["nombres", "nombre"],
             "apellidos": ["apellidos", "apellido"],
-            "numero_identificacion": ["numero_identificacion", "identificacion", "documento"],
+            "numero_identificacion": ["numero_identificacion", "identificacion", "documento", "cedula"],
             "area_destino": ["area_destino", "area"],
             "funcionario_recibe": [
                 "funcionario_recibe",
@@ -205,9 +205,9 @@ class Visitante:
                 "funcionario",
             ],
             "motivo_visita": ["motivo_visita", "motivo"],
-            "placa": ["placa"],
+            "placa": ["placa", "placa_vehiculo"],
             "fecha_hora_registro": ["fecha_hora_registro", "fecha_registro", "fecha"],
-            "fecha_hora_prevista": ["fecha_hora_prevista", "fecha_prevista"],
+            "fecha_hora_prevista": ["fecha_hora_prevista", "fecha_prevista", "fecha_registro"],
             "estado": ["estado"],
             "registrado_por_usuario_id": ["registrado_por_usuario_id", "usuario_id", "id_usuario"],
         }
