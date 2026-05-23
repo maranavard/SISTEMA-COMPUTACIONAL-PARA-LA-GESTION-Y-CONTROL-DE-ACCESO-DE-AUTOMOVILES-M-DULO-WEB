@@ -220,7 +220,12 @@ class Novedad:
         return {"assigned_space_id": espacio_id, "assigned_space_num": slot_numero}
 
     @staticmethod
-    def register_salida_by_placa(placa: str, user_id: int, observaciones: str = "Salida manual web") -> int:
+    def register_salida_by_placa(
+        placa: str,
+        user_id: int,
+        observaciones: str = "Salida manual web",
+        espacio_numero: str | None = None,
+    ) -> int:
         now_local = Novedad._now_local()
         vehicle = Novedad._find_vehicle_by_plate(placa)
         if not vehicle:
@@ -228,22 +233,29 @@ class Novedad:
 
         vehicle_id, _ = vehicle
 
-        latest_ingreso_query = """
-            SELECT n.id_espacio
-            FROM public.novedad n
-            WHERE n.id_vehiculo = %s
-              AND lower(coalesce(n.tipo_novedad, '')) = 'ingreso'
-              AND n.id_espacio IS NOT NULL
-            ORDER BY n.fecha_hora DESC, n.id DESC
-            LIMIT 1
-        """
-
         espacio_id = None
-        with get_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(latest_ingreso_query, (vehicle_id,))
-                row_ingreso = cur.fetchone()
-                espacio_id = row_ingreso[0] if row_ingreso else None
+        espacio = None
+
+        if espacio_numero:
+            espacio = Espacio.get_by_numero(str(espacio_numero).strip())
+            if espacio and espacio.get("id") is not None:
+                espacio_id = int(espacio["id"])
+
+        if espacio_id is None:
+            latest_ingreso_query = """
+                SELECT n.id_espacio
+                FROM public.novedad n
+                WHERE n.id_vehiculo = %s
+                  AND lower(coalesce(n.tipo_novedad, '')) IN ('ingreso', 'entrada')
+                  AND n.id_espacio IS NOT NULL
+                ORDER BY n.fecha_hora DESC, n.id DESC
+                LIMIT 1
+            """
+            with get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(latest_ingreso_query, (vehicle_id,))
+                    row_ingreso = cur.fetchone()
+                    espacio_id = row_ingreso[0] if row_ingreso else None
 
         payload = {
             "tipo_novedad": "salida",
@@ -260,7 +272,9 @@ class Novedad:
             raise ValueError(f"No se pudo registrar salida para la placa {placa}")
 
         if espacio_id is not None:
-            espacio = Espacio.get_by_id(int(espacio_id))
+            if espacio is None:
+                espacio = Espacio.get_by_id(int(espacio_id))
+
             if espacio and espacio.get("numero") is not None:
                 Espacio.upsert_by_numero(
                     {
