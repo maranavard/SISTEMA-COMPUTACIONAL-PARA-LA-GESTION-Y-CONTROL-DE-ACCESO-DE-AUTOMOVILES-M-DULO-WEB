@@ -180,6 +180,9 @@ def list_items():
         can_manage_sensitive=can_manage_sensitive,
         is_funcionario=is_funcionario,
     )
+@conductores_bp.post("/crear")
+@login_required
+@community_required
 def create_item():
     can_manage_sensitive = _can_manage_sensitive()
     is_funcionario = _is_funcionario_role()
@@ -236,6 +239,9 @@ def create_item():
 
     return redirect(url_for(LIST_ITEMS_ROUTE))
     
+@conductores_bp.post("/<int:item_id>/actualizar")
+@login_required
+@community_required
 def update_item(item_id: int):
     can_manage_sensitive = _can_manage_sensitive()
     is_funcionario = _is_funcionario_role()
