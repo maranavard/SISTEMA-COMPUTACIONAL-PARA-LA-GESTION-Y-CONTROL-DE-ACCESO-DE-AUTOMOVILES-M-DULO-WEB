@@ -114,9 +114,11 @@
                 {% if not is_guard_role %}
                 <a class="espacios-action-icon" href="{{ url_for('espacios.editar_item', item_id=item.id) }}" title="Editar" aria-label="Editar"><span aria-hidden="true">✎</span></a>
                 {% endif %}
+
                 <form method="post" action="{{ url_for('control_accesos.registrar_vehicular') }}" class="espacios-inline-form">
                   <input type="hidden" name="movimiento" value="salida" />
                   <input type="hidden" name="placa" value="{{ item.placa_salida or '' }}" />
+                  <input type="hidden" name="next_url" value="{{ url_for('espacios.list_items') }}" />
                   <button
                     type="submit"
                     class="espacios-action-icon"
@@ -128,6 +130,7 @@
                     <span aria-hidden="true">↪</span>
                   </button>
                 </form>
+
                 {% if not is_guard_role %}
                 <a class="espacios-action-icon" href="{{ url_for('espacios.visualizar_item', item_id=item.id) }}" title="Visualizar" aria-label="Visualizar"><span aria-hidden="true">👁</span></a>
                 {% endif %}
