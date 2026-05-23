@@ -118,6 +118,7 @@
                 <form method="post" action="{{ url_for('control_accesos.registrar_vehicular') }}" class="espacios-inline-form">
                   <input type="hidden" name="movimiento" value="salida" />
                   <input type="hidden" name="placa" value="{{ item.placa_salida or '' }}" />
+                  <input type="hidden" name="espacio_numero" value="{{ item.numero or '' }}" />
                   <input type="hidden" name="next_url" value="{{ url_for('espacios.list_items') }}" />
                   <button
                     type="submit"
