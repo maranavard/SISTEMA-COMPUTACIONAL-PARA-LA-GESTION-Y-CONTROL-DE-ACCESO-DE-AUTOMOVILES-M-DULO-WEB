@@ -50,6 +50,13 @@ class Conductor:
             with conn.cursor() as cur:
                 cur.execute(query, (table_name,))
                 return {row[0] for row in cur.fetchall()}
+    @staticmethod
+    def _pick_fecha_vencimiento_column(cols: set[str]) -> str | None:
+        if "fecha_vencimiento_pase" in cols:
+            return "fecha_vencimiento_pase"
+        if "fecha_vencimiento_pas" in cols:
+            return "fecha_vencimiento_pas"
+        return None
     @classmethod
     def get_by_user_id(cls, user_id: int) -> dict | None:
         table_name = cls._get_table_name()
@@ -138,7 +145,23 @@ class Conductor:
             "numero_pase": "c.numero_pase" if "numero_pase" in cols else "NULL::text AS numero_pase",
             "categoria_pase": "c.categoria_pase" if "categoria_pase" in cols else "NULL::text AS categoria_pase",
             "fecha_registro": "c.fecha_registro" if "fecha_registro" in cols else "NULL::timestamp AS fecha_registro",
-            "fecha_vencimiento_pase": "c.fecha_vencimiento_pase" if "fecha_vencimiento_pase" in cols else "NULL::date AS fecha_vencimiento_pase",
+        fecha_vencimiento_col = cls._pick_fecha_vencimiento_column(cols)
+
+        select_map = {
+            "id": "c.id",
+            "nombre": "c.nombre" if "nombre" in cols else "NULL::text AS nombre",
+            "apellido": "c.apellido" if "apellido" in cols else "NULL::text AS apellido",
+            "cedula": "c.cedula" if "cedula" in cols else "NULL::text AS cedula",
+            "email": "c.email" if "email" in cols else "NULL::text AS email",
+            "telefono": "c.telefono" if "telefono" in cols else "NULL::text AS telefono",
+            "dependencia": "c.dependencia" if "dependencia" in cols else "NULL::text AS dependencia",
+            "tipo": "c.tipo" if "tipo" in cols else "NULL::text AS tipo",
+            "estado": "c.estado" if "estado" in cols else "'activo'::text AS estado",
+            "numero_pase": "c.numero_pase" if "numero_pase" in cols else "NULL::text AS numero_pase",
+            "categoria_pase": "c.categoria_pase" if "categoria_pase" in cols else "NULL::text AS categoria_pase",
+            "fecha_registro": "c.fecha_registro" if "fecha_registro" in cols else "NULL::timestamp AS fecha_registro",
+            "fecha_vencimiento_pase": f"c.{fecha_vencimiento_col}" if fecha_vencimiento_col else "NULL::date AS fecha_vencimiento_pase",
+        }
         }
 
         query = f"""
@@ -206,7 +229,8 @@ class Conductor:
             "numero_pase": "c.numero_pase" if "numero_pase" in cols else "NULL::text AS numero_pase",
             "categoria_pase": "c.categoria_pase" if "categoria_pase" in cols else "NULL::text AS categoria_pase",
             "fecha_registro": "c.fecha_registro" if "fecha_registro" in cols else "NULL::timestamp AS fecha_registro",
-            "fecha_vencimiento_pase": "c.fecha_vencimiento_pase" if "fecha_vencimiento_pase" in cols else "NULL::date AS fecha_vencimiento_pase",
+        fecha_vencimiento_col = cls._pick_fecha_vencimiento_column(cols)
+            "fecha_vencimiento_pase": f"c.{fecha_vencimiento_col}" if fecha_vencimiento_col else "NULL::date AS fecha_vencimiento_pase",
         }
 
         query = f"""
@@ -273,8 +297,13 @@ class Conductor:
             "numero_pase",
             "categoria_pase",
             "fecha_registro",
-            "fecha_vencimiento_pase",
         ]
+
+        fecha_vencimiento_col = cls._pick_fecha_vencimiento_column(cols)
+        if fecha_vencimiento_col and data.get("fecha_vencimiento_pase") not in (None, ""):
+            data = dict(data)
+            data[fecha_vencimiento_col] = data.get("fecha_vencimiento_pase")
+            allowed_fields.append(fecha_vencimiento_col)
 
         insert_cols = []
         insert_vals = []
@@ -315,8 +344,13 @@ class Conductor:
             "numero_pase",
             "categoria_pase",
             "fecha_registro",
-            "fecha_vencimiento_pase",
         ]
+
+        fecha_vencimiento_col = cls._pick_fecha_vencimiento_column(cols)
+        if fecha_vencimiento_col and "fecha_vencimiento_pase" in data:
+            data = dict(data)
+            data[fecha_vencimiento_col] = data.get("fecha_vencimiento_pase")
+            allowed_fields.append(fecha_vencimiento_col)
 
         assignments = []
         values = []
