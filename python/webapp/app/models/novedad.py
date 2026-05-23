@@ -5,7 +5,6 @@ from zoneinfo import ZoneInfo
 
 from psycopg2 import sql
 
-# CORREGIDO: Usar conexión directa con DATABASE_URL
 import os
 import psycopg2
 from dotenv import load_dotenv
@@ -18,7 +17,7 @@ def get_connection():
     database_url = os.getenv("DATABASE_URL")
     if not database_url:
         raise ValueError("❌ DATABASE_URL no configurada")
-    return psycopg2.connect(dsn=database_url, sslmode='require')
+    return psycopg2.connect(dsn=database_url, sslmode="require")
 
 
 from app.models.espacio import Espacio
@@ -75,6 +74,65 @@ class Novedad:
         return row[0], row[1]
 
     @staticmethod
+    def _find_open_space_for_vehicle(vehicle_tipo_id: int | None) -> dict | None:
+        slots = Espacio.build_slots(total_slots=50)
+        disponibles = [
+            slot
+            for slot in slots
+            if slot.get("estado") == "disponible"
+            and (slot.get("tipo_vehiculo_id") in (None, vehicle_tipo_id))
+        ]
+
+        if not disponibles:
+            return None
+
+        return min(disponibles, key=lambda item: int(item.get("numero") or 0))
+
+    @classmethod
+    def _insert_novedad(cls, payload: dict) -> int | None:
+        cols = cls._get_columns()
+
+        field_order = [
+            "tipo_novedad",
+            "id_vehiculo",
+            "id_espacio",
+            "fecha_hora",
+            "id_usuario",
+            "observaciones",
+            "estado",
+        ]
+
+        insert_cols = []
+        insert_vals = []
+
+        for field in field_order:
+            if field not in cols:
+                continue
+            value = payload.get(field)
+            if value is None or value == "":
+                continue
+            insert_cols.append(field)
+            insert_vals.append(value)
+
+        if not insert_cols:
+            return None
+
+        query = sql.SQL("INSERT INTO public.novedad ({fields}) VALUES ({values}) RETURNING id").format(
+            fields=sql.SQL(", ").join(sql.Identifier(column_name) for column_name in insert_cols),
+            values=sql.SQL(", ").join(sql.Placeholder() for _ in insert_cols),
+        )
+
+        inserted_id = None
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, insert_vals)
+                row = cur.fetchone()
+                inserted_id = row[0] if row else None
+            conn.commit()
+
+        return inserted_id
+
+    @staticmethod
     def list_recent(limit: int = 50) -> list[dict]:
         query = """
             SELECT
@@ -116,141 +174,19 @@ class Novedad:
             for row in rows
         ]
 
-    @staticmethod
-    def register_ingreso_by_placa(placa: str, user_id: int) -> dict:
-        row = None
-        sql_error = None
-
-        query = "SELECT assigned_space_id, assigned_space_num FROM public.assign_space_and_register_ingreso(%s, %s)"
-        try:
-            with get_connection() as conn:
-                with conn.cursor() as cur:
-                    cur.execute(query, (placa, user_id))
-                    row = cur.fetchone()
-                conn.commit()
-        except Exception as exc:
-            sql_error = exc
-
-        if row and row[0] is not None:
-            try:
-                vehicle_id = Novedad._find_vehicle_id_by_plate(placa)
-                LocalSyncService.sync_event(
-                    entidad="novedad",
-                    operacion="insert",
-                    payload={
-                        "tipo_novedad": "ingreso",
-                        "id_vehiculo": vehicle_id,
-                        "id_usuario": user_id,
-                        "id_espacio": row[0],
-                        "fecha_hora": Novedad._now_local(),
-                        "observaciones": "Ingreso automático sincronizado",
-                        "estado": "registrado",
-                    },
-                )
-            except Exception:
-                pass
-            return {"assigned_space_id": row[0], "assigned_space_num": row[1]}
-
-        fallback = Novedad._assign_space_manual_fallback(placa=placa, user_id=user_id)
-        if fallback:
-            return fallback
-
-        if sql_error:
-            raise sql_error
-
-        return {"assigned_space_id": None, "assigned_space_num": None}
-
     @classmethod
-    def _insert_ingreso_novedad(
-        cls,
-        vehicle_id: int,
-        user_id: int,
-        espacio_id: int | None,
-        observaciones: str,
-    ) -> int | None:
-        cols = cls._get_columns()
-        payload = {
-            "tipo_novedad": "ingreso",
-            "id_vehiculo": vehicle_id,
-            "id_espacio": espacio_id,
-            "fecha_hora": cls._now_local(),
-            "id_usuario": user_id,
-            "observaciones": observaciones,
-            "estado": "registrado",
-        }
-
-        field_order = [
-            "tipo_novedad",
-            "id_vehiculo",
-            "id_espacio",
-            "fecha_hora",
-            "id_usuario",
-            "observaciones",
-            "estado",
-        ]
-
-        insert_cols = []
-        insert_vals = []
-        for field in field_order:
-            if field not in cols:
-                continue
-            value = payload.get(field)
-            if value is None or value == "":
-                continue
-            insert_cols.append(field)
-            insert_vals.append(value)
-
-        if not insert_cols:
-            return None
-
-        query = sql.SQL("INSERT INTO public.novedad ({fields}) VALUES ({values}) RETURNING id").format(
-            fields=sql.SQL(", ").join(sql.Identifier(column_name) for column_name in insert_cols),
-            values=sql.SQL(", ").join(sql.Placeholder() for _ in insert_cols),
-        )
-
-        inserted_id = None
-        with get_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(query, insert_vals)
-                row = cur.fetchone()
-                inserted_id = row[0] if row else None
-
-                if inserted_id is not None and espacio_id is not None:
-                    cur.execute(
-                        "UPDATE public.novedad SET id_espacio = %s WHERE id = %s",
-                        (espacio_id, inserted_id),
-                    )
-            conn.commit()
-
-        try:
-            LocalSyncService.sync_event(entidad="novedad", operacion="insert", payload=payload)
-        except Exception:
-            pass
-
-        return inserted_id
-
-    @classmethod
-    def _assign_space_manual_fallback(cls, placa: str, user_id: int) -> dict:
+    def register_ingreso_by_placa(cls, placa: str, user_id: int) -> dict:
         vehicle = cls._find_vehicle_by_plate(placa)
         if not vehicle:
             raise ValueError(f"No existe vehículo con placa {placa}")
 
         vehicle_id, vehicle_tipo_id = vehicle
 
-        slots = Espacio.build_slots(total_slots=50)
-        disponibles = [
-            slot
-            for slot in slots
-            if slot.get("estado") == "disponible"
-            and (slot.get("tipo_vehiculo_id") in (None, vehicle_tipo_id))
-        ]
-
-        if not disponibles:
+        slot = cls._find_open_space_for_vehicle(vehicle_tipo_id)
+        if not slot:
             return {"assigned_space_id": None, "assigned_space_num": None}
 
-        slot = min(disponibles, key=lambda item: int(item.get("numero") or 0))
         slot_numero = str(slot.get("numero"))
-
         Espacio.upsert_by_numero(
             {
                 "numero": slot_numero,
@@ -262,17 +198,26 @@ class Novedad:
         espacio = Espacio.get_by_numero(slot_numero)
         espacio_id = int(espacio["id"]) if espacio and espacio.get("id") is not None else None
 
-        cls._insert_ingreso_novedad(
-            vehicle_id=vehicle_id,
-            user_id=user_id,
-            espacio_id=espacio_id,
-            observaciones="Ingreso automático (respaldo manual web)",
-        )
-
-        return {
-            "assigned_space_id": espacio_id,
-            "assigned_space_num": slot_numero,
+        payload = {
+            "tipo_novedad": "ingreso",
+            "id_vehiculo": vehicle_id,
+            "id_espacio": espacio_id,
+            "fecha_hora": cls._now_local(),
+            "id_usuario": user_id,
+            "observaciones": "Ingreso automático web",
+            "estado": "registrado",
         }
+
+        inserted_id = cls._insert_novedad(payload)
+        if inserted_id is None:
+            raise ValueError("No se pudo registrar el ingreso en la tabla de novedades.")
+
+        try:
+            LocalSyncService.sync_event(entidad="novedad", operacion="insert", payload=payload)
+        except Exception:
+            pass
+
+        return {"assigned_space_id": espacio_id, "assigned_space_num": slot_numero}
 
     @staticmethod
     def register_salida_by_placa(placa: str, user_id: int, observaciones: str = "Salida manual web") -> int:
@@ -294,33 +239,24 @@ class Novedad:
         """
 
         espacio_id = None
-        row = None
-
         with get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(latest_ingreso_query, (vehicle_id,))
                 row_ingreso = cur.fetchone()
                 espacio_id = row_ingreso[0] if row_ingreso else None
 
-                insert_query = """
-                    INSERT INTO public.novedad (
-                        tipo_novedad,
-                        id_vehiculo,
-                        fecha_hora,
-                        id_usuario,
-                        observaciones,
-                        id_espacio,
-                        estado
-                    )
-                    VALUES ('salida', %s, %s, %s, %s, %s, 'registrado')
-                    RETURNING id
-                """
-                cur.execute(insert_query, (vehicle_id, now_local, user_id, observaciones, espacio_id))
-                row = cur.fetchone()
+        payload = {
+            "tipo_novedad": "salida",
+            "id_vehiculo": vehicle_id,
+            "id_espacio": espacio_id,
+            "fecha_hora": now_local,
+            "id_usuario": user_id,
+            "observaciones": observaciones,
+            "estado": "registrado",
+        }
 
-            conn.commit()
-
-        if not row:
+        inserted_id = Novedad._insert_novedad(payload)
+        if inserted_id is None:
             raise ValueError(f"No se pudo registrar salida para la placa {placa}")
 
         if espacio_id is not None:
@@ -335,23 +271,11 @@ class Novedad:
                 )
 
         try:
-            LocalSyncService.sync_event(
-                entidad="novedad",
-                operacion="insert",
-                payload={
-                    "tipo_novedad": "salida",
-                    "id_vehiculo": vehicle_id,
-                    "id_usuario": user_id,
-                    "id_espacio": espacio_id,
-                    "fecha_hora": now_local,
-                    "observaciones": observaciones,
-                    "estado": "registrado",
-                },
-            )
+            LocalSyncService.sync_event(entidad="novedad", operacion="insert", payload=payload)
         except Exception:
             pass
 
-        return row[0]
+        return inserted_id
 
     @classmethod
     def create_reporte(cls, payload: dict) -> int:
