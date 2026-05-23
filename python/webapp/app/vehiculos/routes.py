@@ -26,7 +26,7 @@ def _can_manage_sensitive() -> bool:
 
 def _is_funcionario_role() -> bool:
     rol = normalize_role(getattr(current_user, "rol", ""))
-    return rol == "funcionario_area"
+    return rol in {"funcionario_area", "estudiante_udec", "docente_udec"}
 
 
 def _normalize_lookup_text(value: str) -> str:
