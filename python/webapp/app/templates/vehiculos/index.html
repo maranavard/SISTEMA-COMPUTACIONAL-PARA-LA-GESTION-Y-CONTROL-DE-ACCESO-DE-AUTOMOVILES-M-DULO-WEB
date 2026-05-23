@@ -124,7 +124,7 @@
   </div>
   {% endif %}
 
-  {% if is_funcionario %}
+    {% if is_funcionario %}
   <div class="vehiculos-register-card">
     <h3>Listado de mis vehículos</h3>
 
@@ -137,6 +137,9 @@
             <th>Marca</th>
             <th>Modelo</th>
             <th>Color</th>
+            <th>SOAT</th>
+            <th>Técnico-mecánica</th>
+            <th>Tarjeta propiedad</th>
             <th>Acciones</th>
           </tr>
         </thead>
@@ -149,6 +152,9 @@
               <td>{{ item.marca or '' }}</td>
               <td>{{ item.modelo or '' }}</td>
               <td>{{ item.color or '' }}</td>
+              <td>{{ item.fecha_vencimiento_soat_input or '' }}</td>
+              <td>{{ item.fecha_vencimiento_tecnomecanica_input or '' }}</td>
+              <td>{{ item.fecha_vencimiento_tarjeta_propiedad_input or '' }}</td>
               <td>
                 <form method="post" action="{{ url_for('vehiculos.update_item', item_id=item.id) }}" class="inline-form">
                   <input type="hidden" name="placa" value="{{ item.placa or '' }}" />
@@ -158,9 +164,9 @@
                   <input type="text" name="color" value="{{ item.color or '' }}" placeholder="Color" required />
                   <input type="hidden" name="estado" value="{{ item.estado or 'activo' }}" />
 
-                  <input type="date" name="fecha_vencimiento_soat" required />
-                  <input type="date" name="fecha_vencimiento_tecnomecanica" required />
-                  <input type="date" name="fecha_vencimiento_tarjeta_propiedad" required />
+                  <input type="date" name="fecha_vencimiento_soat" value="{{ item.fecha_vencimiento_soat_input or '' }}" required />
+                  <input type="date" name="fecha_vencimiento_tecnomecanica" value="{{ item.fecha_vencimiento_tecnomecanica_input or '' }}" required />
+                  <input type="date" name="fecha_vencimiento_tarjeta_propiedad" value="{{ item.fecha_vencimiento_tarjeta_propiedad_input or '' }}" required />
 
                   <button type="submit">Actualizar</button>
                 </form>
@@ -169,7 +175,7 @@
             {% endfor %}
           {% else %}
             <tr>
-              <td colspan="6">No tienes vehículos registrados.</td>
+              <td colspan="9">No tienes vehículos registrados.</td>
             </tr>
           {% endif %}
         </tbody>
