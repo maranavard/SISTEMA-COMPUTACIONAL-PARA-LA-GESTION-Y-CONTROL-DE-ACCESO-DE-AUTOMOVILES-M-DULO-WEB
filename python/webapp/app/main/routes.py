@@ -3,10 +3,17 @@
 Incluye entrada del sitio y panel protegido.
 """
 
-from flask import Blueprint, redirect, render_template, url_for
+from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
+from app.models.user import User
 from app.utils.authz import normalize_role
+from app.utils.field_validators import (
+    is_valid_cedula,
+    is_valid_email,
+    normalize_cedula,
+    normalize_email,
+)
 
 
 main_bp = Blueprint("main", __name__)
@@ -40,3 +47,41 @@ def dashboard():
 @login_required
 def mi_cuenta():
     return render_template("main/mi_cuenta.html", user=current_user)
+
+
+@main_bp.post("/mi-cuenta/actualizar")
+@login_required
+def actualizar_mi_cuenta():
+    nombre = request.form.get("nombre", "").strip()
+    apellido = request.form.get("apellido", "").strip()
+    email = normalize_email(request.form.get("email", ""))
+    numero_identificacion = normalize_cedula(request.form.get("numero_identificacion", ""))
+    new_password = request.form.get("new_password", "").strip()
+
+    if email and not is_valid_email(email):
+        flash("Formato de correo inválido. Usa un correo válido (ej: usuario@dominio.com).", "error")
+        return redirect(url_for("main.mi_cuenta"))
+
+    if numero_identificacion and not is_valid_cedula(numero_identificacion):
+        flash("Formato de cédula inválido. Debe contener solo números (6 a 12 dígitos).", "error")
+        return redirect(url_for("main.mi_cuenta"))
+
+    try:
+        User.update_user(
+            user_id=int(current_user.id),
+            role=getattr(current_user, "rol", ""),
+            estado=getattr(current_user, "estado", "activo"),
+            nombre=nombre,
+            apellido=apellido,
+            email=email,
+            numero_identificacion=numero_identificacion,
+        )
+
+        if new_password:
+            User.update_password(user_id=int(current_user.id), raw_password=new_password)
+
+        flash("Tus datos fueron actualizados correctamente.", "success")
+    except Exception as exc:
+        flash(f"No se pudo actualizar tu cuenta: {exc}", "error")
+
+    return redirect(url_for("main.mi_cuenta"))
