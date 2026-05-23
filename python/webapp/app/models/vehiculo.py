@@ -282,7 +282,12 @@ class Vehiculo:
 
     @classmethod
     def _get_conductor_row_for_docs(cls, conductor_table: str, conductor_cols: set[str], conductor_id: int):
-        fecha_col = "fecha_vencimiento_pase" if "fecha_vencimiento_pase" in conductor_cols else None
+        fecha_col = None
+        if "fecha_vencimiento_pase" in conductor_cols:
+            fecha_col = "fecha_vencimiento_pase"
+        elif "fecha_vencimiento_pas" in conductor_cols:
+            fecha_col = "fecha_vencimiento_pas"
+
         numero_pase_col = "numero_pase" if "numero_pase" in conductor_cols else None
         estado_col = "estado" if "estado" in conductor_cols else None
         nombre_col = "nombre" if "nombre" in conductor_cols else None
