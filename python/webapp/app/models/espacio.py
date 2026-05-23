@@ -171,12 +171,7 @@ class Espacio:
                 {select_map['tipo_vehiculo_nombre']},
                 {select_map['fecha_actualizacion']}
             FROM public.{table_name} e
-            ORDER BY
-                CASE
-                    WHEN cast(e.{numero_col} as text) ~ '^[0-9]+$' THEN 0
-                    ELSE 1
-                END,
-                cast(e.{numero_col} as text)
+            ORDER BY e.{id_col} ASC
         """
 
         with get_connection() as conn:
