@@ -6,8 +6,8 @@ from flask_login import current_user, login_required
 from app.models.espacio import Espacio
 from app.models.novedad import Novedad
 from app.models.vehiculo import Vehiculo
-from app.utils.lstm_predict import predict_next_40_minutes
 from app.utils.authz import admin_required, normalize_role, parking_ops_required
+from app.utils.lstm_predict import predict_next_40_minutes
 
 
 espacios_bp = Blueprint("espacios", __name__, url_prefix="/espacios")
@@ -35,27 +35,41 @@ def _run_background_prediction() -> None:
         pass
 
 
+def _filter_numeric_operational_spaces(items: list[dict]) -> list[dict]:
+    filtered: list[dict] = []
+    for item in items:
+        numero = str(item.get("numero") or "").strip()
+        if numero.isdigit():
+            numero_int = int(numero)
+            if 1 <= numero_int <= 50:
+                filtered.append(item)
+    return filtered
+
+
 def _build_space_lookup(items: list[dict]) -> dict[int, str]:
     space_by_id: dict[int, str] = {}
     for item in items:
         if item.get("id") is not None:
-            space_by_id[int(item["id"])] = str(item.get("numero") or "")
+            try:
+                space_by_id[int(item["id"])] = str(item.get("numero") or "")
+            except Exception:
+                continue
     return space_by_id
 
 
-def _resolve_space_number(row: dict, space_by_id: dict[int, str]):
+def _resolve_space_number(row: dict, space_by_id: dict[int, str]) -> str:
     space_num = row.get("espacio_numero")
     if space_num not in (None, ""):
-        return str(space_num)
+        return str(space_num).strip()
 
     space_id = row.get("id_espacio")
     if space_id is None:
         return ""
 
     try:
-        return str(space_by_id.get(int(space_id), space_id))
+        return str(space_by_id.get(int(space_id), "")).strip()
     except Exception:
-        return str(space_id)
+        return ""
 
 
 def _extract_recent_ingresos(items: list[dict]) -> tuple[list[dict], dict[str, dict]]:
@@ -67,39 +81,46 @@ def _extract_recent_ingresos(items: list[dict]) -> tuple[list[dict], dict[str, d
 
     for row in recent_raw:
         tipo = (row.get("tipo_novedad") or "").strip().lower()
-        if tipo not in {"ingreso", "entrada"}:
-            continue
-
         fecha = row.get("fecha_hora")
         fecha_texto = str(fecha or "")
-        hora_ingreso = fecha.strftime("%H:%M:%S") if hasattr(fecha, "strftime") else ""
-        fecha_ingreso = fecha.strftime("%Y-%m-%d") if hasattr(fecha, "strftime") else ""
+        hora_mov = fecha.strftime("%H:%M:%S") if hasattr(fecha, "strftime") else ""
+        fecha_mov = fecha.strftime("%Y-%m-%d") if hasattr(fecha, "strftime") else ""
         space_num = _resolve_space_number(row=row, space_by_id=space_by_id)
 
-        if space_num and space_num not in latest_movement_by_space:
+        if not space_num:
+            continue
+
+        if space_num not in latest_movement_by_space:
+            placa = str(row.get("placa") or "").strip()
+            if tipo == "salida":
+                placa = ""
+
             latest_movement_by_space[space_num] = {
-                "placa": str(row.get("placa") or ""),
-                "hora": hora_ingreso,
-                "fecha": fecha_ingreso,
+                "placa": placa,
+                "hora": hora_mov,
+                "fecha": fecha_mov,
                 "fecha_obj": fecha,
+                "tipo": tipo,
             }
 
-        recent_ingresos.append(
-            {
-                "placa": row.get("placa") or "",
-                "espacio": space_num or "",
-                "hora_ingreso": hora_ingreso,
-                "fecha_hora": fecha_texto,
-            }
-        )
+        if tipo in {"ingreso", "entrada"}:
+            recent_ingresos.append(
+                {
+                    "placa": row.get("placa") or "",
+                    "espacio": space_num,
+                    "hora_ingreso": hora_mov,
+                    "fecha_hora": fecha_texto,
+                }
+            )
 
     return recent_ingresos[:25], latest_movement_by_space
 
 
 def _build_table_items(items: list[dict], latest_movement_by_space: dict[str, dict]) -> list[dict]:
     table_items = []
+
     for item in items:
-        numero = str(item.get("numero") or "")
+        numero = str(item.get("numero") or "").strip()
         latest = latest_movement_by_space.get(numero, {})
 
         placa_salida = latest.get("placa", "")
@@ -112,9 +133,9 @@ def _build_table_items(items: list[dict], latest_movement_by_space: dict[str, di
         if latest_fecha_obj and hasattr(latest_fecha_obj, "strftime"):
             hora_display = latest_fecha_obj.strftime("%H:%M:%S")
             fecha_display = latest_fecha_obj.strftime("%Y-%m-%d")
-        elif item.get("fecha_actualizacion"):
+        else:
             fecha_actualizacion = item.get("fecha_actualizacion")
-            if hasattr(fecha_actualizacion, "strftime"):
+            if fecha_actualizacion and hasattr(fecha_actualizacion, "strftime"):
                 hora_display = fecha_actualizacion.strftime("%H:%M:%S")
                 fecha_display = fecha_actualizacion.strftime("%Y-%m-%d")
 
@@ -185,7 +206,9 @@ def _handle_auto_assignment_error(exc: Exception) -> None:
 @login_required
 @parking_ops_required
 def list_items():
-    items = Espacio.list_items()
+    all_items = Espacio.list_items()
+    items = _filter_numeric_operational_spaces(all_items)
+
     tipos_vehiculo = Vehiculo.list_vehicle_types()
     slots = Espacio.build_slots(total_slots=50)
     summary = Espacio.slot_summary(slots)
