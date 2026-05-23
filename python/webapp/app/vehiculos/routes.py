@@ -173,7 +173,7 @@ def list_items():
 
     warning_items = []
     error_items = []
-    if can_manage_sensitive:
+    if can_manage_sensitive or is_funcionario:
         warning_items, error_items = _decorate_items_with_doc_status(items=items)
 
     if placa_consulta:
