@@ -4,10 +4,11 @@ Soporta tablas `public.espacio` o `public.espacios`.
 """
 
 import re
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from psycopg2 import sql
 
-# CORREGIDO: Usar conexión directa con DATABASE_URL
 import os
 import psycopg2
 from dotenv import load_dotenv
@@ -35,6 +36,10 @@ class Espacio:
         "ocupado": ("ocupa", "ocupada", "disponible", "libre"),
         "disponible": ("libre", "dispo", "ocupado"),
     }
+
+    @staticmethod
+    def _now_local() -> datetime:
+        return datetime.now(ZoneInfo("America/Bogota")).replace(tzinfo=None)
 
     @staticmethod
     def _get_table_name() -> str:
@@ -82,7 +87,7 @@ class Espacio:
             WHERE n.nspname = 'public'
               AND t.relname = %s
               AND c.contype = 'c'
-                            AND pg_get_constraintdef(c.oid) ILIKE '%%estado%%'
+              AND pg_get_constraintdef(c.oid) ILIKE '%%estado%%'
         """
 
         with get_connection() as conn:
@@ -123,7 +128,7 @@ class Espacio:
 
     @classmethod
     def _pick_estado_fallback(cls, requested: str, allowed: set[str]) -> str | None:
-        for candidate in cls.ESTADO_FALLBACK_MAP.get(requested, ()):  # pragma: no branch
+        for candidate in cls.ESTADO_FALLBACK_MAP.get(requested, ()):
             if candidate in allowed:
                 return candidate
         return None
@@ -166,7 +171,12 @@ class Espacio:
                 {select_map['tipo_vehiculo_nombre']},
                 {select_map['fecha_actualizacion']}
             FROM public.{table_name} e
-            ORDER BY e.{id_col} DESC
+            ORDER BY
+                CASE
+                    WHEN cast(e.{numero_col} as text) ~ '^[0-9]+$' THEN 0
+                    ELSE 1
+                END,
+                cast(e.{numero_col} as text)
         """
 
         with get_connection() as conn:
@@ -191,6 +201,12 @@ class Espacio:
         table_name = cls._get_table_name()
         cols = cls._get_columns(table_name)
 
+        estado_value = data.get("estado")
+        if estado_value not in (None, ""):
+            estado_value, _ = cls.adapt_estado_for_db(str(estado_value))
+
+        fecha_value = data.get("fecha_actualizacion") or cls._now_local()
+
         field_map = {
             "numero": ["numero", "codigo", "nombre"],
             "estado": ["estado"],
@@ -198,11 +214,15 @@ class Espacio:
             "fecha_actualizacion": ["fecha_actualizacion", "updated_at"],
         }
 
+        normalized_data = dict(data)
+        normalized_data["estado"] = estado_value
+        normalized_data["fecha_actualizacion"] = fecha_value
+
         insert_cols = []
         insert_vals = []
 
         for key, candidates in field_map.items():
-            value = data.get(key)
+            value = normalized_data.get(key)
             if value in (None, ""):
                 continue
 
@@ -243,11 +263,19 @@ class Espacio:
             "fecha_actualizacion": ["fecha_actualizacion", "updated_at"],
         }
 
+        normalized_data = dict(data)
+
+        if "estado" in normalized_data and normalized_data.get("estado") not in (None, ""):
+            estado_adaptado, _ = cls.adapt_estado_for_db(str(normalized_data["estado"]))
+            normalized_data["estado"] = estado_adaptado
+
+        normalized_data["fecha_actualizacion"] = cls._now_local()
+
         assignments = []
         values = []
 
         for key, candidates in field_map.items():
-            if key not in data:
+            if key not in normalized_data:
                 continue
 
             target_col = cls._pick_existing(cols, *candidates)
@@ -255,7 +283,7 @@ class Espacio:
                 continue
 
             assignments.append(sql.SQL("{} = {}").format(sql.Identifier(target_col), sql.Placeholder()))
-            values.append(data[key] if data[key] != "" else None)
+            values.append(normalized_data[key] if normalized_data[key] != "" else None)
 
         if not assignments:
             return
@@ -404,10 +432,11 @@ class Espacio:
         mapped: dict[int, dict] = {}
 
         for item in items:
-            try:
-                numero_int = int(str(item.get("numero") or "").strip())
-            except Exception:
+            numero_raw = str(item.get("numero") or "").strip()
+            if not numero_raw.isdigit():
                 continue
+
+            numero_int = int(numero_raw)
             if 1 <= numero_int <= total_slots and numero_int not in mapped:
                 mapped[numero_int] = item
 
@@ -422,6 +451,7 @@ class Espacio:
                     "estado": status_key,
                     "estado_label": status_label,
                     "tipo_vehiculo_id": item.get("tipo_vehiculo_id") if item else None,
+                    "fecha_actualizacion": item.get("fecha_actualizacion") if item else None,
                 }
             )
 
