@@ -12,6 +12,10 @@
     <h3>Datos del usuario</h3>
     <p><strong>Usuario:</strong> {{ user.username or '' }}</p>
     <p><strong>Rol:</strong> {{ (user.rol or '') | role_label }}</p>
+    <p><strong>Nombre:</strong> {{ user.nombre or '' }}</p>
+    <p><strong>Apellido:</strong> {{ user.apellido or '' }}</p>
+    <p><strong>Correo:</strong> {{ user.email or '' }}</p>
+    <p><strong>Identificación:</strong> {{ user.numero_identificacion or '' }}</p>
 
     <form method="post" action="{{ url_for('main.actualizar_mi_cuenta') }}" style="margin-top: 1rem;">
       <div style="display: grid; gap: 0.85rem;">
