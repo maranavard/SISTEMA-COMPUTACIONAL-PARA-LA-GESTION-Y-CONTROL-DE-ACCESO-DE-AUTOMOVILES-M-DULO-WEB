@@ -78,7 +78,7 @@ def _flash_vehicular_error(exc: Exception) -> None:
     error_text = str(exc)
     if "No hay espacios disponibles" in error_text:
         flash("No hay espacios disponibles para permitir el ingreso.", "error")
-    elif "placa" in error_text.lower() or "vehículo" in error_text.lower() or "vehiculo" in error_text.lower():
+    elif "placa" in error_lower := error_text.lower() or "vehículo" in error_lower or "vehiculo" in error_lower:
         flash("La placa no está registrada en el sistema.", "error")
     else:
         flash(f"No se pudo validar el acceso vehicular: {exc}", "error")
@@ -106,11 +106,12 @@ def _process_ingreso_vehicular(placa: str) -> Response | str:
     return redirect(url_for("espacios.list_items", assigned_space=assigned_space, assigned_plate=placa))
 
 
-def _process_salida_vehicular(placa: str) -> None:
+def _process_salida_vehicular(placa: str, espacio_numero: str | None = None) -> None:
     Novedad.register_salida_by_placa(
         placa=placa,
         user_id=int(current_user.id),
         observaciones="Salida validada en control de accesos",
+        espacio_numero=espacio_numero,
     )
     flash(f"Salida validada correctamente para la placa {placa}.", "success")
 
@@ -168,6 +169,7 @@ def registrar_vehicular():
     placa = (request.form.get("placa", "") or "").strip().upper()
     movimiento = (request.form.get("movimiento", "entrada") or "entrada").strip().lower()
     next_url = (request.form.get("next_url", "") or "").strip()
+    espacio_numero = (request.form.get("espacio_numero", "") or "").strip()
 
     redirect_target = next_url or url_for(INDEX_ROUTE)
 
@@ -182,7 +184,7 @@ def registrar_vehicular():
                 return ingreso_result
             return redirect(redirect_target)
 
-        _process_salida_vehicular(placa=placa)
+        _process_salida_vehicular(placa=placa, espacio_numero=espacio_numero or None)
     except Exception as exc:
         _flash_vehicular_error(exc)
 
