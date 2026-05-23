@@ -50,7 +50,7 @@
             <td>{{ n.tipo_novedad or '' }}</td>
             <td>{{ n.placa or '' }}</td>
             <td>{{ n.estado or '' }}</td>
-            <td>{{ n.fecha_hora or '' }}</td>
+            <td>{{ n.fecha_hora.strftime('%d/%m/%Y %I:%M:%S %p') if n.fecha_hora else '' }}</td>
             <td>{{ n.observaciones or '' }}</td>
             <td>{{ n.id_usuario or '' }}</td>
           </tr>
