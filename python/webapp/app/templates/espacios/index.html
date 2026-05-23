@@ -133,8 +133,8 @@
                 {% endif %}
               </div>
             </td>
-            <td>{{ item.fecha_actualizacion.strftime('%H:%M:%S') if item.fecha_actualizacion else '' }}</td>
-            <td>{{ item.fecha_actualizacion.strftime('%Y-%m-%d') if item.fecha_actualizacion else '' }}</td>
+            <td>{{ item.hora_display or '' }}</td>
+            <td>{{ item.fecha_display or '' }}</td>
           </tr>
           {% else %}
           <tr>
