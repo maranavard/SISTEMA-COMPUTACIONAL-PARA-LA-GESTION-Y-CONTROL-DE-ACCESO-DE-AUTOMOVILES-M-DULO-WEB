@@ -30,7 +30,6 @@ def _build_assignment_notice() -> dict | None:
 
 def _run_background_prediction() -> None:
     try:
-        # Predicción silenciosa para mantener el modelo operativo sin botones en UI.
         predict_next_40_minutes()
     except Exception:
         pass
@@ -40,31 +39,31 @@ def _build_space_lookup(items: list[dict]) -> dict[int, str]:
     space_by_id: dict[int, str] = {}
     for item in items:
         if item.get("id") is not None:
-            space_by_id[int(item["id"])] = item.get("numero")
+            space_by_id[int(item["id"])] = str(item.get("numero") or "")
     return space_by_id
 
 
 def _resolve_space_number(row: dict, space_by_id: dict[int, str]):
     space_num = row.get("espacio_numero")
     if space_num not in (None, ""):
-        return space_num
+        return str(space_num)
 
     space_id = row.get("id_espacio")
     if space_id is None:
-        return space_num
+        return ""
 
     try:
-        return space_by_id.get(int(space_id), space_id)
+        return str(space_by_id.get(int(space_id), space_id))
     except Exception:
-        return space_id
+        return str(space_id)
 
 
-def _extract_recent_ingresos(items: list[dict]) -> tuple[list[dict], dict[str, str]]:
+def _extract_recent_ingresos(items: list[dict]) -> tuple[list[dict], dict[str, dict]]:
     recent_raw = Novedad.list_recent(limit=150)
     space_by_id = _build_space_lookup(items)
 
     recent_ingresos: list[dict] = []
-    latest_plate_by_space: dict[str, str] = {}
+    latest_movement_by_space: dict[str, dict] = {}
 
     for row in recent_raw:
         tipo = (row.get("tipo_novedad") or "").strip().lower()
@@ -74,12 +73,16 @@ def _extract_recent_ingresos(items: list[dict]) -> tuple[list[dict], dict[str, s
         fecha = row.get("fecha_hora")
         fecha_texto = str(fecha or "")
         hora_ingreso = fecha.strftime("%H:%M:%S") if hasattr(fecha, "strftime") else ""
+        fecha_ingreso = fecha.strftime("%Y-%m-%d") if hasattr(fecha, "strftime") else ""
         space_num = _resolve_space_number(row=row, space_by_id=space_by_id)
 
-        if space_num:
-            key_num = str(space_num)
-            if key_num not in latest_plate_by_space and row.get("placa"):
-                latest_plate_by_space[key_num] = str(row.get("placa"))
+        if space_num and space_num not in latest_movement_by_space:
+            latest_movement_by_space[space_num] = {
+                "placa": str(row.get("placa") or ""),
+                "hora": hora_ingreso,
+                "fecha": fecha_ingreso,
+                "fecha_obj": fecha,
+            }
 
         recent_ingresos.append(
             {
@@ -90,20 +93,38 @@ def _extract_recent_ingresos(items: list[dict]) -> tuple[list[dict], dict[str, s
             }
         )
 
-    return recent_ingresos[:25], latest_plate_by_space
+    return recent_ingresos[:25], latest_movement_by_space
 
 
-def _build_table_items(items: list[dict], latest_plate_by_space: dict[str, str]) -> list[dict]:
+def _build_table_items(items: list[dict], latest_movement_by_space: dict[str, dict]) -> list[dict]:
     table_items = []
     for item in items:
         numero = str(item.get("numero") or "")
-        placa_salida = latest_plate_by_space.get(numero, "")
+        latest = latest_movement_by_space.get(numero, {})
+
+        placa_salida = latest.get("placa", "")
         placa_display = placa_salida or item.get("estado") or ""
+
+        hora_display = ""
+        fecha_display = ""
+
+        latest_fecha_obj = latest.get("fecha_obj")
+        if latest_fecha_obj and hasattr(latest_fecha_obj, "strftime"):
+            hora_display = latest_fecha_obj.strftime("%H:%M:%S")
+            fecha_display = latest_fecha_obj.strftime("%Y-%m-%d")
+        elif item.get("fecha_actualizacion"):
+            fecha_actualizacion = item.get("fecha_actualizacion")
+            if hasattr(fecha_actualizacion, "strftime"):
+                hora_display = fecha_actualizacion.strftime("%H:%M:%S")
+                fecha_display = fecha_actualizacion.strftime("%Y-%m-%d")
+
         table_items.append(
             {
                 **item,
                 "placa_display": placa_display,
                 "placa_salida": placa_salida,
+                "hora_display": hora_display,
+                "fecha_display": fecha_display,
             }
         )
 
@@ -171,8 +192,8 @@ def list_items():
 
     assignment_notice = _build_assignment_notice()
     _run_background_prediction()
-    recent_ingresos, latest_plate_by_space = _extract_recent_ingresos(items)
-    table_items = _build_table_items(items=items, latest_plate_by_space=latest_plate_by_space)
+    recent_ingresos, latest_movement_by_space = _extract_recent_ingresos(items)
+    table_items = _build_table_items(items=items, latest_movement_by_space=latest_movement_by_space)
 
     return render_template(
         "espacios/index.html",
@@ -336,17 +357,17 @@ def asignacion_automatica():
         if not result.get("assigned_space_num"):
             flash(NO_SPACES_AVAILABLE_MSG, "error")
             return _redirect_to_list_items()
-        else:
-            space_num = result.get("assigned_space_num")
-            _flash_predicted_occupancy_alert()
 
-            return redirect(
-                url_for(
-                    LIST_ITEMS_ROUTE,
-                    assigned_space=space_num,
-                    assigned_plate=placa,
-                )
+        space_num = result.get("assigned_space_num")
+        _flash_predicted_occupancy_alert()
+
+        return redirect(
+            url_for(
+                LIST_ITEMS_ROUTE,
+                assigned_space=space_num,
+                assigned_plate=placa,
             )
+        )
     except Exception as exc:
         _handle_auto_assignment_error(exc)
 
