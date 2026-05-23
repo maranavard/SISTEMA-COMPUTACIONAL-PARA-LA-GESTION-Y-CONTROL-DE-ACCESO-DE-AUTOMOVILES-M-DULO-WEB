@@ -76,9 +76,11 @@ def _find_visitante(item_id: int) -> dict | None:
 
 def _flash_vehicular_error(exc: Exception) -> None:
     error_text = str(exc)
+    error_lower = error_text.lower()
+
     if "No hay espacios disponibles" in error_text:
         flash("No hay espacios disponibles para permitir el ingreso.", "error")
-    elif "placa" in error_lower := error_text.lower() or "vehículo" in error_lower or "vehiculo" in error_lower:
+    elif "placa" in error_lower or "vehículo" in error_lower or "vehiculo" in error_lower:
         flash("La placa no está registrada en el sistema.", "error")
     else:
         flash(f"No se pudo validar el acceso vehicular: {exc}", "error")
