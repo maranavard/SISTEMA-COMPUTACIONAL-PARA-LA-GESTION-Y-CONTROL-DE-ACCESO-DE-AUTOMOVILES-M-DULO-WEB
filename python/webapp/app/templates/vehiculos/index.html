@@ -11,7 +11,7 @@
     </div>
   </div>
 
-  {% if can_manage_sensitive %}
+    {% if can_manage_sensitive %}
   <div class="vehiculos-register-card">
     <h2>Formulario de Registro de Vehiculos</h2>
     <form method="post" action="{{ url_for('vehiculos.create_item') }}" class="vehiculos-register-form">
@@ -39,14 +39,53 @@
         {% endfor %}
       </select>
       <input name="estado" type="text" placeholder="Estado" value="activo" />
+
       <label class="form-field-label" for="vehiculo-conductor">Conductor</label>
       <input id="vehiculo-conductor" name="conductor_id" type="text" placeholder="Escribe nombre del conductor" />
 
       <label class="form-field-label" for="vehiculo-usuario">Usuario</label>
       <input id="vehiculo-usuario" name="user_id" type="text" placeholder="Escribe nombre del usuario" />
+
       <button type="submit" class="vehiculos-register-btn">Registrar</button>
     </form>
   </div>
+
+  {% elif is_funcionario %}
+  <div class="vehiculos-register-card">
+    <h2>Mis vehículos</h2>
+    <p class="auth-form-hint">Aquí puedes registrar y gestionar únicamente los vehículos asociados a tu usuario.</p>
+
+    <form method="post" action="{{ url_for('vehiculos.create_item') }}" class="vehiculos-register-form">
+      <input name="placa" type="text" placeholder="Placa" required />
+      <input name="marca" type="text" placeholder="Marca" required />
+      <input name="color" type="text" placeholder="Color" required />
+      <input name="modelo" type="text" placeholder="Modelo" required />
+
+      <label class="form-field-label" for="vehiculo-fecha-registro-funcionario">Fecha de Registro</label>
+      <input id="vehiculo-fecha-registro-funcionario" name="fecha_registro" type="datetime-local" required />
+
+      <label class="form-field-label" for="vehiculo-fecha-soat-funcionario">Vencimiento SOAT</label>
+      <input id="vehiculo-fecha-soat-funcionario" name="fecha_vencimiento_soat" type="date" required />
+
+      <label class="form-field-label" for="vehiculo-fecha-tecnomecanica-funcionario">Vencimiento Técnico-mecánica</label>
+      <input id="vehiculo-fecha-tecnomecanica-funcionario" name="fecha_vencimiento_tecnomecanica" type="date" required />
+
+      <label class="form-field-label" for="vehiculo-fecha-tarjeta-funcionario">Vencimiento Tarjeta de propiedad</label>
+      <input id="vehiculo-fecha-tarjeta-funcionario" name="fecha_vencimiento_tarjeta_propiedad" type="date" required />
+
+      <label class="form-field-label" for="vehiculo-tipo-funcionario">Tipo de vehículo</label>
+      <select id="vehiculo-tipo-funcionario" name="tipo_vehiculo_id" required>
+        <option value="">Seleccione tipo de vehículo</option>
+        {% for tipo in tipos_vehiculo %}
+        <option value="{{ tipo.id }}">{{ tipo.nombre }}</option>
+        {% endfor %}
+      </select>
+
+      <input name="estado" type="text" placeholder="Estado" value="activo" />
+      <button type="submit" class="vehiculos-register-btn">Registrar mi vehículo</button>
+    </form>
+  </div>
+
   {% else %}
   <div class="vehiculos-register-card">
     <h2>Consulta básica de vehículos</h2>
@@ -54,6 +93,7 @@
   </div>
   {% endif %}
 
+    {% if not is_funcionario %}
   <div class="vehiculos-register-card vehiculos-consulta-card">
     <h3>Consulta por placa</h3>
     <form method="get" action="{{ url_for('vehiculos.consultar_por_placa') }}" class="vehiculos-consulta-form">
@@ -82,6 +122,61 @@
       {% endif %}
     {% endif %}
   </div>
+  {% endif %}
+
+  {% if is_funcionario %}
+  <div class="vehiculos-register-card">
+    <h3>Listado de mis vehículos</h3>
+
+    <div class="table-wrap">
+      <table class="users-table">
+        <thead>
+          <tr>
+            <th>Placa</th>
+            <th>Tipo</th>
+            <th>Marca</th>
+            <th>Modelo</th>
+            <th>Color</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if items %}
+            {% for item in items %}
+            <tr>
+              <td>{{ item.placa or '' }}</td>
+              <td>{{ item.tipo_vehiculo_nombre or '' }}</td>
+              <td>{{ item.marca or '' }}</td>
+              <td>{{ item.modelo or '' }}</td>
+              <td>{{ item.color or '' }}</td>
+              <td>
+                <form method="post" action="{{ url_for('vehiculos.update_item', item_id=item.id) }}" class="inline-form">
+                  <input type="hidden" name="placa" value="{{ item.placa or '' }}" />
+                  <input type="hidden" name="tipo_vehiculo_id" value="{{ item.tipo_vehiculo_id or '' }}" />
+                  <input type="text" name="marca" value="{{ item.marca or '' }}" placeholder="Marca" required />
+                  <input type="text" name="modelo" value="{{ item.modelo or '' }}" placeholder="Modelo" required />
+                  <input type="text" name="color" value="{{ item.color or '' }}" placeholder="Color" required />
+                  <input type="hidden" name="estado" value="{{ item.estado or 'activo' }}" />
+
+                  <input type="date" name="fecha_vencimiento_soat" required />
+                  <input type="date" name="fecha_vencimiento_tecnomecanica" required />
+                  <input type="date" name="fecha_vencimiento_tarjeta_propiedad" required />
+
+                  <button type="submit">Actualizar</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="6">No tienes vehículos registrados.</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
 
   {% if can_manage_sensitive %}
   <div class="vehiculos-register-card">
