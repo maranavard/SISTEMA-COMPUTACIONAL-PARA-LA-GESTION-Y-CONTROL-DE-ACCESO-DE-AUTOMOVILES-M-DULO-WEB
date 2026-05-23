@@ -184,7 +184,7 @@ class Conductor:
             for row in rows
         ]
 
-    @classmethod
+        @classmethod
     def create_item(cls, data: dict) -> None:
         table_name = cls._get_table_name()
         cols = cls._get_columns(table_name)
@@ -231,7 +231,7 @@ class Conductor:
         table_name = cls._get_table_name()
         cols = cls._get_columns(table_name)
 
-       allowed_fields = [
+        allowed_fields = [
             "user_id",
             "nombre",
             "apellido",
