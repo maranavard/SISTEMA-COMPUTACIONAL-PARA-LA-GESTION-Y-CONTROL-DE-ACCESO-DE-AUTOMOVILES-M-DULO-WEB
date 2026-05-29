@@ -53,6 +53,14 @@ class Conductor:
                 return {row[0] for row in cur.fetchall()}
 
     @staticmethod
+    def _pick_id_column(cols: set[str]) -> str | None:
+        if "id" in cols:
+            return "id"
+        if "id_conductor" in cols:
+            return "id_conductor"
+        return None
+
+    @staticmethod
     def _pick_fecha_vencimiento_column(cols: set[str]) -> str | None:
         if "fecha_vencimiento_pase" in cols:
             return "fecha_vencimiento_pase"
@@ -64,14 +72,15 @@ class Conductor:
     def get_by_user_id(cls, user_id: int) -> dict | None:
         table_name = cls._get_table_name()
         cols = cls._get_columns(table_name)
+        id_col = cls._pick_id_column(cols)
 
-        if "user_id" not in cols:
+        if not id_col or "user_id" not in cols:
             return None
 
         fecha_vencimiento_col = cls._pick_fecha_vencimiento_column(cols)
 
         select_map = {
-            "id": "c.id",
+            "id": f"c.{id_col}",
             "user_id": "c.user_id",
             "nombre": "c.nombre" if "nombre" in cols else "NULL::text AS nombre",
             "apellido": "c.apellido" if "apellido" in cols else "NULL::text AS apellido",
@@ -141,10 +150,14 @@ class Conductor:
     def list_items(cls) -> list[dict]:
         table_name = cls._get_table_name()
         cols = cls._get_columns(table_name)
+        id_col = cls._pick_id_column(cols)
+        if not id_col:
+            raise ValueError(f"La tabla {table_name} no tiene columna identificadora soportada.")
+
         fecha_vencimiento_col = cls._pick_fecha_vencimiento_column(cols)
 
         select_map = {
-            "id": "c.id",
+            "id": f"c.{id_col}",
             "nombre": "c.nombre" if "nombre" in cols else "NULL::text AS nombre",
             "apellido": "c.apellido" if "apellido" in cols else "NULL::text AS apellido",
             "cedula": "c.cedula" if "cedula" in cols else "NULL::text AS cedula",
@@ -179,7 +192,7 @@ class Conductor:
                 {select_map['fecha_registro']},
                 {select_map['fecha_vencimiento_pase']}
             FROM public.{table_name} c
-            ORDER BY c.id DESC
+            ORDER BY c.{id_col} DESC
         """
 
         with get_connection() as conn:
@@ -257,6 +270,10 @@ class Conductor:
     def update_item(cls, item_id: int, data: dict) -> None:
         table_name = cls._get_table_name()
         cols = cls._get_columns(table_name)
+        id_col = cls._pick_id_column(cols)
+        if not id_col:
+            raise ValueError(f"La tabla {table_name} no tiene columna identificadora soportada.")
+
         fecha_vencimiento_col = cls._pick_fecha_vencimiento_column(cols)
 
         allowed_fields = [
@@ -290,9 +307,10 @@ class Conductor:
             return
 
         values.append(item_id)
-        query = sql.SQL("UPDATE public.{table} SET {assignments} WHERE id = %s").format(
+        query = sql.SQL("UPDATE public.{table} SET {assignments} WHERE {id_col} = %s").format(
             table=sql.Identifier(table_name),
             assignments=sql.SQL(", ").join(assignments),
+            id_col=sql.Identifier(id_col),
         )
 
         with get_connection() as conn:
