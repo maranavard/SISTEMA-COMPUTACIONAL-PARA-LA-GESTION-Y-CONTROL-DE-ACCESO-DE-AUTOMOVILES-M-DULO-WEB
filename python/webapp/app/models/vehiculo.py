@@ -9,7 +9,6 @@ import unicodedata
 
 from psycopg2 import sql
 
-# CORREGIDO: Usar conexión directa con DATABASE_URL
 import os
 import psycopg2
 from dotenv import load_dotenv
@@ -22,7 +21,7 @@ def get_connection():
     database_url = os.getenv("DATABASE_URL")
     if not database_url:
         raise ValueError("❌ DATABASE_URL no configurada")
-    return psycopg2.connect(dsn=database_url, sslmode='require')
+    return psycopg2.connect(dsn=database_url, sslmode="require")
 
 
 from app.models.documento_vehiculo import DocumentoVehiculo
@@ -42,6 +41,10 @@ class Vehiculo:
                 return candidate
         return None
 
+    @classmethod
+    def _get_id_col(cls, cols: set[str]) -> str | None:
+        return cls._first_existing(cols, "id", "id_vehiculo")
+
     @staticmethod
     def _doc_status(ok: bool, level: str, message: str, block_automatic_assignment: bool) -> dict:
         return {
@@ -54,7 +57,6 @@ class Vehiculo:
     @staticmethod
     def normalize_plate(placa: str) -> str:
         raw = (placa or "").strip().upper()
-        # Acepta entradas con espacios/guiones y las normaliza a formato compacto.
         return re.sub(r"[^A-Z0-9]", "", raw)
 
     @classmethod
@@ -197,12 +199,7 @@ class Vehiculo:
                 found[matched_key] = {"id": item_id, "nombre": canonical_labels[matched_key]}
 
         ordered_keys = ["automovil", "motocicleta", "bus", "camion"]
-        default_ids = {
-            "automovil": 1,
-            "motocicleta": 2,
-            "bus": 3,
-            "camion": 4,
-        }
+        default_ids = {"automovil": 1, "motocicleta": 2, "bus": 3, "camion": 4}
 
         result = []
         for key in ordered_keys:
@@ -244,12 +241,16 @@ class Vehiculo:
 
     @classmethod
     def _get_vehicle_row_for_docs(cls, table_name: str, table_cols: set[str], plate: str):
+        id_col = cls._get_id_col(table_cols)
+        if not id_col:
+            return None
+
         conductor_fk_col = "conductor_id" if "conductor_id" in table_cols else None
         user_fk_col = "user_id" if "user_id" in table_cols else None
 
         query_vehicle = f"""
             SELECT
-                v.id,
+                v.{id_col},
                 v.placa,
                 {f'v.{conductor_fk_col}' if conductor_fk_col else 'NULL::int'} AS conductor_id,
                 {f'v.{user_fk_col}' if user_fk_col else 'NULL::int'} AS user_id
@@ -332,47 +333,22 @@ class Vehiculo:
         estado_conductor = (conductor_row[5] or "").strip().lower()
 
         if not numero_pase:
-            return cls._doc_status(
-                False,
-                "error",
-                f"El conductor del vehículo {plate} no tiene número de pase registrado.",
-                True,
-            )
+            return cls._doc_status(False, "error", f"El conductor del vehículo {plate} no tiene número de pase registrado.", True)
 
         if fecha_vence is None:
-            return cls._doc_status(
-                False,
-                "error",
-                f"El conductor del vehículo {plate} no tiene fecha de vencimiento del pase.",
-                True,
-            )
+            return cls._doc_status(False, "error", f"El conductor del vehículo {plate} no tiene fecha de vencimiento del pase.", True)
 
         if hasattr(fecha_vence, "date"):
             fecha_vence = fecha_vence.date()
         if not isinstance(fecha_vence, date):
-            return cls._doc_status(
-                False,
-                "error",
-                f"No se pudo interpretar la fecha de vencimiento del pase para {plate}.",
-                True,
-            )
+            return cls._doc_status(False, "error", f"No se pudo interpretar la fecha de vencimiento del pase para {plate}.", True)
 
         days_to_expire = (fecha_vence - date.today()).days
         if estado_conductor == "inactivo":
-            return cls._doc_status(
-                False,
-                "error",
-                f"Conductor inactivo para la placa {plate}. Se requiere validación manual.",
-                True,
-            )
+            return cls._doc_status(False, "error", f"Conductor inactivo para la placa {plate}. Se requiere validación manual.", True)
 
         if days_to_expire < 0:
-            return cls._doc_status(
-                False,
-                "error",
-                f"Documento vencido para {plate} ({abs(days_to_expire)} días). Acceso sujeto a validación manual.",
-                True,
-            )
+            return cls._doc_status(False, "error", f"Documento vencido para {plate} ({abs(days_to_expire)} días). Acceso sujeto a validación manual.", True)
 
         if days_to_expire <= warning_days:
             warning_parts = [f"Alerta documental: pase de {plate} vence en {days_to_expire} días."]
@@ -389,11 +365,14 @@ class Vehiculo:
     def list_items(cls) -> list[dict]:
         table_name = cls._get_table_name()
         cols = cls._get_columns(table_name)
+        id_col = cls._get_id_col(cols)
+        if not id_col:
+            raise ValueError(f"La tabla {table_name} no tiene columna identificadora soportada.")
 
         tipo_nombre_expr = cls._tipo_nombre_expr(cols)
 
         select_map = {
-            "id": "v.id",
+            "id": f"v.{id_col}",
             "placa": "v.placa" if "placa" in cols else "NULL::text AS placa",
             "tipo_vehiculo_id": "v.tipo_vehiculo_id" if "tipo_vehiculo_id" in cols else "NULL::int AS tipo_vehiculo_id",
             "tipo_vehiculo_nombre": tipo_nombre_expr,
@@ -420,7 +399,7 @@ class Vehiculo:
                 {select_map['conductor_id']},
                 {select_map['user_id']}
             FROM public.{table_name} v
-            ORDER BY v.id DESC
+            ORDER BY v.{id_col} DESC
         """
 
         with get_connection() as conn:
@@ -444,19 +423,20 @@ class Vehiculo:
             }
             for row in rows
         ]
+
     @classmethod
     def list_items_by_user_id(cls, user_id: int) -> list[dict]:
         table_name = cls._get_table_name()
         cols = cls._get_columns(table_name)
-
-        if "user_id" not in cols:
+        id_col = cls._get_id_col(cols)
+        if not id_col or "user_id" not in cols:
             return []
 
         tipo_nombre_expr = cls._tipo_nombre_expr(cols)
 
         query = f"""
             SELECT
-                v.id,
+                v.{id_col},
                 {"v.placa" if "placa" in cols else "NULL::text"},
                 {"v.tipo_vehiculo_id" if "tipo_vehiculo_id" in cols else "NULL::int"},
                 {tipo_nombre_expr},
@@ -469,7 +449,7 @@ class Vehiculo:
                 {"v.user_id" if "user_id" in cols else "NULL::int"}
             FROM public.{table_name} v
             WHERE v.user_id = %s
-            ORDER BY v.id DESC
+            ORDER BY v.{id_col} DESC
         """
 
         with get_connection() as conn:
@@ -493,18 +473,20 @@ class Vehiculo:
             }
             for row in rows
         ]
+
     @classmethod
     def get_by_placa(cls, placa: str) -> dict | None:
         table_name = cls._get_table_name()
         cols = cls._get_columns(table_name)
-        if "placa" not in cols:
+        id_col = cls._get_id_col(cols)
+        if not id_col or "placa" not in cols:
             return None
 
         tipo_nombre_expr = cls._tipo_nombre_expr(cols)
 
         query = f"""
             SELECT
-                v.id,
+                v.{id_col},
                 v.placa,
                 {tipo_nombre_expr},
                 {"v.marca" if "marca" in cols else "NULL::text"},
@@ -540,12 +522,15 @@ class Vehiculo:
     def get_by_id(cls, item_id: int) -> dict | None:
         table_name = cls._get_table_name()
         cols = cls._get_columns(table_name)
+        id_col = cls._get_id_col(cols)
+        if not id_col:
+            return None
 
         tipo_nombre_expr = cls._tipo_nombre_expr(cols)
 
         query = f"""
             SELECT
-                v.id,
+                v.{id_col},
                 {"v.placa" if "placa" in cols else "NULL::text"},
                 {tipo_nombre_expr},
                 {"v.tipo_vehiculo_id" if "tipo_vehiculo_id" in cols else "NULL::int"},
@@ -557,7 +542,7 @@ class Vehiculo:
                 {"v.conductor_id" if "conductor_id" in cols else "NULL::int"},
                 {"v.user_id" if "user_id" in cols else "NULL::int"}
             FROM public.{table_name} v
-            WHERE v.id = %s
+            WHERE v.{id_col} = %s
             LIMIT 1
         """
 
@@ -582,16 +567,19 @@ class Vehiculo:
             "conductor_id": row[9],
             "user_id": row[10],
         }
+
     @classmethod
     def belongs_to_user(cls, item_id: int, user_id: int) -> bool:
         item = cls.get_by_id(item_id)
         if not item:
             return False
         return str(item.get("user_id") or "") == str(user_id)
+
     @classmethod
     def create_item(cls, data: dict) -> int | None:
         table_name = cls._get_table_name()
         cols = cls._get_columns(table_name)
+        id_col = cls._get_id_col(cols)
 
         if "placa" in cols and not data.get("placa"):
             raise ValueError("La placa es obligatoria")
@@ -622,12 +610,15 @@ class Vehiculo:
             insert_vals.append(value)
 
         if not insert_cols:
-            return
+            return None
 
-        query = sql.SQL("INSERT INTO public.{table} ({fields}) VALUES ({values}) RETURNING id").format(
+        returning_clause = sql.Identifier(id_col) if id_col else sql.SQL("NULL")
+
+        query = sql.SQL("INSERT INTO public.{table} ({fields}) VALUES ({values}) RETURNING {id_col}").format(
             table=sql.Identifier(table_name),
             fields=sql.SQL(", ").join(sql.Identifier(column_name) for column_name in insert_cols),
             values=sql.SQL(", ").join(sql.Placeholder() for _ in insert_cols),
+            id_col=returning_clause,
         )
 
         inserted_id = None
@@ -650,6 +641,9 @@ class Vehiculo:
     def update_item(cls, item_id: int, data: dict) -> None:
         table_name = cls._get_table_name()
         cols = cls._get_columns(table_name)
+        id_col = cls._get_id_col(cols)
+        if not id_col:
+            raise ValueError(f"La tabla {table_name} no tiene columna identificadora soportada.")
 
         allowed_fields = [
             "placa",
@@ -674,9 +668,10 @@ class Vehiculo:
             return
 
         values.append(item_id)
-        query = sql.SQL("UPDATE public.{table} SET {assignments} WHERE id = %s").format(
+        query = sql.SQL("UPDATE public.{table} SET {assignments} WHERE {id_col} = %s").format(
             table=sql.Identifier(table_name),
             assignments=sql.SQL(", ").join(assignments),
+            id_col=sql.Identifier(id_col),
         )
 
         with get_connection() as conn:
@@ -696,7 +691,15 @@ class Vehiculo:
     @classmethod
     def delete_item(cls, item_id: int) -> None:
         table_name = cls._get_table_name()
-        query = sql.SQL("DELETE FROM public.{table} WHERE id = %s").format(table=sql.Identifier(table_name))
+        cols = cls._get_columns(table_name)
+        id_col = cls._get_id_col(cols)
+        if not id_col:
+            raise ValueError(f"La tabla {table_name} no tiene columna identificadora soportada.")
+
+        query = sql.SQL("DELETE FROM public.{table} WHERE {id_col} = %s").format(
+            table=sql.Identifier(table_name),
+            id_col=sql.Identifier(id_col),
+        )
 
         with get_connection() as conn:
             with conn.cursor() as cur:
@@ -712,12 +715,7 @@ class Vehiculo:
         veh_table = cls._get_table_name()
         veh_cols = cls._get_columns(veh_table)
         if "placa" not in veh_cols:
-            return cls._doc_status(
-                False,
-                "error",
-                "La tabla de vehículos no contiene columna placa para validar documentación.",
-                True,
-            )
+            return cls._doc_status(False, "error", "La tabla de vehículos no contiene columna placa para validar documentación.", True)
 
         vehicle_row = cls._get_vehicle_row_for_docs(table_name=veh_table, table_cols=veh_cols, plate=plate)
 
@@ -729,12 +727,7 @@ class Vehiculo:
             warning_days=warning_days,
         )
         if not vehicle_doc_status.get("ok"):
-            return cls._doc_status(
-                False,
-                "error",
-                f"{vehicle_doc_status.get('message') or 'Documentación vehicular inválida.'}",
-                True,
-            )
+            return cls._doc_status(False, "error", f"{vehicle_doc_status.get('message') or 'Documentación vehicular inválida.'}", True)
 
         vehicle_warning_text = ""
         if (vehicle_doc_status.get("level") or "").strip().lower() == "warning":
@@ -742,12 +735,7 @@ class Vehiculo:
 
         conductor_id = vehicle_row[2]
         if conductor_id is None:
-            return cls._doc_status(
-                False,
-                "error",
-                f"El vehículo {plate} no tiene conductor asociado. Validación documental manual requerida.",
-                True,
-            )
+            return cls._doc_status(False, "error", f"El vehículo {plate} no tiene conductor asociado. Validación documental manual requerida.", True)
 
         conductor_table, conductor_cols = cls._resolve_conductor_table_and_columns()
         conductor_row, schema_error = cls._get_conductor_row_for_docs(
