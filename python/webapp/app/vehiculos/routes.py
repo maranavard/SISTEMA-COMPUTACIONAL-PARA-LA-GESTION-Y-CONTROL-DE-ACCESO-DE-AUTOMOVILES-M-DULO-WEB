@@ -162,27 +162,53 @@ def list_items():
     vehiculo_consulta = None
     tipos_vehiculo = Vehiculo.list_vehicle_types()
 
-    if is_funcionario and not can_manage_sensitive:
-        conductores = [Conductor.get_by_user_id(int(current_user.id))] if Conductor.get_by_user_id(int(current_user.id)) else []
+    try:
+        if is_funcionario and not can_manage_sensitive:
+            own_conductor = Conductor.get_by_user_id(int(current_user.id))
+            conductores = [own_conductor] if own_conductor else []
+            usuarios = []
+            items = Vehiculo.list_items_by_user_id(int(current_user.id))
+        else:
+            conductores = Conductor.list_items()
+            usuarios = User.list_users()
+            items = Vehiculo.list_items()
+    except Exception as exc:
+        flash(f"No se pudo cargar la información base de vehículos: {exc}", "error")
+        conductores = []
         usuarios = []
-        items = Vehiculo.list_items_by_user_id(int(current_user.id))
-    else:
-        conductores = Conductor.list_items()
-        usuarios = User.list_users()
-        items = Vehiculo.list_items()
+        items = []
 
     warning_items = []
     error_items = []
     if can_manage_sensitive or is_funcionario:
-        warning_items, error_items = _decorate_items_with_doc_status(items=items)
+        try:
+            warning_items, error_items = _decorate_items_with_doc_status(items=items)
+        except Exception as exc:
+            flash(f"No se pudo cargar el estado documental de vehículos: {exc}", "warning")
+            warning_items, error_items = [], []
+            for item in items:
+                item["fecha_vencimiento_soat_input"] = ""
+                item["fecha_vencimiento_tecnomecanica_input"] = ""
+                item["fecha_vencimiento_tarjeta_propiedad_input"] = ""
+                item["doc_status_level"] = "warning"
+                item["doc_status_message"] = "Estado documental no disponible temporalmente."
+                item["conductor_ref"] = str(item.get("conductor_id") or "")
+                item["user_ref"] = str(item.get("user_id") or "")
 
     if placa_consulta:
-        vehiculo_consulta = Vehiculo.get_by_placa(placa_consulta)
+        try:
+            vehiculo_consulta = Vehiculo.get_by_placa(placa_consulta)
+        except Exception as exc:
+            flash(f"No se pudo consultar la placa indicada: {exc}", "warning")
+            vehiculo_consulta = None
 
     doc_status_consulta = None
     if can_manage_sensitive and vehiculo_consulta and vehiculo_consulta.get("id"):
         try:
-            doc_status_consulta = DocumentoVehiculo.get_status_summary(int(vehiculo_consulta.get("id")), warning_days=30)
+            doc_status_consulta = DocumentoVehiculo.get_status_summary(
+                int(vehiculo_consulta.get("id")),
+                warning_days=30,
+            )
         except Exception:
             doc_status_consulta = None
 
