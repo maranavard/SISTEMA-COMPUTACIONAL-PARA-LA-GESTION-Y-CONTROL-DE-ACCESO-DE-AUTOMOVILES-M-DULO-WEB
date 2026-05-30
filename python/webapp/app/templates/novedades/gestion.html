@@ -8,7 +8,13 @@
     <img class="panel-logo" src="{{ url_for('static', filename='imagenes/ESCUDO COLOR.png') }}" alt="Logo Universidad de Cundinamarca" />
   </div>
 
-  <h2 class="panel-title">Gestión de Novedades</h2>
+  <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:1rem;">
+    <h2 class="panel-title" style="margin:0;">Gestión de Novedades</h2>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <a href="{{ url_for('novedades.index') }}" class="panel-action-btn">Registrar novedad</a>
+      <a href="{{ url_for('main.dashboard') }}" class="panel-action-btn">Volver al panel</a>
+    </div>
+  </div>
 
   <form method="get" action="{{ url_for('novedades.gestion') }}" style="margin-bottom: 1rem; display:grid; gap:10px;">
     <input type="text" name="placa" placeholder="Filtrar por placa" value="{{ filtros.placa or '' }}">
@@ -39,10 +45,10 @@
           <tr>
             <th><input type="checkbox" id="select-all-novedades"></th>
             <th>Fecha y hora</th>
+            <th>Placa</th>
             <th>Tipo</th>
-            <th>ID vehículo</th>
-            <th>ID espacio</th>
-            <th>ID usuario</th>
+            <th>Espacio</th>
+            <th>Usuario</th>
             <th>Estado</th>
             <th>Observaciones</th>
           </tr>
@@ -52,10 +58,10 @@
           <tr>
             <td><input type="checkbox" name="selected_ids" value="{{ item.id }}" class="novedad-row-checkbox"></td>
             <td>{{ item.fecha_hora or '' }}</td>
+            <td>{{ item.placa or '' }}</td>
             <td>{{ item.tipo_novedad or '' }}</td>
-            <td>{{ item.id_vehiculo or '' }}</td>
-            <td>{{ item.id_espacio or '' }}</td>
-            <td>{{ item.id_usuario or '' }}</td>
+            <td>{{ item.espacio_numero or '' }}</td>
+            <td>{{ item.username or '' }}</td>
             <td>{{ item.estado or '' }}</td>
             <td>{{ item.observaciones or '' }}</td>
           </tr>
