@@ -27,47 +27,68 @@
       <button type="submit">Buscar</button>
     </form>
 
-    <div style="display:flex; gap:10px; margin-bottom: 1rem; flex-wrap: wrap;">
-      <a href="{{ url_for('control_accesos.export_historial_excel', placa=placa, fecha=fecha, documento=documento, scope='filtered') }}" class="control-accesos-btn">Excel selección</a>
-      <a href="{{ url_for('control_accesos.export_historial_pdf', placa=placa, fecha=fecha, documento=documento, scope='filtered') }}" class="control-accesos-btn">PDF selección</a>
-      <a href="{{ url_for('control_accesos.export_historial_excel', scope='all') }}" class="control-accesos-btn">Excel todo</a>
-      <a href="{{ url_for('control_accesos.export_historial_pdf', scope='all') }}" class="control-accesos-btn">PDF todo</a>
-    </div>
+    <form id="export-access-form" method="get">
+      <input type="hidden" name="placa" value="{{ placa or '' }}">
+      <input type="hidden" name="fecha" value="{{ fecha or '' }}">
+      <input type="hidden" name="documento" value="{{ documento or '' }}">
 
-    <div class="table-wrap">
-      <table class="users-table control-accesos-table">
-        <thead>
-          <tr>
-            <th>Fecha y hora</th>
-            <th>Placa</th>
-            <th>Movimiento</th>
-            <th>Espacio</th>
-            <th>Usuario</th>
-            <th>Cédula</th>
-            <th>Estado</th>
-            <th>Observaciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for item in items %}
-          <tr>
-            <td>{{ item.fecha_hora or '' }}</td>
-            <td>{{ item.placa or '' }}</td>
-            <td>{{ item.tipo_novedad or '' }}</td>
-            <td>{{ item.espacio_numero or '' }}</td>
-            <td>{{ item.username or '' }}</td>
-            <td>{{ item.documento_usuario or '' }}</td>
-            <td>{{ item.estado or '' }}</td>
-            <td>{{ item.observaciones or '' }}</td>
-          </tr>
-          {% else %}
-          <tr>
-            <td colspan="8">No hay registros de acceso disponibles para los filtros seleccionados.</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+      <div style="display:flex; gap:8px; margin-bottom: 1rem; flex-wrap: wrap;">
+        <button type="submit" formaction="{{ url_for('control_accesos.export_historial_excel') }}" class="control-accesos-btn" style="padding:6px 12px; font-size:0.9rem;">Exportar Excel</button>
+        <button type="submit" formaction="{{ url_for('control_accesos.export_historial_pdf') }}" class="control-accesos-btn" style="padding:6px 12px; font-size:0.9rem;">Exportar PDF</button>
+      </div>
+
+      <div class="table-wrap">
+        <table class="users-table control-accesos-table">
+          <thead>
+            <tr>
+              <th><input type="checkbox" id="select-all-access"></th>
+              <th>Fecha y hora</th>
+              <th>Placa</th>
+              <th>Movimiento</th>
+              <th>Espacio</th>
+              <th>Usuario</th>
+              <th>Cédula</th>
+              <th>Estado</th>
+              <th>Observaciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in items %}
+            <tr>
+              <td><input type="checkbox" name="selected_ids" value="{{ item.id }}" class="access-row-checkbox"></td>
+              <td>{{ item.fecha_hora or '' }}</td>
+              <td>{{ item.placa or '' }}</td>
+              <td>{{ item.tipo_novedad or '' }}</td>
+              <td>{{ item.espacio_numero or '' }}</td>
+              <td>{{ item.username or '' }}</td>
+              <td>{{ item.documento_usuario or '' }}</td>
+              <td>{{ item.estado or '' }}</td>
+              <td>{{ item.observaciones or '' }}</td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="9">No hay registros de acceso disponibles para los filtros seleccionados.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </form>
   </section>
 </section>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const selectAll = document.getElementById("select-all-access");
+    const checkboxes = document.querySelectorAll(".access-row-checkbox");
+
+    if (selectAll) {
+      selectAll.addEventListener("change", function () {
+        checkboxes.forEach(cb => {
+          cb.checked = selectAll.checked;
+        });
+      });
+    }
+  });
+</script>
 {% endblock %}
