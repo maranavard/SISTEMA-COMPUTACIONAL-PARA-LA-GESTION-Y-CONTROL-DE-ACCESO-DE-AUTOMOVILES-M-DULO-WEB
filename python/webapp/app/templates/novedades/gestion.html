@@ -18,49 +18,70 @@
     <button type="submit">Buscar</button>
   </form>
 
-  <div style="display:flex; gap:10px; margin-bottom: 1rem; flex-wrap: wrap;">
-    <a href="{{ url_for('novedades.export_gestion_excel', placa=filtros.placa, tipo=filtros.tipo, fecha_desde=filtros.fecha_desde, fecha_hasta=filtros.fecha_hasta, scope='filtered') }}" class="panel-action-btn">Excel selección</a>
-    <a href="{{ url_for('novedades.export_gestion_pdf', placa=filtros.placa, tipo=filtros.tipo, fecha_desde=filtros.fecha_desde, fecha_hasta=filtros.fecha_hasta, scope='filtered') }}" class="panel-action-btn">PDF selección</a>
-    <a href="{{ url_for('novedades.export_gestion_excel', scope='all') }}" class="panel-action-btn">Excel todo</a>
-    <a href="{{ url_for('novedades.export_gestion_pdf', scope='all') }}" class="panel-action-btn">PDF todo</a>
-    <a href="{{ url_for('main.dashboard') }}" class="panel-action-btn">Volver al panel</a>
-  </div>
-
   {% if guard_today_only %}
     <p class="panel-role-pill">Mostrando solo novedades del día actual para rol de vigilancia.</p>
   {% endif %}
 
-  <div class="table-wrap">
-    <table class="users-table">
-      <thead>
-        <tr>
-          <th>Fecha y hora</th>
-          <th>Tipo</th>
-          <th>ID vehículo</th>
-          <th>ID espacio</th>
-          <th>ID usuario</th>
-          <th>Estado</th>
-          <th>Observaciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for item in items %}
-        <tr>
-          <td>{{ item.fecha_hora or '' }}</td>
-          <td>{{ item.tipo_novedad or '' }}</td>
-          <td>{{ item.id_vehiculo or '' }}</td>
-          <td>{{ item.id_espacio or '' }}</td>
-          <td>{{ item.id_usuario or '' }}</td>
-          <td>{{ item.estado or '' }}</td>
-          <td>{{ item.observaciones or '' }}</td>
-        </tr>
-        {% else %}
-        <tr>
-          <td colspan="7">No hay novedades para los filtros seleccionados.</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+  <form id="export-novedades-form" method="get">
+    <input type="hidden" name="placa" value="{{ filtros.placa or '' }}">
+    <input type="hidden" name="tipo" value="{{ filtros.tipo or '' }}">
+    <input type="hidden" name="fecha_desde" value="{{ filtros.fecha_desde or '' }}">
+    <input type="hidden" name="fecha_hasta" value="{{ filtros.fecha_hasta or '' }}">
+
+    <div style="display:flex; gap:8px; margin-bottom: 1rem; flex-wrap: wrap;">
+      <button type="submit" formaction="{{ url_for('novedades.export_gestion_excel') }}" class="panel-action-btn" style="padding:6px 12px; font-size:0.9rem;">Exportar Excel</button>
+      <button type="submit" formaction="{{ url_for('novedades.export_gestion_pdf') }}" class="panel-action-btn" style="padding:6px 12px; font-size:0.9rem;">Exportar PDF</button>
+    </div>
+
+    <div class="table-wrap">
+      <table class="users-table">
+        <thead>
+          <tr>
+            <th><input type="checkbox" id="select-all-novedades"></th>
+            <th>Fecha y hora</th>
+            <th>Tipo</th>
+            <th>ID vehículo</th>
+            <th>ID espacio</th>
+            <th>ID usuario</th>
+            <th>Estado</th>
+            <th>Observaciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in items %}
+          <tr>
+            <td><input type="checkbox" name="selected_ids" value="{{ item.id }}" class="novedad-row-checkbox"></td>
+            <td>{{ item.fecha_hora or '' }}</td>
+            <td>{{ item.tipo_novedad or '' }}</td>
+            <td>{{ item.id_vehiculo or '' }}</td>
+            <td>{{ item.id_espacio or '' }}</td>
+            <td>{{ item.id_usuario or '' }}</td>
+            <td>{{ item.estado or '' }}</td>
+            <td>{{ item.observaciones or '' }}</td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="8">No hay novedades para los filtros seleccionados.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </form>
 </section>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const selectAll = document.getElementById("select-all-novedades");
+    const checkboxes = document.querySelectorAll(".novedad-row-checkbox");
+
+    if (selectAll) {
+      selectAll.addEventListener("change", function () {
+        checkboxes.forEach(cb => {
+          cb.checked = selectAll.checked;
+        });
+      });
+    }
+  });
+</script>
 {% endblock %}
