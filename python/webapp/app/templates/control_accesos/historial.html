@@ -27,6 +27,11 @@
       <button type="submit">Buscar</button>
     </form>
 
+    <div style="display:flex; gap:10px; margin-bottom: 1rem; flex-wrap: wrap;">
+      <a href="{{ url_for('control_accesos.export_historial_excel', placa=placa, fecha=fecha, documento=documento) }}" class="control-accesos-btn">Exportar Excel</a>
+      <a href="{{ url_for('control_accesos.export_historial_pdf', placa=placa, fecha=fecha, documento=documento) }}" class="control-accesos-btn">Exportar PDF</a>
+    </div>
+
     <div class="table-wrap">
       <table class="users-table control-accesos-table">
         <thead>
