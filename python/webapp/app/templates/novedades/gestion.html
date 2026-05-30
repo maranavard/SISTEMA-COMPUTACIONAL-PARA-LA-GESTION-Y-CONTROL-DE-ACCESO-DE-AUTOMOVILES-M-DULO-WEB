@@ -50,6 +50,7 @@
             <th>Espacio</th>
             <th>Usuario</th>
             <th>Estado</th>
+            <th>Guardar estado</th>
             <th>Observaciones</th>
           </tr>
         </thead>
@@ -62,12 +63,29 @@
             <td>{{ item.tipo_novedad or '' }}</td>
             <td>{{ item.espacio_numero or '' }}</td>
             <td>{{ item.username or '' }}</td>
-            <td>{{ item.estado or '' }}</td>
+            <td>
+              <form method="post" action="{{ url_for('novedades.actualizar_estado', novedad_id=item.id) }}">
+                <input type="hidden" name="placa" value="{{ filtros.placa or '' }}">
+                <input type="hidden" name="tipo" value="{{ filtros.tipo or '' }}">
+                <input type="hidden" name="fecha_desde" value="{{ filtros.fecha_desde or '' }}">
+                <input type="hidden" name="fecha_hasta" value="{{ filtros.fecha_hasta or '' }}">
+                <select name="estado" required>
+                  <option value="registrado" {% if item.estado == 'registrado' %}selected{% endif %}>Registrado</option>
+                  <option value="pendiente" {% if item.estado == 'pendiente' %}selected{% endif %}>Pendiente</option>
+                  <option value="en_revision" {% if item.estado == 'en_revision' %}selected{% endif %}>En revisión</option>
+                  <option value="resuelto" {% if item.estado == 'resuelto' %}selected{% endif %}>Resuelto</option>
+                  <option value="cerrado" {% if item.estado == 'cerrado' %}selected{% endif %}>Cerrado</option>
+                </select>
+            </td>
+            <td>
+                <button type="submit" class="panel-action-btn" style="padding:6px 12px; font-size:0.85rem;">Guardar</button>
+              </form>
+            </td>
             <td>{{ item.observaciones or '' }}</td>
           </tr>
           {% else %}
           <tr>
-            <td colspan="8">No hay novedades para los filtros seleccionados.</td>
+            <td colspan="9">No hay novedades para los filtros seleccionados.</td>
           </tr>
           {% endfor %}
         </tbody>
