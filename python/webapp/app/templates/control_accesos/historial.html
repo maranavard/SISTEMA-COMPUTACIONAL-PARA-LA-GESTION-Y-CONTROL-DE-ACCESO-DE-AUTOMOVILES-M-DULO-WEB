@@ -28,8 +28,10 @@
     </form>
 
     <div style="display:flex; gap:10px; margin-bottom: 1rem; flex-wrap: wrap;">
-      <a href="{{ url_for('control_accesos.export_historial_excel', placa=placa, fecha=fecha, documento=documento) }}" class="control-accesos-btn">Exportar Excel</a>
-      <a href="{{ url_for('control_accesos.export_historial_pdf', placa=placa, fecha=fecha, documento=documento) }}" class="control-accesos-btn">Exportar PDF</a>
+      <a href="{{ url_for('control_accesos.export_historial_excel', placa=placa, fecha=fecha, documento=documento, scope='filtered') }}" class="control-accesos-btn">Excel selección</a>
+      <a href="{{ url_for('control_accesos.export_historial_pdf', placa=placa, fecha=fecha, documento=documento, scope='filtered') }}" class="control-accesos-btn">PDF selección</a>
+      <a href="{{ url_for('control_accesos.export_historial_excel', scope='all') }}" class="control-accesos-btn">Excel todo</a>
+      <a href="{{ url_for('control_accesos.export_historial_pdf', scope='all') }}" class="control-accesos-btn">PDF todo</a>
     </div>
 
     <div class="table-wrap">
