@@ -126,6 +126,27 @@ class Novedad:
         return row[0] if row else None
 
     @classmethod
+    def update_estado(cls, novedad_id: int, estado: str) -> None:
+        cols = cls._get_columns()
+        if "estado" not in cols:
+            raise ValueError("La tabla novedad no tiene columna estado.")
+
+        estado = (estado or "").strip().lower()
+        if not estado:
+            raise ValueError("Debes indicar un estado válido.")
+
+        query = """
+            UPDATE public.novedad
+            SET estado = %s
+            WHERE id = %s
+        """
+
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, (estado, novedad_id))
+            conn.commit()
+
+    @classmethod
     def list_recent(cls, limit: int = 50) -> list[dict]:
         user_cols = cls._get_table_columns("usuarios")
         doc_col = cls._pick_existing(
