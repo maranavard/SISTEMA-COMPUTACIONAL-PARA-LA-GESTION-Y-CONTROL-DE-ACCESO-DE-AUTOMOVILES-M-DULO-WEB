@@ -16,15 +16,35 @@
     <h2>Formulario de Registro de Novedades</h2>
     <form method="post" action="{{ url_for('novedades.registrar_novedad') }}" class="novedades-register-form">
       <label class="form-field-label" for="novedad-tipo">Tipo de novedad</label>
-      <input id="novedad-tipo" name="tipo_novedad" type="text" placeholder="Tipo de novedad" required />
+      <select id="novedad-tipo" name="tipo_novedad" required>
+        <option value="">Selecciona una opción</option>
+        <option value="novedad">Novedad general</option>
+        <option value="incidente">Incidente</option>
+        <option value="observacion">Observación</option>
+        <option value="ingreso">Ingreso</option>
+        <option value="salida">Salida</option>
+        <option value="bloqueo">Bloqueo</option>
+        <option value="alerta">Alerta</option>
+      </select>
+
       <label class="form-field-label" for="novedad-placa">Placa</label>
       <input id="novedad-placa" name="placa" type="text" placeholder="Placa" required />
+
       <label class="form-field-label" for="novedad-fecha-hora">Fecha/ Hora</label>
       <input id="novedad-fecha-hora" name="fecha_hora" type="datetime-local" required />
+
       <label class="form-field-label" for="novedad-observaciones">Observaciones</label>
       <input id="novedad-observaciones" name="observaciones" type="text" placeholder="Observaciones" required />
+
       <label class="form-field-label" for="novedad-estado">Estado</label>
-      <input id="novedad-estado" name="estado" type="text" placeholder="Estado" value="registrado" required />
+      <select id="novedad-estado" name="estado" required>
+        <option value="registrado" selected>Registrado</option>
+        <option value="pendiente">Pendiente</option>
+        <option value="en_revision">En revisión</option>
+        <option value="resuelto">Resuelto</option>
+        <option value="cerrado">Cerrado</option>
+      </select>
+
       <button type="submit" class="novedades-register-btn">Registrar</button>
     </form>
   </div>
