@@ -270,24 +270,34 @@ def autorizacion():
 @login_required
 @control_access_required
 def autorizar(item_id: int):
+    item = _find_visitante(item_id)
+    if not item:
+        flash(RECORD_NOT_FOUND_MSG, "error")
+        return redirect(url_for(AUTORIZACION_ROUTE))
+
     try:
         Visitante.update_item(item_id, {"estado": "autorizado"})
-        flash("Ingreso autorizado correctamente.", "success")
+
+        placa = (item.get("placa") or "").strip().upper()
+        if placa:
+            try:
+                ingreso_result = Novedad.register_ingreso_by_placa(
+                    placa=placa,
+                    user_id=int(current_user.id),
+                )
+                assigned_space = ingreso_result.get("assigned_space_num")
+
+                if assigned_space:
+                    flash(f"Ingreso autorizado correctamente. Cupo asignado: {assigned_space}.", "success")
+                else:
+                    flash("Ingreso autorizado, pero no había espacios disponibles para asignación automática.", "warning")
+            except Exception as ingreso_exc:
+                flash(f"Ingreso autorizado, pero no se pudo asignar cupo automáticamente: {ingreso_exc}", "warning")
+        else:
+            flash("Ingreso autorizado correctamente, pero el visitante no tiene placa registrada.", "warning")
+
     except Exception as exc:
         flash(f"No se pudo autorizar el ingreso: {exc}", "error")
-
-    return redirect(url_for(AUTORIZACION_ROUTE))
-
-
-@control_accesos_bp.post("/autorizacion/<int:item_id>/rechazar")
-@login_required
-@control_access_required
-def rechazar(item_id: int):
-    try:
-        Visitante.update_item(item_id, {"estado": "rechazado"})
-        flash("Solicitud rechazada correctamente.", "success")
-    except Exception as exc:
-        flash(f"No se pudo rechazar la solicitud: {exc}", "error")
 
     return redirect(url_for(AUTORIZACION_ROUTE))
 
