@@ -43,11 +43,66 @@ class Novedad:
                 return {row[0] for row in cur.fetchall()}
 
     @staticmethod
-    def _find_vehicle_id_by_plate(placa: str) -> int | None:
+    def _get_table_columns(table_name: str) -> set[str]:
         query = """
-            SELECT id
-            FROM public.vehiculos
-            WHERE upper(placa) = upper(%s)
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = %s
+        """
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, (table_name,))
+                return {row[0] for row in cur.fetchall()}
+
+    @staticmethod
+    def _first_existing(cols: set[str], *candidates: str) -> str | None:
+        for candidate in candidates:
+            if candidate in cols:
+                return candidate
+        return None
+
+    @classmethod
+    def _resolve_vehicle_table(cls) -> tuple[str | None, str | None, str | None]:
+        candidates = ["vehiculos", "vehicles"]
+        for table_name in candidates:
+            cols = cls._get_table_columns(table_name)
+            if not cols:
+                continue
+            id_col = cls._first_existing(cols, "id", "id_vehiculo")
+            placa_col = cls._first_existing(cols, "placa")
+            if id_col and placa_col:
+                return table_name, id_col, placa_col
+        return None, None, None
+
+    @classmethod
+    def _resolve_user_table(cls) -> tuple[str | None, str | None, str | None, str | None]:
+        table_name = "usuarios"
+        cols = cls._get_table_columns(table_name)
+        if not cols:
+            return None, None, None, None
+
+        id_col = cls._first_existing(cols, "id", "id_usuario")
+        username_col = cls._first_existing(cols, "username", "usuario", "user_name")
+        documento_col = cls._first_existing(
+            cols,
+            "numero_identificacion",
+            "identificacion",
+            "documento",
+            "cedula",
+        )
+        return table_name, id_col, username_col, documento_col
+
+    @classmethod
+    def _find_vehicle_id_by_plate(cls, placa: str) -> int | None:
+        table_name, id_col, placa_col = cls._resolve_vehicle_table()
+        if not table_name or not id_col or not placa_col:
+            return None
+
+        query = f"""
+            SELECT {id_col}
+            FROM public.{table_name}
+            WHERE upper({placa_col}) = upper(%s)
             LIMIT 1
         """
         with get_connection() as conn:
@@ -56,12 +111,21 @@ class Novedad:
                 row = cur.fetchone()
         return row[0] if row else None
 
-    @staticmethod
-    def _find_vehicle_by_plate(placa: str) -> tuple[int, int | None] | None:
-        query = """
-            SELECT id, tipo_vehiculo_id
-            FROM public.vehiculos
-            WHERE upper(placa) = upper(%s)
+    @classmethod
+    def _find_vehicle_by_plate(cls, placa: str) -> tuple[int, int | None] | None:
+        table_name, id_col, placa_col = cls._resolve_vehicle_table()
+        if not table_name or not id_col or not placa_col:
+            return None
+
+        cols = cls._get_table_columns(table_name)
+        tipo_col = "tipo_vehiculo_id" if "tipo_vehiculo_id" in cols else None
+
+        query = f"""
+            SELECT
+                {id_col},
+                {tipo_col if tipo_col else 'NULL::int'}
+            FROM public.{table_name}
+            WHERE upper({placa_col}) = upper(%s)
             LIMIT 1
         """
         with get_connection() as conn:
@@ -132,6 +196,55 @@ class Novedad:
 
         return inserted_id
 
+    @classmethod
+    def _resolve_vehicle_plate(cls, vehiculo_id: int | None) -> str:
+        if vehiculo_id is None:
+            return ""
+
+        table_name, id_col, placa_col = cls._resolve_vehicle_table()
+        if not table_name or not id_col or not placa_col:
+            return ""
+
+        query = f"""
+            SELECT {placa_col}
+            FROM public.{table_name}
+            WHERE {id_col} = %s
+            LIMIT 1
+        """
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, (vehiculo_id,))
+                row = cur.fetchone()
+        return str(row[0] or "") if row else ""
+
+    @classmethod
+    def _resolve_user_info(cls, user_id: int | None) -> tuple[str, str]:
+        if user_id is None:
+            return "", ""
+
+        table_name, id_col, username_col, documento_col = cls._resolve_user_table()
+        if not table_name or not id_col:
+            return "", ""
+
+        username_expr = username_col if username_col else "NULL::text"
+        documento_expr = documento_col if documento_col else "NULL::text"
+
+        query = f"""
+            SELECT {username_expr}, {documento_expr}
+            FROM public.{table_name}
+            WHERE {id_col} = %s
+            LIMIT 1
+        """
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, (user_id,))
+                row = cur.fetchone()
+
+        if not row:
+            return "", ""
+
+        return str(row[0] or ""), str(row[1] or "")
+
     @staticmethod
     def list_recent(limit: int = 50) -> list[dict]:
         query = """
@@ -139,16 +252,12 @@ class Novedad:
                 n.id,
                 n.tipo_novedad,
                 n.id_vehiculo,
-                v.placa,
                 n.id_espacio,
-                e.numero AS espacio_numero,
                 n.id_usuario,
                 n.estado,
                 n.fecha_hora,
                 n.observaciones
             FROM public.novedad n
-            LEFT JOIN public.vehiculos v ON v.id = n.id_vehiculo
-            LEFT JOIN public.espacio e ON e.id_espacio = n.id_espacio
             ORDER BY n.fecha_hora DESC, n.id DESC
             LIMIT %s
         """
@@ -158,21 +267,33 @@ class Novedad:
                 cur.execute(query, (limit,))
                 rows = cur.fetchall()
 
-        return [
-            {
-                "id": row[0],
-                "tipo_novedad": row[1],
-                "id_vehiculo": row[2],
-                "placa": row[3],
-                "id_espacio": row[4],
-                "espacio_numero": row[5],
-                "id_usuario": row[6],
-                "estado": row[7],
-                "fecha_hora": row[8],
-                "observaciones": row[9],
-            }
-            for row in rows
-        ]
+        items = []
+        for row in rows:
+            vehiculo_id = row[2]
+            espacio_id = row[3]
+            user_id = row[4]
+
+            placa = Novedad._resolve_vehicle_plate(vehiculo_id)
+            username, documento_usuario = Novedad._resolve_user_info(user_id)
+
+            items.append(
+                {
+                    "id": row[0],
+                    "tipo_novedad": row[1],
+                    "id_vehiculo": vehiculo_id,
+                    "placa": placa,
+                    "id_espacio": espacio_id,
+                    "espacio_numero": espacio_id if espacio_id is not None else "",
+                    "id_usuario": user_id,
+                    "username": username,
+                    "documento_usuario": documento_usuario,
+                    "estado": row[5],
+                    "fecha_hora": row[6],
+                    "observaciones": row[7],
+                }
+            )
+
+        return items
 
     @staticmethod
     def search_access_history(placa: str = "", fecha: str = "", documento: str = "") -> list[dict]:
@@ -180,85 +301,69 @@ class Novedad:
         fecha = (fecha or "").strip()
         documento = (documento or "").strip().lower()
 
-        conditions = []
-        params = []
-
-        if placa:
-            conditions.append("upper(v.placa) LIKE %s")
-            params.append(f"%{placa}%")
-
-        if fecha:
-            conditions.append("DATE(n.fecha_hora) = %s")
-            params.append(fecha)
-
-        if documento:
-            conditions.append(
-                """
-                (
-                    lower(coalesce(u.numero_identificacion, '')) LIKE %s
-                    OR lower(coalesce(u.identificacion, '')) LIKE %s
-                    OR lower(coalesce(u.documento, '')) LIKE %s
-                    OR lower(coalesce(u.cedula, '')) LIKE %s
-                )
-                """
-            )
-            like_doc = f"%{documento}%"
-            params.extend([like_doc, like_doc, like_doc, like_doc])
-
-        where_sql = ""
-        if conditions:
-            where_sql = "WHERE " + " AND ".join(conditions)
-
-        query = f"""
+        query = """
             SELECT
                 n.id,
                 n.tipo_novedad,
                 n.id_vehiculo,
-                v.placa,
                 n.id_espacio,
-                e.numero AS espacio_numero,
                 n.id_usuario,
-                u.username,
-                COALESCE(
-                    u.numero_identificacion,
-                    u.identificacion,
-                    u.documento,
-                    u.cedula,
-                    ''
-                ) AS documento_usuario,
                 n.estado,
                 n.fecha_hora,
                 n.observaciones
             FROM public.novedad n
-            LEFT JOIN public.vehiculos v ON v.id = n.id_vehiculo
-            LEFT JOIN public.espacio e ON e.id_espacio = n.id_espacio
-            LEFT JOIN public.usuarios u ON u.id = n.id_usuario
-            {where_sql}
             ORDER BY n.fecha_hora DESC, n.id DESC
         """
 
         with get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(query, params)
+                cur.execute(query)
                 rows = cur.fetchall()
 
-        return [
-            {
+        items = []
+        for row in rows:
+            vehiculo_id = row[2]
+            espacio_id = row[3]
+            user_id = row[4]
+
+            placa_real = Novedad._resolve_vehicle_plate(vehiculo_id)
+            username, documento_usuario = Novedad._resolve_user_info(user_id)
+
+            item = {
                 "id": row[0],
                 "tipo_novedad": row[1],
-                "id_vehiculo": row[2],
-                "placa": row[3],
-                "id_espacio": row[4],
-                "espacio_numero": row[5],
-                "id_usuario": row[6],
-                "username": row[7],
-                "documento_usuario": row[8],
-                "estado": row[9],
-                "fecha_hora": row[10],
-                "observaciones": row[11],
+                "id_vehiculo": vehiculo_id,
+                "placa": placa_real,
+                "id_espacio": espacio_id,
+                "espacio_numero": espacio_id if espacio_id is not None else "",
+                "id_usuario": user_id,
+                "username": username,
+                "documento_usuario": documento_usuario,
+                "estado": row[5],
+                "fecha_hora": row[6],
+                "observaciones": row[7],
             }
-            for row in rows
-        ]
+            items.append(item)
+
+        if placa:
+            items = [
+                item for item in items
+                if placa in str(item.get("placa") or "").upper()
+            ]
+
+        if fecha:
+            items = [
+                item for item in items
+                if str(item.get("fecha_hora") or "").startswith(fecha)
+            ]
+
+        if documento:
+            items = [
+                item for item in items
+                if documento in str(item.get("documento_usuario") or "").lower()
+            ]
+
+        return items
 
     @classmethod
     def register_ingreso_by_placa(cls, placa: str, user_id: int) -> dict:
