@@ -295,8 +295,15 @@ def autorizar(item_id: int):
 
         if assigned_space:
             flash(f"Ingreso autorizado correctamente. Cupo asignado: {assigned_space}.", "success")
-        else:
-            flash("Ingreso autorizado, pero no había espacios disponibles para asignación automática.", "warning")
+            return redirect(
+                url_for(
+                    "espacios.list_items",
+                    assigned_space=assigned_space,
+                    assigned_plate=placa,
+                )
+            )
+
+        flash("Ingreso autorizado, pero no había espacios disponibles para asignación automática.", "warning")
 
     except Exception as exc:
         flash(f"Ingreso autorizado, pero no se pudo asignar cupo automáticamente: {exc}", "warning")
