@@ -161,6 +161,34 @@ def registrar_novedad():
     return redirect(url_for(GESTION_ROUTE))
 
 
+@novedades_bp.post("/<int:novedad_id>/estado")
+@login_required
+@community_required
+def actualizar_estado(novedad_id: int):
+    estado = (request.form.get("estado", "") or "").strip().lower()
+
+    placa = (request.form.get("placa", "") or "").strip()
+    tipo = (request.form.get("tipo", "") or "").strip()
+    fecha_desde = (request.form.get("fecha_desde", "") or "").strip()
+    fecha_hasta = (request.form.get("fecha_hasta", "") or "").strip()
+
+    try:
+        Novedad.update_estado(novedad_id=novedad_id, estado=estado)
+        flash("Estado de la novedad actualizado correctamente.", "success")
+    except Exception as exc:
+        flash(f"No se pudo actualizar el estado de la novedad: {exc}", "error")
+
+    return redirect(
+        url_for(
+            GESTION_ROUTE,
+            placa=placa,
+            tipo=tipo,
+            fecha_desde=fecha_desde,
+            fecha_hasta=fecha_hasta,
+        )
+    )
+
+
 @novedades_bp.get("/gestion")
 @login_required
 @community_required
@@ -189,9 +217,9 @@ def export_gestion_excel():
     headers = [
         "Fecha y hora",
         "Tipo novedad",
-        "ID vehículo",
-        "ID espacio",
-        "ID usuario",
+        "Placa",
+        "Espacio",
+        "Usuario",
         "Estado",
         "Observaciones",
     ]
@@ -202,9 +230,9 @@ def export_gestion_excel():
             [
                 str(item.get("fecha_hora") or ""),
                 str(item.get("tipo_novedad") or ""),
-                str(item.get("id_vehiculo") or ""),
-                str(item.get("id_espacio") or ""),
-                str(item.get("id_usuario") or ""),
+                str(item.get("placa") or ""),
+                str(item.get("espacio_numero") or ""),
+                str(item.get("username") or ""),
                 str(item.get("estado") or ""),
                 str(item.get("observaciones") or ""),
             ]
@@ -248,7 +276,7 @@ def export_gestion_pdf():
     pdf.drawString(40, height - 60, filtros_texto)
 
     y = height - 90
-    headers = ["Fecha", "Tipo", "Vehículo", "Espacio", "Usuario", "Estado"]
+    headers = ["Fecha", "Tipo", "Placa", "Espacio", "Usuario", "Estado"]
     x_positions = [40, 170, 280, 380, 470, 580]
 
     pdf.setFont("Helvetica-Bold", 9)
@@ -270,9 +298,9 @@ def export_gestion_pdf():
         values = [
             str(item.get("fecha_hora") or "")[:19],
             str(item.get("tipo_novedad") or "")[:15],
-            str(item.get("id_vehiculo") or "")[:10],
-            str(item.get("id_espacio") or "")[:10],
-            str(item.get("id_usuario") or "")[:10],
+            str(item.get("placa") or "")[:12],
+            str(item.get("espacio_numero") or "")[:10],
+            str(item.get("username") or "")[:15],
             str(item.get("estado") or "")[:12],
         ]
 
