@@ -19,8 +19,10 @@
   </form>
 
   <div style="display:flex; gap:10px; margin-bottom: 1rem; flex-wrap: wrap;">
-    <a href="{{ url_for('novedades.export_gestion_excel', placa=filtros.placa, tipo=filtros.tipo, fecha_desde=filtros.fecha_desde, fecha_hasta=filtros.fecha_hasta) }}" class="panel-action-btn">Exportar Excel</a>
-    <a href="{{ url_for('novedades.export_gestion_pdf', placa=filtros.placa, tipo=filtros.tipo, fecha_desde=filtros.fecha_desde, fecha_hasta=filtros.fecha_hasta) }}" class="panel-action-btn">Exportar PDF</a>
+    <a href="{{ url_for('novedades.export_gestion_excel', placa=filtros.placa, tipo=filtros.tipo, fecha_desde=filtros.fecha_desde, fecha_hasta=filtros.fecha_hasta, scope='filtered') }}" class="panel-action-btn">Excel selección</a>
+    <a href="{{ url_for('novedades.export_gestion_pdf', placa=filtros.placa, tipo=filtros.tipo, fecha_desde=filtros.fecha_desde, fecha_hasta=filtros.fecha_hasta, scope='filtered') }}" class="panel-action-btn">PDF selección</a>
+    <a href="{{ url_for('novedades.export_gestion_excel', scope='all') }}" class="panel-action-btn">Excel todo</a>
+    <a href="{{ url_for('novedades.export_gestion_pdf', scope='all') }}" class="panel-action-btn">PDF todo</a>
     <a href="{{ url_for('main.dashboard') }}" class="panel-action-btn">Volver al panel</a>
   </div>
 
