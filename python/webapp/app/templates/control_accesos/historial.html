@@ -12,36 +12,50 @@
   </div>
 
   <section class="control-accesos-card">
-    <h2>Historial de Accesos</h2>
+    <h2>Historial de Accesos Vehiculares</h2>
+
+    <form method="get" action="{{ url_for('control_accesos.historial') }}" class="control-accesos-search-form" style="margin-bottom: 1rem;">
+      <div class="control-accesos-search-input-wrap">
+        <input name="placa" type="text" placeholder="Consultar por placa" value="{{ placa or '' }}" />
+      </div>
+      <div class="control-accesos-search-input-wrap">
+        <input name="fecha" type="date" value="{{ fecha or '' }}" />
+      </div>
+      <div class="control-accesos-search-input-wrap">
+        <input name="documento" type="text" placeholder="Consultar por cédula" value="{{ documento or '' }}" />
+      </div>
+      <button type="submit">Buscar</button>
+    </form>
 
     <div class="table-wrap">
       <table class="users-table control-accesos-table">
         <thead>
           <tr>
             <th>Fecha y hora</th>
-            <th>Usuario</th>
+            <th>Placa</th>
+            <th>Movimiento</th>
             <th>Espacio</th>
-            <th>Accion</th>
-            <th>Acciones PDF</th>
+            <th>Usuario</th>
+            <th>Cédula</th>
+            <th>Estado</th>
+            <th>Observaciones</th>
           </tr>
         </thead>
         <tbody>
           {% for item in items %}
           <tr>
-            <td>{{ item.fecha_hora_registro or item.fecha_hora_prevista or '' }}</td>
-            <td>{{ item.numero_identificacion or '' }}</td>
-            <td>{{ item.area_destino or '' }}</td>
+            <td>{{ item.fecha_hora or '' }}</td>
+            <td>{{ item.placa or '' }}</td>
+            <td>{{ item.tipo_novedad or '' }}</td>
+            <td>{{ item.espacio_numero or '' }}</td>
+            <td>{{ item.username or '' }}</td>
+            <td>{{ item.documento_usuario or '' }}</td>
             <td>{{ item.estado or '' }}</td>
-            <td>
-              <div class="control-accesos-actions">
-                <a class="control-accesos-icon-btn" href="{{ url_for('control_accesos.historial_visualizar', item_id=item.id) }}" title="Visualizar" aria-label="Visualizar"><span aria-hidden="true">👁</span></a>
-                <a class="control-accesos-icon-btn" href="{{ url_for('control_accesos.historial_pdf', item_id=item.id) }}" title="PDF" aria-label="PDF" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">📄</span></a>
-              </div>
-            </td>
+            <td>{{ item.observaciones or '' }}</td>
           </tr>
           {% else %}
           <tr>
-            <td colspan="5">No hay registros de acceso disponibles.</td>
+            <td colspan="8">No hay registros de acceso disponibles para los filtros seleccionados.</td>
           </tr>
           {% endfor %}
         </tbody>
