@@ -37,6 +37,19 @@ class Novedad:
                 return {row[0] for row in cur.fetchall()}
 
     @staticmethod
+    def _get_table_columns(table_name: str) -> set[str]:
+        query = """
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = %s
+        """
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, (table_name,))
+                return {row[0] for row in cur.fetchall()}
+
+    @staticmethod
     def _find_vehicle_id_by_plate(placa: str) -> int | None:
         query = """
             SELECT id
@@ -106,24 +119,68 @@ class Novedad:
         return row[0] if row else None
 
     @staticmethod
-    def list_recent(limit: int = 50) -> list[dict]:
-        query = """
-            SELECT
-                id,
-                tipo_novedad,
-                id_vehiculo,
-                id_espacio,
-                id_usuario,
-                estado,
-                fecha_hora,
-                observaciones
-            FROM public.novedad
-            ORDER BY fecha_hora DESC, id DESC
-            LIMIT %s
+    def _build_history_query(placa: str = "", fecha: str = "", documento: str = "", limit: int = 200):
+        user_doc_expr = """
+            COALESCE(
+                u.numero_identificacion,
+                u.identificacion,
+                u.documento,
+                u.cedula,
+                ''
+            )
         """
+
+        query = f"""
+            SELECT
+                n.id,
+                n.tipo_novedad,
+                n.id_vehiculo,
+                COALESCE(v.placa, '') AS placa,
+                n.id_espacio,
+                COALESCE(CAST(e.numero AS text), '') AS espacio_numero,
+                n.id_usuario,
+                COALESCE(u.username, '') AS username,
+                {user_doc_expr} AS documento_usuario,
+                n.estado,
+                n.fecha_hora,
+                n.observaciones
+            FROM public.novedad n
+            LEFT JOIN public.vehiculos v ON v.id = n.id_vehiculo
+            LEFT JOIN public.espacio e ON e.id_espacio = n.id_espacio
+            LEFT JOIN public.usuarios u ON u.id = n.id_usuario
+            WHERE 1 = 1
+        """
+
+        params = []
+
+        placa = (placa or "").strip().upper()
+        fecha = (fecha or "").strip()
+        documento = (documento or "").strip().lower()
+
+        if placa:
+            query += " AND upper(COALESCE(v.placa, '')) LIKE %s"
+            params.append(f"%{placa}%")
+
+        if fecha:
+            query += " AND DATE(n.fecha_hora) = %s"
+            params.append(fecha)
+
+        if documento:
+            query += f" AND lower({user_doc_expr}) LIKE %s"
+            params.append(f"%{documento}%")
+
+        query += " ORDER BY n.fecha_hora DESC, n.id DESC LIMIT %s"
+        params.append(limit)
+
+        return query, params
+
+    @classmethod
+    def list_recent(cls, limit: int = 50) -> list[dict]:
+        query, params = cls._build_history_query(limit=limit)
+
         with get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(query, (limit,))
+                cur.execute(query, params)
                 rows = cur.fetchall()
 
         return [
@@ -131,63 +188,50 @@ class Novedad:
                 "id": row[0],
                 "tipo_novedad": row[1],
                 "id_vehiculo": row[2],
-                "placa": "",
-                "id_espacio": row[3],
-                "espacio_numero": row[3] or "",
-                "id_usuario": row[4],
-                "username": row[4] or "",
-                "documento_usuario": "",
-                "estado": row[5],
-                "fecha_hora": row[6],
-                "observaciones": row[7],
+                "placa": row[3],
+                "id_espacio": row[4],
+                "espacio_numero": row[5],
+                "id_usuario": row[6],
+                "username": row[7],
+                "documento_usuario": row[8],
+                "estado": row[9],
+                "fecha_hora": row[10],
+                "observaciones": row[11],
             }
             for row in rows
         ]
 
-    @staticmethod
-    def search_access_history(placa: str = "", fecha: str = "", documento: str = "") -> list[dict]:
-        query = """
-            SELECT
-                id,
-                tipo_novedad,
-                id_vehiculo,
-                id_espacio,
-                id_usuario,
-                estado,
-                fecha_hora,
-                observaciones
-            FROM public.novedad
-            ORDER BY fecha_hora DESC, id DESC
-            LIMIT 200
-        """
+    @classmethod
+    def search_access_history(cls, placa: str = "", fecha: str = "", documento: str = "") -> list[dict]:
+        query, params = cls._build_history_query(
+            placa=placa,
+            fecha=fecha,
+            documento=documento,
+            limit=200,
+        )
+
         with get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(query)
+                cur.execute(query, params)
                 rows = cur.fetchall()
 
-        items = [
+        return [
             {
                 "id": row[0],
                 "tipo_novedad": row[1],
                 "id_vehiculo": row[2],
-                "placa": "",
-                "id_espacio": row[3],
-                "espacio_numero": row[3] or "",
-                "id_usuario": row[4],
-                "username": row[4] or "",
-                "documento_usuario": "",
-                "estado": row[5],
-                "fecha_hora": row[6],
-                "observaciones": row[7],
+                "placa": row[3],
+                "id_espacio": row[4],
+                "espacio_numero": row[5],
+                "id_usuario": row[6],
+                "username": row[7],
+                "documento_usuario": row[8],
+                "estado": row[9],
+                "fecha_hora": row[10],
+                "observaciones": row[11],
             }
             for row in rows
         ]
-
-        fecha = (fecha or "").strip()
-        if fecha:
-            items = [item for item in items if str(item.get("fecha_hora") or "").startswith(fecha)]
-
-        return items
 
     @classmethod
     def register_ingreso_by_placa(cls, placa: str, user_id: int) -> dict:
