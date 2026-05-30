@@ -125,22 +125,40 @@ class Novedad:
 
         return row[0] if row else None
 
-    @staticmethod
-    def list_recent(limit: int = 50) -> list[dict]:
-        query = """
+    @classmethod
+    def list_recent(cls, limit: int = 50) -> list[dict]:
+        user_cols = cls._get_table_columns("usuarios")
+        doc_col = cls._pick_existing(
+            user_cols,
+            "numero_identificacion",
+            "identificacion",
+            "documento",
+            "cedula",
+        )
+        documento_expr = f"COALESCE(u.{doc_col}, '')" if doc_col else "''::text"
+
+        query = f"""
             SELECT
-                id,
-                tipo_novedad,
-                id_vehiculo,
-                id_espacio,
-                id_usuario,
-                estado,
-                fecha_hora,
-                observaciones
-            FROM public.novedad
-            ORDER BY fecha_hora DESC, id DESC
+                n.id,
+                n.tipo_novedad,
+                n.id_vehiculo,
+                COALESCE(v.placa, '') AS placa,
+                n.id_espacio,
+                COALESCE(CAST(e.numero AS text), '') AS espacio_numero,
+                n.id_usuario,
+                COALESCE(u.username, '') AS username,
+                {documento_expr} AS documento_usuario,
+                n.estado,
+                n.fecha_hora,
+                n.observaciones
+            FROM public.novedad n
+            LEFT JOIN public.vehiculos v ON v.id = n.id_vehiculo
+            LEFT JOIN public.espacio e ON e.id_espacio = n.id_espacio
+            LEFT JOIN public.usuarios u ON u.id = n.id_usuario
+            ORDER BY n.fecha_hora DESC, n.id DESC
             LIMIT %s
         """
+
         with get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(query, (limit,))
@@ -151,15 +169,15 @@ class Novedad:
                 "id": row[0],
                 "tipo_novedad": row[1],
                 "id_vehiculo": row[2],
-                "placa": "",
-                "id_espacio": row[3],
-                "espacio_numero": row[3] if row[3] is not None else "",
-                "id_usuario": row[4],
-                "username": str(row[4] or ""),
-                "documento_usuario": "",
-                "estado": row[5],
-                "fecha_hora": row[6],
-                "observaciones": row[7],
+                "placa": row[3],
+                "id_espacio": row[4],
+                "espacio_numero": row[5],
+                "id_usuario": row[6],
+                "username": row[7],
+                "documento_usuario": row[8],
+                "estado": row[9],
+                "fecha_hora": row[10],
+                "observaciones": row[11],
             }
             for row in rows
         ]
@@ -416,10 +434,5 @@ class Novedad:
                 cur.execute(query, insert_vals)
                 row = cur.fetchone()
             conn.commit()
-
-        try:
-            LocalSyncService.sync_event(entidad="novedad", operacion="insert", payload=payload)
-        except Exception:
-            pass
 
         return row[0]
