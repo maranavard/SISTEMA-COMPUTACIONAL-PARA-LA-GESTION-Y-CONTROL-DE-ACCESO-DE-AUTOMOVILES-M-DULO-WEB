@@ -16,21 +16,21 @@ from reportlab.lib.pagesizes import letter, landscape
 from reportlab.pdfgen import canvas
 
 from app.models.novedad import Novedad
-from app.utils.authz import control_access_required
+from app.utils.authz import community_required
 
 control_accesos_bp = Blueprint("control_accesos", __name__, url_prefix="/control-accesos")
 
 
 @control_accesos_bp.get("/")
 @login_required
-@control_access_required
+@community_required
 def index():
     return render_template("control_accesos/index.html")
 
 
 @control_accesos_bp.post("/registrar")
 @login_required
-@control_access_required
+@community_required
 def registrar():
     flash("Registro manual no implementado en esta versión.", "info")
     return redirect(url_for("control_accesos.index"))
@@ -38,7 +38,7 @@ def registrar():
 
 @control_accesos_bp.post("/registrar-vehicular")
 @login_required
-@control_access_required
+@community_required
 def registrar_vehicular():
     placa = (request.form.get("placa", "") or "").strip().upper()
     movimiento = (request.form.get("movimiento", "") or "").strip().lower()
@@ -67,7 +67,7 @@ def registrar_vehicular():
 
 @control_accesos_bp.get("/autorizacion")
 @login_required
-@control_access_required
+@community_required
 def autorizacion():
     return render_template("control_accesos/autorizacion.html")
 
@@ -87,7 +87,7 @@ def _get_historial_items():
 
 @control_accesos_bp.get("/historial")
 @login_required
-@control_access_required
+@community_required
 def historial():
     try:
         placa, fecha, documento, items = _get_historial_items()
@@ -106,7 +106,7 @@ def historial():
 
 @control_accesos_bp.get("/historial/export/excel")
 @login_required
-@control_access_required
+@community_required
 def export_historial_excel():
     placa, fecha, documento, items = _get_historial_items()
 
@@ -155,7 +155,7 @@ def export_historial_excel():
 
 @control_accesos_bp.get("/historial/export/pdf")
 @login_required
-@control_access_required
+@community_required
 def export_historial_pdf():
     placa, fecha, documento, items = _get_historial_items()
 
