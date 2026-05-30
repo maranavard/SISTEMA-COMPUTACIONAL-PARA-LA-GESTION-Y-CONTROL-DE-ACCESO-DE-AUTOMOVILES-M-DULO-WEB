@@ -1,7 +1,6 @@
 """Factory principal de Flask.
 
 Responsabilidades:
-
 1) Cargar configuración general.
 2) Inicializar Flask-Login.
 3) Registrar blueprints (módulos de rutas).
@@ -44,9 +43,7 @@ def load_user(user_id: str):
 
 
 def _is_csrf_exempt_endpoint(endpoint: str | None) -> bool:
-    if not endpoint:
-        return False
-    return endpoint.startswith(CSRF_EXEMPT_ENDPOINT_PREFIXES)
+    return bool(endpoint and endpoint.startswith(CSRF_EXEMPT_ENDPOINT_PREFIXES))
 
 
 def _get_or_create_csrf_token() -> str:
@@ -110,11 +107,7 @@ def create_app() -> Flask:
             "maestro_udec": DOCENTE_LABEL,
             "visitante_udec": "Visitante UDEC",
         }
-
-        if role in labels:
-            return labels[role]
-
-        return role.replace("_", " ").strip().title()
+        return labels.get(role, role.replace("_", " ").strip().title())
 
     from .auth.routes import auth_bp
     from .main.routes import main_bp
