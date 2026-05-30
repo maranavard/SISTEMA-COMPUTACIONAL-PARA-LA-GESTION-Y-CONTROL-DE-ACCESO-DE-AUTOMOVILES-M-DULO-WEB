@@ -197,8 +197,27 @@ def registrar_vehicular():
 @login_required
 @control_access_required
 def historial():
-    items = Visitante.list_items()
-    return render_template("control_accesos/historial.html", items=items)
+    placa = (request.args.get("placa", "") or "").strip().upper()
+    fecha = (request.args.get("fecha", "") or "").strip()
+    documento = (request.args.get("documento", "") or "").strip()
+
+    try:
+        items = Novedad.search_access_history(
+            placa=placa,
+            fecha=fecha,
+            documento=documento,
+        )
+    except Exception as exc:
+        flash(f"No se pudo cargar el historial de accesos: {exc}", "error")
+        items = []
+
+    return render_template(
+        "control_accesos/historial.html",
+        items=items,
+        placa=placa,
+        fecha=fecha,
+        documento=documento,
+    )
 
 
 @control_accesos_bp.get("/historial/<int:item_id>/visualizar")
