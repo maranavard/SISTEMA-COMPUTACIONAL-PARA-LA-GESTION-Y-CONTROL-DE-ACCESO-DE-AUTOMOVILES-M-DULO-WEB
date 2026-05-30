@@ -50,6 +50,13 @@ class Novedad:
                 return {row[0] for row in cur.fetchall()}
 
     @staticmethod
+    def _pick_existing(cols: set[str], *candidates: str) -> str | None:
+        for candidate in candidates:
+            if candidate in cols:
+                return candidate
+        return None
+
+    @staticmethod
     def _find_vehicle_id_by_plate(placa: str) -> int | None:
         query = """
             SELECT id
@@ -118,17 +125,18 @@ class Novedad:
 
         return row[0] if row else None
 
-    @staticmethod
-    def _build_history_query(placa: str = "", fecha: str = "", documento: str = "", limit: int = 200):
-        user_doc_expr = """
-            COALESCE(
-                u.numero_identificacion,
-                u.identificacion,
-                u.documento,
-                u.cedula,
-                ''
-            )
-        """
+    @classmethod
+    def _build_history_query(cls, placa: str = "", fecha: str = "", documento: str = "", limit: int = 200):
+        user_cols = cls._get_table_columns("usuarios")
+        doc_col = cls._pick_existing(
+            user_cols,
+            "numero_identificacion",
+            "identificacion",
+            "documento",
+            "cedula",
+        )
+
+        documento_expr = f"COALESCE(u.{doc_col}, '')" if doc_col else "''::text"
 
         query = f"""
             SELECT
@@ -140,7 +148,7 @@ class Novedad:
                 COALESCE(CAST(e.numero AS text), '') AS espacio_numero,
                 n.id_usuario,
                 COALESCE(u.username, '') AS username,
-                {user_doc_expr} AS documento_usuario,
+                {documento_expr} AS documento_usuario,
                 n.estado,
                 n.fecha_hora,
                 n.observaciones
@@ -166,7 +174,7 @@ class Novedad:
             params.append(fecha)
 
         if documento:
-            query += f" AND lower({user_doc_expr}) LIKE %s"
+            query += f" AND lower({documento_expr}) LIKE %s"
             params.append(f"%{documento}%")
 
         query += " ORDER BY n.fecha_hora DESC, n.id DESC LIMIT %s"
