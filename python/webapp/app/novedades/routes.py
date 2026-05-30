@@ -119,6 +119,13 @@ def _get_gestion_items():
     return items, guard_today_only, filtros
 
 
+def _filter_selected_items(items: list[dict]) -> list[dict]:
+    selected_ids = {str(item_id) for item_id in request.args.getlist("selected_ids") if str(item_id).strip()}
+    if not selected_ids:
+        return items
+    return [item for item in items if str(item.get("id")) in selected_ids]
+
+
 @novedades_bp.get("/")
 @login_required
 @community_required
@@ -173,6 +180,7 @@ def gestion():
 @community_required
 def export_gestion_excel():
     items, _, filtros = _get_gestion_items()
+    items = _filter_selected_items(items)
 
     wb = Workbook()
     ws = wb.active
@@ -220,6 +228,7 @@ def export_gestion_excel():
 @community_required
 def export_gestion_pdf():
     items, _, filtros = _get_gestion_items()
+    items = _filter_selected_items(items)
 
     output = BytesIO()
     pdf = canvas.Canvas(output, pagesize=landscape(letter))
