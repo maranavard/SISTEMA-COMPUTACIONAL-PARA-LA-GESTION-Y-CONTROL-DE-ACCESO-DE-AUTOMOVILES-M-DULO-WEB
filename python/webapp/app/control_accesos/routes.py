@@ -73,9 +73,9 @@ def autorizacion():
 
 
 def _get_historial_items():
-    placa = (request.values.get("placa", "") or "").strip().upper()
-    fecha = (request.values.get("fecha", "") or "").strip()
-    documento = (request.values.get("documento", "") or "").strip()
+    placa = (request.args.get("placa", "") or "").strip().upper()
+    fecha = (request.args.get("fecha", "") or "").strip()
+    documento = (request.args.get("documento", "") or "").strip()
 
     items = Novedad.search_access_history(
         placa=placa,
@@ -86,12 +86,10 @@ def _get_historial_items():
 
 
 def _filter_selected_items(items: list[dict]) -> list[dict]:
-    selected_ids = request.values.getlist("selected_ids")
+    selected_ids = {str(item_id) for item_id in request.args.getlist("selected_ids") if str(item_id).strip()}
     if not selected_ids:
         return items
-
-    selected_set = {str(item_id).strip() for item_id in selected_ids if str(item_id).strip()}
-    return [item for item in items if str(item.get("id")) in selected_set]
+    return [item for item in items if str(item.get("id")) in selected_ids]
 
 
 @control_accesos_bp.get("/historial")
@@ -113,7 +111,7 @@ def historial():
     )
 
 
-@control_accesos_bp.post("/historial/export/excel")
+@control_accesos_bp.get("/historial/export/excel")
 @login_required
 @community_required
 def export_historial_excel():
@@ -163,7 +161,7 @@ def export_historial_excel():
     )
 
 
-@control_accesos_bp.post("/historial/export/pdf")
+@control_accesos_bp.get("/historial/export/pdf")
 @login_required
 @community_required
 def export_historial_pdf():
