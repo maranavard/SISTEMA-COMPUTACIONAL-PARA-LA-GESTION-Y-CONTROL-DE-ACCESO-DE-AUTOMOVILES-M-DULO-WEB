@@ -125,8 +125,47 @@ class Novedad:
 
         return row[0] if row else None
 
+    @staticmethod
+    def list_recent(limit: int = 50) -> list[dict]:
+        query = """
+            SELECT
+                id,
+                tipo_novedad,
+                id_vehiculo,
+                id_espacio,
+                id_usuario,
+                estado,
+                fecha_hora,
+                observaciones
+            FROM public.novedad
+            ORDER BY fecha_hora DESC, id DESC
+            LIMIT %s
+        """
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, (limit,))
+                rows = cur.fetchall()
+
+        return [
+            {
+                "id": row[0],
+                "tipo_novedad": row[1],
+                "id_vehiculo": row[2],
+                "placa": "",
+                "id_espacio": row[3],
+                "espacio_numero": row[3] if row[3] is not None else "",
+                "id_usuario": row[4],
+                "username": str(row[4] or ""),
+                "documento_usuario": "",
+                "estado": row[5],
+                "fecha_hora": row[6],
+                "observaciones": row[7],
+            }
+            for row in rows
+        ]
+
     @classmethod
-    def _build_history_query(cls, placa: str = "", fecha: str = "", documento: str = "", limit: int = 200):
+    def search_access_history(cls, placa: str = "", fecha: str = "", documento: str = "") -> list[dict]:
         user_cols = cls._get_table_columns("usuarios")
         doc_col = cls._pick_existing(
             user_cols,
@@ -135,7 +174,6 @@ class Novedad:
             "documento",
             "cedula",
         )
-
         documento_expr = f"COALESCE(u.{doc_col}, '')" if doc_col else "''::text"
 
         query = f"""
@@ -156,7 +194,7 @@ class Novedad:
             LEFT JOIN public.vehiculos v ON v.id = n.id_vehiculo
             LEFT JOIN public.espacio e ON e.id_espacio = n.id_espacio
             LEFT JOIN public.usuarios u ON u.id = n.id_usuario
-            WHERE 1 = 1
+            WHERE lower(coalesce(n.tipo_novedad, '')) IN ('ingreso', 'entrada', 'salida')
         """
 
         params = []
@@ -177,46 +215,7 @@ class Novedad:
             query += f" AND lower({documento_expr}) LIKE %s"
             params.append(f"%{documento}%")
 
-        query += " ORDER BY n.fecha_hora DESC, n.id DESC LIMIT %s"
-        params.append(limit)
-
-        return query, params
-
-    @classmethod
-    def list_recent(cls, limit: int = 50) -> list[dict]:
-        query, params = cls._build_history_query(limit=limit)
-
-        with get_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(query, params)
-                rows = cur.fetchall()
-
-        return [
-            {
-                "id": row[0],
-                "tipo_novedad": row[1],
-                "id_vehiculo": row[2],
-                "placa": row[3],
-                "id_espacio": row[4],
-                "espacio_numero": row[5],
-                "id_usuario": row[6],
-                "username": row[7],
-                "documento_usuario": row[8],
-                "estado": row[9],
-                "fecha_hora": row[10],
-                "observaciones": row[11],
-            }
-            for row in rows
-        ]
-
-    @classmethod
-    def search_access_history(cls, placa: str = "", fecha: str = "", documento: str = "") -> list[dict]:
-        query, params = cls._build_history_query(
-            placa=placa,
-            fecha=fecha,
-            documento=documento,
-            limit=200,
-        )
+        query += " ORDER BY n.fecha_hora DESC, n.id DESC LIMIT 300"
 
         with get_connection() as conn:
             with conn.cursor() as cur:
