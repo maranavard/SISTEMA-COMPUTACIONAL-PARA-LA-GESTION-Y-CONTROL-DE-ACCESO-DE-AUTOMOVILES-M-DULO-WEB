@@ -131,9 +131,11 @@ class Novedad:
         if "estado" not in cols:
             raise ValueError("La tabla novedad no tiene columna estado.")
 
-        estado = (estado or "").strip().lower()
-        if not estado:
-            raise ValueError("Debes indicar un estado válido.")
+        estado_limpio = (estado or "").strip().lower()
+        estados_validos = {"registrado", "pendiente", "en_revision", "resuelto", "cerrado"}
+
+        if estado_limpio not in estados_validos:
+            raise ValueError("Estado de novedad no válido.")
 
         query = """
             UPDATE public.novedad
@@ -143,7 +145,7 @@ class Novedad:
 
         with get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(query, (estado, novedad_id))
+                cur.execute(query, (estado_limpio, novedad_id))
             conn.commit()
 
     @classmethod
