@@ -174,8 +174,7 @@ class Novedad:
             for row in rows
         ]
 
-
-          @staticmethod
+    @staticmethod
     def search_access_history(placa: str = "", fecha: str = "", documento: str = "") -> list[dict]:
         placa = (placa or "").strip().upper()
         fecha = (fecha or "").strip()
@@ -260,8 +259,7 @@ class Novedad:
             }
             for row in rows
         ]
-    
-    
+
     @classmethod
     def register_ingreso_by_placa(cls, placa: str, user_id: int) -> dict:
         vehicle = cls._find_vehicle_by_plate(placa)
