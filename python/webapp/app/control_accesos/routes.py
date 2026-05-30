@@ -304,6 +304,24 @@ def autorizar(item_id: int):
     return redirect(url_for(AUTORIZACION_ROUTE))
 
 
+@control_accesos_bp.post("/autorizacion/<int:item_id>/rechazar")
+@login_required
+@control_access_required
+def rechazar(item_id: int):
+    item = _find_visitante(item_id)
+    if not item:
+        flash(RECORD_NOT_FOUND_MSG, "error")
+        return redirect(url_for(AUTORIZACION_ROUTE))
+
+    try:
+        Visitante.update_item(item_id, {"estado": "rechazado"})
+        flash("Ingreso rechazado correctamente.", "success")
+    except Exception as exc:
+        flash(f"No se pudo rechazar el ingreso: {exc}", "error")
+
+    return redirect(url_for(AUTORIZACION_ROUTE))
+    
+
 @control_accesos_bp.get("/autorizacion/<int:item_id>/detalle")
 @login_required
 @control_access_required
