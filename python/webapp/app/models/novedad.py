@@ -174,6 +174,94 @@ class Novedad:
             for row in rows
         ]
 
+
+        @staticmethod
+    def search_access_history(placa: str = "", fecha: str = "", documento: str = "") -> list[dict]:
+        placa = (placa or "").strip().upper()
+        fecha = (fecha or "").strip()
+        documento = (documento or "").strip().lower()
+
+        conditions = []
+        params = []
+
+        if placa:
+            conditions.append("upper(v.placa) LIKE %s")
+            params.append(f"%{placa}%")
+
+        if fecha:
+            conditions.append("DATE(n.fecha_hora) = %s")
+            params.append(fecha)
+
+        if documento:
+            conditions.append(
+                """
+                (
+                    lower(coalesce(u.numero_identificacion, '')) LIKE %s
+                    OR lower(coalesce(u.identificacion, '')) LIKE %s
+                    OR lower(coalesce(u.documento, '')) LIKE %s
+                    OR lower(coalesce(u.cedula, '')) LIKE %s
+                )
+                """
+            )
+            like_doc = f"%{documento}%"
+            params.extend([like_doc, like_doc, like_doc, like_doc])
+
+        where_sql = ""
+        if conditions:
+            where_sql = "WHERE " + " AND ".join(conditions)
+
+        query = f"""
+            SELECT
+                n.id,
+                n.tipo_novedad,
+                n.id_vehiculo,
+                v.placa,
+                n.id_espacio,
+                e.numero AS espacio_numero,
+                n.id_usuario,
+                u.username,
+                COALESCE(
+                    u.numero_identificacion,
+                    u.identificacion,
+                    u.documento,
+                    u.cedula,
+                    ''
+                ) AS documento_usuario,
+                n.estado,
+                n.fecha_hora,
+                n.observaciones
+            FROM public.novedad n
+            LEFT JOIN public.vehiculos v ON v.id = n.id_vehiculo
+            LEFT JOIN public.espacio e ON e.id_espacio = n.id_espacio
+            LEFT JOIN public.usuarios u ON u.id = n.id_usuario
+            {where_sql}
+            ORDER BY n.fecha_hora DESC, n.id DESC
+        """
+
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, params)
+                rows = cur.fetchall()
+
+        return [
+            {
+                "id": row[0],
+                "tipo_novedad": row[1],
+                "id_vehiculo": row[2],
+                "placa": row[3],
+                "id_espacio": row[4],
+                "espacio_numero": row[5],
+                "id_usuario": row[6],
+                "username": row[7],
+                "documento_usuario": row[8],
+                "estado": row[9],
+                "fecha_hora": row[10],
+                "observaciones": row[11],
+            }
+            for row in rows
+        ]
+    
+    
     @classmethod
     def register_ingreso_by_placa(cls, placa: str, user_id: int) -> dict:
         vehicle = cls._find_vehicle_by_plate(placa)
